@@ -14,24 +14,28 @@
 | Approved scope | PENDING approval; candidate in `PROJECT-BRIEF.md` |
 | Exclusions | No dashboard, real webhooks, PR-Agent requirement, unattended public PR automation, auto-merge or code modification in MVP |
 | Material decisions | Proposed in `ARCHITECTURE.md` D-01 to D-08; acceptance pending |
-| Open blockers | License; initial repository commit authority; G00 scope; host environment; credential/sandbox evidence |
+| Open blockers | License; architecture/G00 acceptance; main integration authority; runtime environment; credential/sandbox evidence |
 | Updated | 2026-10-14 |
 
 ## 2. Repositories and environment
 
-| Area | Repository/URL | Canonical checkout | Base / SHA | Status |
-|---|---|---|---|---|
-| CLI, manager, workers, shared contract (proposed monorepo) | https://github.com/PixelsWorker/CodeGuardian | UNKNOWN - not inspected on user device | `main` configured but **no actual branch/commit** | Repo accessible, empty |
-| UI | Same repository, terminal-only | UNKNOWN | N/A | G00 planned, no code |
-| GitHub account | PixelsWorker connector | N/A | N/A | Admin/write access observed (NOT used) |
+Canonical checkout verified on 2026-10-14: `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`. Repository: https://github.com/PixelsWorker/CodeGuardian; current documentation branch: `dev`.
 
-- Preferred host root if Fedora: `/home/rockson/Projects/PixelsWorker/CodeGuardian` **PROPOSED ONLY; NOT VERIFIED**. Do not infer actual clone path.
-- Alternate preferred canonical Windows root: `D:\Projects\PixelsWorker\CodeGuardian` (only if Windows host verified).
-- Branch convention (proposed): `feat/g00-cli-ux-demo`, then `feat/g01-auth-pr-inspection`, etc. Do not create before branch/init approval.
-- Git safety: if a canonical checkout is dirty/diverged or in the middle of an operation, STOP. No branch switching, worktree creation, reset, or automatic pull without an approved safe plan.
-- Evidence directory: TBD only if useful during implementation; outside source repository.
+| Reference | Verified commit | Relationship |
+|---|---|---|
+| Local `dev` | `1b9f8bd7422548e0f05cdd7d445b9ea4a8be6ff7` | Current HEAD; synchronized with `origin/dev` |
+| `origin/dev` | `1b9f8bd7422548e0f05cdd7d445b9ea4a8be6ff7` | Architecture packet committed and pushed |
+| Local `main` | `1bb57572f3c1a544c71bb6e519f4428db22e3086` | Ancestor of `dev`; differs from remote `main` |
+| `origin/main` | `dfe6daa7190a24215ccfc5537e5780fe56b2909d` | Independent history; no common ancestor with `dev` |
 
-## 3. Proposed stack (NOT installed)
+Both remote branches exist. Git history integration remains unresolved and NOT AUTHORIZED. The repository contains `AGENTS.md` and ten planning documents, with no application source or configured build/test runner. DOC-01 preflight confirmed a clean working tree and no unfinished Git operation; local documentation edits will make it dirty until separately approved for commit.
+
+- Parent workspace: `/home/rockson/Projects/PixelsWorker/CodeGuardian`; evidence: `../evidence/`; reserved worktree location: `../worktree/`.
+- Host runtime, Docker availability, package tooling, and authentication remain NOT VERIFIED by this task.
+- Future branch names such as `feat/g00-cli-ux-demo` are proposals, requiring separate authorization.
+- Git safety: stop on an unexpected dirty/diverged checkout or unfinished operation. No branch switching, worktree creation, reset, pull, or merge without an approved safe plan. DOC-01 authorizes only five local documentation edits on the verified baseline.
+
+## 3. Proposed stack (installation NOT VERIFIED)
 
 | Concern | Candidate / stage | Acceptance state |
 |---|---|---|
@@ -48,12 +52,12 @@
 
 ## 4. Source documents and contract
 
-| Item | Path (in architecture packet, not yet in GitHub) | Status |
+| Item | Repository path (packet committed on `dev`) | Status |
 |---|---|---|
 | Full proposed architecture | `ARCHITECTURE.md` | Draft |
 | Research and versions | `TECH-RESEARCH.md` | Source-verified claims only |
 | Security | Architecture security sections; separate repo `SECURITY.md` optional initialization decision | Draft |
-| Repository structure | `REPO-INITIALIZATION.md` | Proposed; GitHub repo empty |
+| Repository structure | `REPO-INITIALIZATION.md` | Completed initialization record; integration pending |
 | Canonical internal review contract | `API-CONTRACT.md` | Draft, not implemented |
 | Group roadmap | `PROJECT-BRIEF.md` | Draft |
 | Active executable TODO | NONE | Deliberately not created: G00 not authorized |
@@ -62,10 +66,10 @@
 
 | Area | Exact command / working directory | Verified result |
 |---|---|---|
-| Git checkout/status | Not available: no local checkout inspected | NOT VERIFIED |
+| Git checkout/status | `git status -sb`, `git status --porcelain=v1`, `git rev-parse`, `git remote -v` from canonical checkout | Baseline verified above; clean before DOC-01 edits |
 | Docker build | No Dockerfile created; no command run | NOT RUN |
-| Codex installation/login | Not attempted; device auth may need workspace enablement | NOT RUN |
-| GitHub CLI login | Not attempted | NOT RUN |
+| Codex installation/login | NOT VERIFIED by DOC-01; device auth may need workspace enablement | NOT RUN |
+| GitHub CLI login | Not checked by DOC-01 | NOT VERIFIED |
 | CLI start/build | No package manifest exists yet | N/A - NOT IMPLEMENTED |
 | Lint/types/tests | No commands/manifests exist yet | N/A - NOT IMPLEMENTED |
 | Real PR review and publication | No PR run performed | NOT RUN |
@@ -79,11 +83,13 @@ See `PROJECT-BRIEF.md` for dependency-ordered G00-G05 roadmap and draft time est
 | Gate | State / evidence |
 |---|---|
 | Architecture/setup review | Draft packet prepared; pending Rockson acceptance |
-| Initial GitHub commit to `PixelsWorker/CodeGuardian` | NOT AUTHORIZED / NOT EXECUTED |
+| Initial documentation delivery to `dev` | COMPLETED: committed and pushed at `1b9f8bd` |
+| DOC-01 documentation correction | AUTHORIZED: local edits to five named files only |
+| Integration into remote `main` | NOT AUTHORIZED; unrelated histories remain |
 | G00 CLI demo scope | Pending explicit approval |
 | G00 local branch and code execution | NOT AUTHORIZED |
 | G00 complete terminal UI/UX demo approval | PENDING, must occur after demo |
 | G01 functional execution | BLOCKED ON G00 approval |
-| Push/merge/deployment | NOT AUTHORIZED |
+| Further staging/commits/pushes/merges/packages/deployment | NOT AUTHORIZED |
 
-**Next handoff:** Review `HANDOFF.md`. Confirm architecture/G00 scope and separately approve any initial GitHub commit; then prepare a bounded G00 executable TODO for subsequent approval. STOP before executing implementation.
+**Next handoff:** Review the DOC-01 local diff and `HANDOFF.md`. Documentation commit/PR steps, Git integration, architecture acceptance, and G00 scope/execution require separate authorization. STOP before implementation. Untouched planning documents may retain preparation-time repository statements; the verified baseline here supersedes those historical claims.

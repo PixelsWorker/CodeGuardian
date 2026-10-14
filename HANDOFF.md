@@ -2,7 +2,7 @@
 
 **Product/group:** CodeGuardian / architecture and setup review (PRE-G00)  
 **Date:** 2026-10-14  
-**Status:** DRAFT - preparation completed; scope and Git actions still awaiting explicit approval
+**Status:** Documentation delivered to `dev`; architecture/G00 acceptance pending. DOC-01 local documentation corrections authorized; further Git actions not authorized.
 
 ## 1. Project goal and scope
 
@@ -12,25 +12,30 @@ ChatGPT account login is a supported possible Codex local auth method without an
 
 ## 2. Repository identity / current state
 
-- Repo: https://github.com/PixelsWorker/CodeGuardian
-- Owner: PixelsWorker, public, connected account has admin/write capabilities.
-- Default branch setting: `main`; actual branches: NONE, initial commit/SHA: NONE.
-- Canonical local checkout: UNKNOWN; host OS/available Docker binaries: NOT VERIFIED.
-- Branch for G00: `feat/g00-cli-ux-demo` (PROPOSED ONLY).
-- Git status/commit/push/PR: NONE performed in this work.
+- Repo: https://github.com/PixelsWorker/CodeGuardian (public; owner PixelsWorker).
+- Canonical checkout: `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`.
+- Local `dev` / `origin/dev`: `1b9f8bd7422548e0f05cdd7d445b9ea4a8be6ff7`.
+- Local `main`: `1bb57572f3c1a544c71bb6e519f4428db22e3086`, an ancestor of `dev`.
+- Remote `origin/main`: `dfe6daa7190a24215ccfc5537e5780fe56b2909d`; no common ancestor with `dev`. Integration remains unresolved.
+- DOC-01 preflight: clean working tree on `dev`; no unfinished merge, rebase, or cherry-pick. Authorized local edits remain uncommitted.
+- No application implementation, configured build system, or test runner exists. Host runtime/Docker/authentication remain unverified.
+- G00 branch `feat/g00-cli-ux-demo`: PROPOSED ONLY, not authorized.
 
-## 3. Documents delivered (local packet only)
+## 3. Documentation delivery completed on `dev`
 
-`README.md`, `PROJECT-BRIEF.md`, `ARCHITECTURE.md`, `TECH-RESEARCH.md`, `API-CONTRACT.md`, `SETUP.md`, `G00-SCOPE.md`, `G00-CLI-WIREFRAMES.md`, `REPO-INITIALIZATION.md`, and this handoff.
+The ten packet files (`README.md`, `PROJECT-BRIEF.md`, `ARCHITECTURE.md`, `TECH-RESEARCH.md`, `API-CONTRACT.md`, `SETUP.md`, `G00-SCOPE.md`, `G00-CLI-WIREFRAMES.md`, `REPO-INITIALIZATION.md`, and `HANDOFF.md`) were created, committed, and pushed at `1b9f8bd`. Repository `AGENTS.md` was introduced at `1bb5757`.
+
+Initial documentation delivery is resolved **for `dev` only**. It neither integrates the packet into remote `main` nor approves architecture, technologies, or G00. DOC-01 permits local corrections to five specified files only; staging, commits, pushes, merges, and PR operations remain prohibited.
 
 ## 4. Open decisions and blockers
 
 | ID | Stage | Decision needed | Effect |
 |---|---|---|---|
 | B01 | Setup | Accept Codex-first scope, component isolation, and proposed stack | Architecture can't be marked approved |
-| B02 | Repository init | Approve exact initial commit to `PixelsWorker/CodeGuardian:main` with selected files; confirm license | Repo remains empty |
+| B02 | Git integration | Approve a plan preserving independent remote `main` and `dev` histories | Packet remains on `dev`; no main integration authorized |
+| B08 | License/protection | Select license and repository rules/status checks | No license or protection change authorized |
 | B03 | G00 | Approve complete CLI mock UX scope and command vocabulary | Do not issue executable G00 TODO |
-| B04 | G00 setup | Confirm host OS/project root, available Docker, package tool, and environment | Cannot verify local commands |
+| B04 | G00 setup | Project root verified; confirm runtime environment, available Docker, and package tool | Cannot verify local commands |
 | B05 | G02 real AI | Verify allowed ChatGPT Codex login (and device-code permissions where needed) OR later independent API auth | G02 may become blocked, not G00 |
 | B06 | G04 | Choose and configure supported PR-Agent model provider | PR-Agent later integration blocked until solved |
 | B07 | G05 | Approve unattended identity/webhook/sandbox design | No automation until then |
@@ -47,12 +52,15 @@ Do not loop on B05/B06 while G00 mock demo can proceed after its independent app
 
 ## 6. Immediate next action (approval gate)
 
-Ask Rockson to confirm (a) acceptance of architecture and MVP/G00 scope, and (b) whether to initialize **only** the approved documentation on `PixelsWorker/CodeGuardian:main`. These are separate approvals. After acceptance, perform ONLY the specifically authorized GitHub operation and report commit SHA. Then prepare a short, bounded G00 executable TODO per `sprint-code.md` and embed the risk-based test plan from `sprint-test.md` into the same TODO; STOP before G00 implementation until authorized.
+Review the five-file DOC-01 local diff. Stop after verification; do not stage, commit, push, create/switch branches or worktrees, merge, pull, reset, or open a PR. A future documentation commit/PR process and a separate history integration plan need explicit authorization.
+
+Architecture and MVP/G00 scope acceptance, license selection, and G00 branch/TODO approval remain pending. After those approvals, prepare a bounded TODO per `sprint-code.md` with the `sprint-test.md` plan, then stop before implementation until specifically authorized.
 
 ## 7. Evidence standard
 
-- Verified now: GitHub repository metadata/empty branches; cited upstream releases and documentation.
-- NOT verified: actual local checkout, Docker image builds, package installations, Codex or gh logins, PR calls, tests, code execution, CI, or publication.
-- No code was committed, pushed, merged, or deployed.
+- Verified baseline: canonical checkout, branch references above, clean preflight, documentation delivery to remote `dev`, and unrelated remote histories.
+- NOT verified: Docker builds, dependency installation/compatibility, Codex or gh login, PR review calls, application builds/tests, CI, runtime integration, or review publication.
+- Documentation commits and push to `dev` occurred; no application implementation, main integration, or deployment is established.
+- Untouched packet files retain preparation-time repository claims; current repository evidence in this handoff and `SETUP.md` supersedes them. Proposed architecture and API-contract decisions are unchanged.
 
-**Requested response from Rockson:** accept or request revisions to architecture/G00 scope; decide license; then separately authorize initial documentation commit and later G00 work.
+**Next requested decision:** Review the local documentation diff. Further Git actions, history integration, and G00 implementation require new explicit authorization.

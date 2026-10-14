@@ -1,50 +1,47 @@
-# CodeGuardian - Initial Repository Setup Plan
+# CodeGuardian - Repository Initialization and Integration Record
 
-**Target:** https://github.com/PixelsWorker/CodeGuardian  
-**Verified 2026-10-14:** Public, `size=0`, default branch configured as `main`, no branch returned by API, and no commit exists. GitHub write access is available through the linked PixelsWorker account; **not used**.
+**Target:** https://github.com/PixelsWorker/CodeGuardian
+**Verified baseline:** 2026-10-14
+**Status:** Initial documentation committed and pushed to `dev`; integration into remote `main` pending and NOT AUTHORIZED.
 
-## Initial commit candidate (pending specific authorization)
+## Completed initialization
 
-Proposed first commit should contain only approved planning documents and a short README. Do not conflate this initial setup with G00 implementation.
+Canonical checkout: `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`. Initial commits now exist; GitHub is no longer an empty repository.
 
-Suggested paths after approval:
+| Reference | Commit | Meaning |
+|---|---|---|
+| Local `dev` / `origin/dev` | `1b9f8bd7422548e0f05cdd7d445b9ea4a8be6ff7` | Architecture and setup packet committed and pushed |
+| Local `main` | `1bb57572f3c1a544c71bb6e519f4428db22e3086` | Initial project structure and repository guidelines; ancestor of `dev` |
+| `origin/main` | `dfe6daa7190a24215ccfc5537e5780fe56b2909d` | Independent first commit; remote default branch |
 
-```text
-README.md
-PROJECT-BRIEF.md
-ARCHITECTURE.md
-TECH-RESEARCH.md
-API-CONTRACT.md
-SETUP.md
-HANDOFF.md
-G00-SCOPE.md
-G00-CLI-WIREFRAMES.md
-REPO-INITIALIZATION.md
-.gitignore                    # proposal; only add when exact approved contents known
-LICENSE                       # only after license explicitly selected
-```
+The repository contains `AGENTS.md` plus ten planning documents. Documentation delivery is complete on `dev` only; the packet has not been integrated into remote `main`. No application source, configured build system, or test runner exists. Architecture acceptance and G00 scope remain pending.
 
-## Preconditions for initial GitHub write
+## Outstanding history integration
 
-1. Rockson approves exact repository `PixelsWorker/CodeGuardian`, target `main`, and creating the initial commit containing identified files.
-2. Rockson accepts the architecture and exact planning doc content (or requests edits).
-3. Decide code license (`MIT` suggested, **not automatically chosen**). The repo is public, so avoid secrets/private customer information even in examples.
-4. Confirm repo still has no branch/initial commit immediately before writing. If status differs, reconcile without overwriting.
-5. Confirm no local canonical checkout with uncommitted changes is being overridden.
-6. Capture resulting commit SHA, exact files and any error, and provide a truthful Git status/evidence handoff.
+Remote `main` and `dev` have no common ancestor. Local `main` is different from `origin/main`; do not treat them as interchangeable or blindly pull, reset, or force-push.
 
-## After initialization
+Possible future approach, **not authorized by DOC-01**:
 
-- Review the proposed G00 scope; require separate approval for branch creation (`feat/g00-cli-ux-demo`).
-- Create an executable `TODO.md` only after setup and G00 scope approval.
-- Develop all agreed mock CLI screens/flows under one G00 group branch/PR, with tests in the same group.
-- Obtain explicit authorization before pushing/merging any implementation branch and before any security/ruleset changes.
+1. Review documentation corrections, then separately authorize their branch/commit/PR process and incorporation into `dev`.
+2. With separate authorization, create an integration branch based on verified `origin/main` in an approved clean checkout or temporary worktree.
+3. Merge the verified `origin/dev` with `--allow-unrelated-histories`, preserving both histories through an explicit merge commit.
+4. Resolve any README conflict by retaining current project documentation and reviewing both versions.
+5. Inspect the full result and verify that both histories are ancestors of the integration commit.
+6. Obtain separate approval to push the integration branch and open a PR targeting `main`; merging the PR also requires authorization.
 
-## Configuration decisions deliberately open
+Every integration branch, worktree, merge, conflict resolution, push, and PR operation requires its own explicit authorization. No reconciliation is performed as part of DOC-01.
 
-- MIT versus another license.
-- Branch protection/ruleset and status check requirements (repository settings changes need approval).
-- README wording for public visibility.
-- Developer host path, Docker/CLI install policy and future release process.
+## Current authorized checkpoint
 
-**Nothing here is a GitHub operation or proof of an initialized branch.**
+DOC-01 permits local edits only to `AGENTS.md`, `README.md`, `SETUP.md`, `HANDOFF.md`, and this file on `dev`. Preserve HEAD at `1b9f8bd`; do not stage, commit, switch branches, create worktrees, pull, reset, merge, push, open PRs, or deploy. Stop after local diff verification.
+
+## Decisions still pending
+
+- Architecture and proposed technology acceptance.
+- License selection: MIT is suggested, not approved; do not add a license automatically.
+- Repository protection/rulesets and status checks; settings changes need approval.
+- Runtime, Docker/CLI installation policy, authentication, and credential isolation evidence.
+- G00 scope, branch, executable TODO, and implementation authorization.
+- Future release and deployment policy.
+
+Documentation delivery does not approve application implementation or Git integration. Untouched packet files retain historical empty-repository statements; the baseline above supersedes them without changing architecture or API-contract decisions.

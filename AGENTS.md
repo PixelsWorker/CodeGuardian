@@ -2,32 +2,31 @@
 
 ## Project Structure & Module Organization
 
-The current working directory contains the Git repository in `CodeGuardian/`. Run repository commands from that directory. It currently contains only `README.md`, which introduces the project; no source code, tests, or assets are present yet.
+The repository root is `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`. Run repository-relative commands here. Read the parent workspace guide at `../AGENTS.md` as well.
 
-As implementation begins, organize code by responsibility and document new directories in `CodeGuardian/README.md`. Keep tests close to their modules or in a dedicated test directory, and give assets a clearly named location.
+The parent workspace contains sibling `evidence/`, `worktree/`, and `CodeGuardian/` directories. Evidence originals live in `../evidence/CodeGuardian-Architecture-Packet/`; preserve them when editing repository copies.
+
+This repository contains `AGENTS.md` and ten planning documents. Start with `README.md`, then consult `ARCHITECTURE.md`, `API-CONTRACT.md`, `SETUP.md`, and `G00-SCOPE.md`. No application source, tests, assets, package manifest, or build system is configured.
 
 ## Build, Test, and Development Commands
 
-No build system, package manifest, development server, or test runner is configured. Do not assume commands such as `npm test` or `make build` are available.
+- `git status -sb`: inspect branch and working tree.
+- `git diff --check`: check unstaged changes for whitespace errors.
+- `git diff --cached --check`: check staged changes for whitespace errors.
+- `git diff --stat`: summarize local changes.
 
-Useful commands from the current working directory:
-
-- `cd CodeGuardian`: enter the Git repository.
-- `git status --short`: inspect changed and untracked files after entering it.
-- `git diff --check`: check staged or unstaged tracked changes for whitespace errors.
-
-When adding tooling, document exact installation, development, build, and test commands in the README.
+No build, development, lint, or application test commands exist yet. Document exact commands when tooling is approved and introduced.
 
 ## Coding Style & Naming Conventions
 
-No programming language, formatter, or linter has been established. Follow existing conventions as code is introduced, and use consistent indentation within each file. Choose descriptive module, function, and variable names. Keep Markdown headings descriptive and instructions actionable. Add formatting and lint configuration alongside the first implementation that needs it.
+Use concise Markdown with descriptive headings and explicit proposed or verified status. Follow existing uppercase planning filenames, such as `ARCHITECTURE.md`. TypeScript and Node.js remain proposed; no formatter, linter, or code indentation standard is established. Serialized contract examples use `snake_case` keys.
 
 ## Testing Guidelines
 
-There is currently no testing framework or coverage threshold. New behavior should include appropriate automated tests once a runner is selected. Name tests after the behavior they verify, and document how contributors run them. Until then, review documentation changes for accuracy and check whitespace.
+No test framework or coverage threshold is configured. Verify documentation against observed repository facts and review links and whitespace. Future tests should cover contract validation and publication safeguards. G00 is a draft mock CLI demonstration; label all simulated results clearly.
 
 ## Commit & Pull Request Guidelines
 
-The Git repository has no commits, so no commit message convention can be inferred. Use concise, imperative subjects, such as `Add initial project structure`.
+Current documentation branch: `dev`, at baseline `1b9f8bd`, synchronized with `origin/dev`. History includes imperative subjects and a `feat:` prefix. Use concise subjects and describe scope, validation, relevant issues, and terminal captures in pull requests.
 
-Pull requests should explain the change, its purpose, and validation performed. Link relevant issues when available; include screenshots for visible interface changes. Identify any tooling or configuration contributors must install.
+Local `main` (`1bb5757`) is an ancestor of `dev`; `origin/main` (`dfe6daa`) has an independent history. Preserve both histories. Require explicit authorization for branches, worktrees, staging, commits, pushes, merges, dependency additions, and deployments. Do not reset, blindly pull, or force-push. Documentation delivery does not approve architecture or G00 implementation.
