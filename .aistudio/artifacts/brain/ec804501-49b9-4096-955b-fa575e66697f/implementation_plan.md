@@ -1,61 +1,55 @@
-# CodeGuardian G00 Prototype — CodeRabbit Review & UX Refinements (Revised)
+# CodeGuardian G00 — Final Prototype Corrections Implementation Plan
 
-Refine and harden the CodeGuardian browser-based terminal simulation to resolve four CodeRabbit review findings and address critical UX/state consistency concerns: deterministic worker state factories, unpolluted publishing state resets, bulletproof simulation timer cancellation with generation tokens, strict URL parsing (rejecting credentials, non-HTTPS, and invalid owner/repo tokens), and separate Operator Denial vs GitHub 403 Permission Denied scenario flows.
+Address the three CodeRabbit review findings: worker navigation lifecycle management (cancelling only active `running` workers on navigation, preserving completed/failed/skipped states, invalidating run-generation tokens, and preventing StrictMode unmount race conditions), Vite development server host hardening (removing `allowedHosts: true`, defaulting to `127.0.0.1` locally, and restricting preview environments to explicit trusted hosts), and comprehensive React component interaction tests.
 
 > [!IMPORTANT]
-> All changes remain strictly scoped to the local interactive prototype in React/TypeScript. No external APIs, real GitHub tokens, or Codex integrations are introduced.
+> The mock-only G00 terminal prototype boundary is preserved. No external networks, backend daemons, or native Ink ports are introduced.
 
-- **Confirmed Decision 1 (Fresh Worker Factories)**: Create an explicit `createFreshWorker(role, state, failureReason?)` factory that produces decoupled worker records with clean empty logs (`[]`), `elapsedMs: 0`, and `findingsCount: 0` for queued states, preventing telemetry leakage across scenario switches.
-- **Confirmed Decision 2 (Publishing Outcome Reset)**: Explicitly reset `publishOutcome` to `'normal'` whenever a scenario does not define an explicit override, avoiding sticky permission-denied or stale-head errors.
-- **Confirmed Decision 3 (Cancel Handler & Run-Generation Token)**: Link the Cancel button directly to `handleCancelAll`, which clears scheduled timers, sets `isSimulating(false)`, increments a `runGenerationRef` counter, and calls `onCancelAll()`. Use browser-compatible `ReturnType<typeof setTimeout>[]` for timer refs.
-- **Confirmed Decision 4 (Strict URL Security & Owner/Repo Sanitization)**: Reject embedded credentials (`username !== '' || password !== ''`), enforce `protocol === 'https:'`, `hostname === 'github.com'`, and test path against `/^\/([a-zA-Z0-9._-]+)\/([a-zA-Z0-9._-]+)\/pull\/([1-9]\d*)\/?$/`.
-- **Confirmed Decision 5 (Scenario 9 UX Disambiguation)**: Disambiguate "Operator Denied Publication" (operator enters `N` / clicks Cancel at prompt) from "GitHub Write Permission Denied" (simulated GitHub API 403 on the publishing endpoint).
-- **Confirmed Decision 6 (Automated Acceptance Test Suite)**: Introduce an automated Vitest/unit test suite validating the entire 9-point acceptance matrix prior to freezing the G00 design.
+- **Confirmed Decision 1 (Selective Worker Cancellation on Leave)**: When leaving Screen E while a simulation is in progress, cancel *only* workers currently in the `running` state. Workers that are already `complete`, `failed`, `timed_out`, or `skipped` remain untouched.
+- **Confirmed Decision 2 (Timer & Token Invalidation)**: Leaving Screen E flushes all active timers in `timersRef` and increments `runGenerationRef`. Any scheduled callbacks from the previous run are safely discarded.
+- **Confirmed Decision 3 (Vite Security Hardening)**: Eliminate `allowedHosts: true`. In `vite.config.ts`, bind to `127.0.0.1:3000` for local developer environments, bind to `0.0.0.0:3000` only in containerized/preview environments (`K_SERVICE`, `AIS_APPLET_ID`, `PORT`), and replace wildcard host acceptance with an explicit trusted allowlist (`['localhost', '127.0.0.1', '.run.app']`).
+- **Confirmed Decision 4 (React Component Regression Tests)**: Complement the existing unit tests with automated interaction tests mounting the actual React screen components to verify start ➔ leave ➔ return ➔ rerun cycles.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**: Establishes an airtight, deterministic state machine and robust input validation for the CodeGuardian CLI prototype. Ensures scenarios, worker cancellation, publishing gates, and input validation behave identically every single time, serving as the gold-standard reference for Codex's native Ink/TypeScript implementation.
-- **Target Audience**: Rockson and developer-tools reviewers verifying CLI workflows, keyboard handling, and component boundaries.
-- **Key Value**: Provides a reliable, bug-free interactive reference that documents exact terminal behavior without relying on real cloud infrastructure.
+- **What It Does**: Fixes state leakage when operators navigate between screens mid-simulation, guarantees that returning to the workers screen presents a clean state ready for immediate re-execution, and hardens the Vite development server against DNS rebinding and untrusted host header injection.
+- **Target Audience**: Reviewers evaluating the UX flow across arbitrary screen transitions and keyboard jumps before freezing the specification for native Ink development.
+- **Key Value**: Guarantees zero zombie worker processes, zero stale timers, and secure local development server defaults.
 
 ---
 
 ## 2. User Experience & Visual Design
 
 - **Key User Flows**:
-  1. *Scenario Switching*:
-     - Scenario 1 (Complete) ➔ Scenario 3 (Auth Unavailable / Queued): Workers display `[QUEUED]`, 0 candidates, 0.0s elapsed, and `"Waiting for preflight authorization..."` with fresh empty logs.
-     - Scenario 9 / 10 ➔ Scenario 1: Screen H publishing gate resets to nominal state without lingering 403 permission or duplicate-warning banners.
-  2. *Worker Cancellation*:
-     - User clicks "Re-run Simulation", then hits "Cancel [Ctrl+C]" at 0.5s.
-     - Timers are flushed, `runGeneration` increments, workers switch to `[CANCELLED]`, and pending callbacks cannot overwrite worker states.
-  3. *Publishing Safety Distinction*:
-     - *Scenario 9 (Operator Denied)*: Shows review ready, confirms prompt, user enters `N` ➔ `"Operation cancelled by operator. No GitHub write performed."`
-     - *Scenario 5 / Publisher 403 (Permission Denied)*: Shows `"Publisher Error: Permission Denied (403). Lacks write/triage comments permission."`
-  4. *PR URL Rejection*:
-     - Rejects `http://github.com/example/demo/pull/42` (requires HTTPS).
-     - Rejects `https://evil.com/github.com/example/demo/pull/42` (invalid hostname).
-     - Rejects `https://user:pass@github.com/example/demo/pull/42` (credentials forbidden).
-     - Rejects `https://github.com/bad$owner/demo/pull/42` (invalid owner/repo characters).
-- **Visual Identity & Theme**:
-  - Consistent monospaced developer-tool aesthetics with dark terminal, amber CRT, matrix green, and paper light themes.
-  - Persistent, unmissable `CODEGUARDIAN — DEMO ONLY` header badge.
+  1. *Mid-Simulation Navigation*:
+     - User starts a simulation in Screen E (Workers 1 & 2 complete, Worker 3 running, Worker 4 running).
+     - User presses `[1]` (Welcome) or `[7]` (Report) mid-run.
+     - Workers 3 & 4 transition to `[CANCELLED]`.
+     - Workers 1 & 2 remain `[COMPLETE]`.
+     - No orphan timer fires in the background.
+     - Upon navigating back to Screen E (`[5]`), the screen shows the preserved completed workers and cancelled workers, with a clean "Re-run Simulation" button that initiates a fresh, successful run.
+  2. *Scenario Switching*:
+     - Switching scenarios while a simulation is executing immediately halts the old run generation and cleanly populates the new scenario's target fixture without cross-contamination.
+  3. *Secure Dev Server*:
+     - Dev server runs on `127.0.0.1:3000` on local machines.
+     - Rejects untrusted HTTP `Host` headers.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: Run-Generation Token Guard**
-  - *Chosen Approach*: Track active runs with an incrementing `runGenerationRef = useRef(0)`. Each `setTimeout` captures `currentGen = runGenerationRef.current`. If `runGenerationRef.current !== currentGen` when the timeout fires, the callback aborts without updating state.
-  - *Why*: Immune to race conditions between cancellations and immediate re-runs.
-- **Decision 2: Browser-Native Timeout Typing**
-  - *Chosen Approach*: `useRef<ReturnType<typeof setTimeout>[]>([])` rather than `NodeJS.Timeout[]`.
-  - *Why*: Eliminates dependencies on `@types/node` in the Vite browser environment.
-- **Decision 3: Dedicated Acceptance Test Matrix Automation**
-  - *Chosen Approach*: Implement a unit test suite testing URL validation, worker state factories, scenario switching, and cancellation logic.
-  - *Why*: Guarantees verified compliance before design freeze.
+- **Decision 1: Navigation Lifecycle Coordinator in `App.tsx` & `ScreenEMultiAgent.tsx`**
+  - *Chosen Approach*: `ScreenEMultiAgent` exposes `isSimulating` and unmount cleanup, but `App.tsx` (the owner of `workers` state) executes `handleCancelRunningWorkersOnly()` upon screen transition away from `multi_agent` whenever `running` workers exist.
+  - *Why*: Centralizing the state transition in `App.tsx` prevents React 18/19 StrictMode double-invocation glitches (where components briefly mount, unmount, and remount during development), while guaranteeing that real user navigation cancels active workers cleanly.
+- **Decision 2: Explicit Trusted Hosts Allowlist in `vite.config.ts`**
+  - *Chosen Approach*: Replace `allowedHosts: true` with an explicit list:
+    ```ts
+    allowedHosts: ['localhost', '127.0.0.1', '.run.app']
+    ```
+    And bind to `127.0.0.1` locally, or `0.0.0.0` when running in Cloud Run container environments.
+  - *Why*: Eliminates security warnings and prevents arbitrary host header processing while preserving seamless preview accessibility.
 
 ---
 
@@ -63,46 +57,36 @@ Refine and harden the CodeGuardian browser-based terminal simulation to resolve 
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        CodeGuardian Architecture                       │
+│                        CodeGuardian Navigation                         │
 │                                                                        │
-│  ┌────────────────────────┐             ┌───────────────────────────┐  │
-│  │ Scenario Switcher      │             │ Screen C: URL Parser      │  │
-│  │ • publishOutcome reset │             │ • protocol === 'https:'   │  │
-│  │ • createFreshWorker()  │             │ • hostname === 'github.com'  │
-│  └───────────┬────────────┘             │ • username === '' && pass │  │
-│              │                          │ • strict owner/repo regex │  │
-│              ▼                          └───────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Screen E: Multi-Agent Activity                                   │  │
-│  │ • runGenerationRef.current++                                     │  │
-│  │ • timersRef.current = [] (ReturnType<typeof setTimeout>)         │  │
-│  │ • handleCancelAll() ──► clears timers, stops simulation, cancels │  │
-│  │ • useEffect cleanup ──► clears timers                            │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│              │                                                         │
-│              ▼                                                         │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Screen H: Publication Safety Gate                                │  │
-│  │ • 'normal': Operator prompt [y/N] ──► simulated confirmation    │  │
-│  │ • 'operator_denied': Operator explicitly selected [N]           │  │
-│  │ • 'denied_permission': GitHub 403 lacks triage/comment rights   │  │
-│  │ • 'stale_head': Commit SHA mismatch block                        │  │
-│  │ • 'duplicate_warning': Digest fingerprint already posted         │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
+│   Screen E (Active Simulation) ──► User presses [1] Welcome           │
+│         │                                                              │
+│         ├─► timersRef.current.forEach(clearTimeout)                    │
+│         ├─► runGenerationRef.current++                                 │
+│         └─► onLeaveWhileRunning()                                      │
+│                   │                                                    │
+│                   ▼                                                    │
+│   App.tsx (State Store):                                               │
+│         next[role] = worker.state === 'running'                        │
+│           ? createFreshWorker(role, 'cancelled')                       │
+│           : worker // PRESERVED (completed, failed, skipped)           │
+│                                                                        │
+│   Return to Screen E:                                                  │
+│         • No worker remains stuck in 'running'                         │
+│         • Operator clicks [Re-run] ──► Fresh run completes cleanly     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Acceptance Test Matrix
+---
 
-| # | Test Scenario | Input / Action | Expected Result |
-|---|---|---|---|
-| 1 | Complete ➔ Queued Reset | Switch from Scenario 1 to Scenario 3 | All 4 workers show `[QUEUED]`, 0 candidates, 0ms, empty logs |
-| 2 | Permission Error Reset | Switch from Scenario 5 to Scenario 1 | `publishOutcome` resets to `'normal'`, 403 error banner removed |
-| 3 | Immediate Cancellation | Start run ➔ Cancel at 300ms ➔ Wait 3s | Workers remain `[CANCELLED]`, no delayed `[COMPLETE]` transitions |
-| 4 | Rapid Re-run Safety | Start run ➔ Cancel ➔ Immediately Start | Run-generation prevents orphaned updates from previous run |
-| 5 | Unmount Cleanup | Start run ➔ Navigate to Screen A | Component unmount clears all pending timer callbacks |
-| 6 | Protocol Check | `http://github.com/example/demo/pull/42` | Rejected (HTTPS required) |
-| 7 | Host Spoofing Check | `https://evil.com/github.com/owner/repo/pull/42` | Rejected (Invalid hostname) |
-| 8 | Credential Check | `https://user:token@github.com/owner/repo/pull/42` | Rejected (Credentials forbidden in PR URL) |
-| 9 | Strict Owner/Repo Check | `https://github.com/owner$invalid/repo!/pull/42` | Rejected (Invalid owner/repository characters) |
-| 10 | Valid GitHub PR URL | `https://github.com/example/demo/pull/42` | Accepted (`owner: example`, `repo: demo`, `number: 42`) |
+## 5. Regression Test Matrix
+
+| # | Regression Test Case | Expected Outcome |
+|---|---|---|
+| 1 | Start ➔ Leave Screen ➔ Return | Active running workers cancelled; completed workers preserved |
+| 2 | Start ➔ Cancel ➔ Wait 3s | Workers remain cancelled; no resurrection |
+| 3 | Start ➔ Leave ➔ Return ➔ Rerun | New run generation executes and completes |
+| 4 | Completed workers ➔ Leave Screen | Completed workers remain complete upon return |
+| 5 | Switch scenarios mid-simulation | All timers flushed; new scenario state clean |
+| 6 | Vite config host validation | No wildcard `allowedHosts: true`; explicit trusted hosts only |
+| 7–16 | Existing Acceptance Tests (1–10) | All 10 existing acceptance matrix tests pass without regression |

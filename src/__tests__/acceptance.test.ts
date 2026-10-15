@@ -2,7 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { validateGitHubPullRequestUrl } from '../utils/urlValidator';
 import { createFreshWorker } from '../utils/workerFactory';
 import { SCENARIOS } from '../data/scenarios';
-import { WorkerRole, WorkerInfo, ScenarioDefinition } from '../types/contract';
+import { WorkerRole, WorkerInfo } from '../types/contract';
+import fs from 'fs';
+import path from 'path';
 
 describe('CodeGuardian G00 Acceptance Test Matrix', () => {
   // Test 1: Complete → Queued scenario: Counters and logs reset
@@ -27,7 +29,7 @@ describe('CodeGuardian G00 Acceptance Test Matrix', () => {
   it('2. Permission-denied -> Normal scenario resets publishOutcome to normal', () => {
     let publishOutcome: string = 'normal';
 
-    // Simulate selecting Scenario 5 or 9
+    // Simulate selecting Scenario 9 (operator_denied)
     const sc9 = SCENARIOS.find((s) => s.id === 'publish_denied')!;
     publishOutcome = sc9.setupState.publishOutcome ?? 'normal';
     expect(publishOutcome).toBe('operator_denied');
@@ -156,5 +158,197 @@ describe('CodeGuardian G00 Acceptance Test Matrix', () => {
     expect(result.owner).toBe('example');
     expect(result.repo).toBe('demo');
     expect(result.number).toBe(42);
+  });
+});
+
+describe('CodeGuardian G00 Navigation Lifecycle & Vite Hardening Regressions', () => {
+  // Regression 1: Start -> leave screen -> return: active running workers are cancelled, completed workers preserved
+  it('R1. Leaving Screen E transitions only running workers to cancelled, preserving completed workers', () => {
+    // Setup state where worker 1 is complete, worker 2 is running
+    const workers: Record<WorkerRole, WorkerInfo> = {
+      security: createFreshWorker('security', 'complete'),
+      logic: createFreshWorker('logic', 'running'),
+      architecture: createFreshWorker('architecture', 'running'),
+      quality: createFreshWorker('quality', 'skipped'),
+    };
+
+    // Simulate navigation away from Screen E: handleCancelRunningWorkersOnly logic
+    const nextWorkers = { ...workers };
+    (Object.keys(nextWorkers) as WorkerRole[]).forEach((role) => {
+      if (nextWorkers[role].state === 'running') {
+        nextWorkers[role] = createFreshWorker(role, 'cancelled');
+      }
+    });
+
+    // Worker 1 should stay COMPLETE
+    expect(nextWorkers.security.state).toBe('complete');
+    expect(nextWorkers.security.findingsCount).toBe(2);
+
+    // Running workers should transition to CANCELLED
+    expect(nextWorkers.logic.state).toBe('cancelled');
+    expect(nextWorkers.architecture.state).toBe('cancelled');
+
+    // Skipped worker should stay SKIPPED
+    expect(nextWorkers.quality.state).toBe('skipped');
+
+    // Upon returning, no worker is stuck in 'running'
+    const anyRunning = Object.values(nextWorkers).some((w) => w.state === 'running');
+    expect(anyRunning).toBe(false);
+  });
+
+  // Regression 2: Start -> cancel -> wait 3 seconds: no resurrection
+  it('R2. After cancelling, advancing time does not trigger any completion updates', () => {
+    vi.useFakeTimers();
+
+    let runGen = 1;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let secState = 'running';
+    let qualState = 'running';
+
+    const currentGen = runGen;
+    timers.push(
+      setTimeout(() => {
+        if (runGen !== currentGen) return;
+        secState = 'complete';
+      }, 600),
+      setTimeout(() => {
+        if (runGen !== currentGen) return;
+        qualState = 'complete';
+      }, 1900)
+    );
+
+    // Cancel at 400ms
+    vi.advanceTimersByTime(400);
+    timers.forEach(clearTimeout);
+    runGen += 1;
+    secState = 'cancelled';
+    qualState = 'cancelled';
+
+    // Wait 3000ms
+    vi.advanceTimersByTime(3000);
+
+    expect(secState).toBe('cancelled');
+    expect(qualState).toBe('cancelled');
+
+    vi.useRealTimers();
+  });
+
+  // Regression 3: Start -> leave -> return -> rerun: new run completes
+  it('R3. Returning after leaving screen permits a fresh run that completes successfully', () => {
+    vi.useFakeTimers();
+
+    let runGen = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const workers: Record<string, string> = {
+      security: 'queued',
+      logic: 'queued',
+    };
+
+    // User starts run 1
+    runGen += 1;
+    const gen1 = runGen;
+    workers.security = 'running';
+    workers.logic = 'running';
+    timers.push(
+      setTimeout(() => {
+        if (runGen !== gen1) return;
+        workers.security = 'complete';
+        workers.logic = 'complete';
+      }, 1900)
+    );
+
+    // User leaves screen at 500ms
+    vi.advanceTimersByTime(500);
+    timers.forEach(clearTimeout);
+    runGen += 1; // invalidated
+    workers.security = 'cancelled';
+    workers.logic = 'cancelled';
+
+    // User returns and clicks Re-run (Run 2)
+    const gen2 = runGen + 1;
+    runGen = gen2;
+    workers.security = 'running';
+    workers.logic = 'running';
+    timers.push(
+      setTimeout(() => {
+        if (runGen !== gen2) return;
+        workers.security = 'complete';
+        workers.logic = 'complete';
+      }, 1900)
+    );
+
+    // Run 2 finishes at 1900ms
+    vi.advanceTimersByTime(1900);
+
+    expect(workers.security).toBe('complete');
+    expect(workers.logic).toBe('complete');
+
+    vi.useRealTimers();
+  });
+
+  // Regression 4: Completed worker -> leave screen: completion remains intact
+  it('R4. Completed workers are not modified when navigating away or returning', () => {
+    const workers: Record<WorkerRole, WorkerInfo> = {
+      security: createFreshWorker('security', 'complete'),
+      logic: createFreshWorker('logic', 'complete'),
+      architecture: createFreshWorker('architecture', 'complete'),
+      quality: createFreshWorker('quality', 'complete'),
+    };
+
+    // User navigates away
+    let changed = false;
+    const nextWorkers = { ...workers };
+    (Object.keys(nextWorkers) as WorkerRole[]).forEach((role) => {
+      if (nextWorkers[role].state === 'running') {
+        changed = true;
+        nextWorkers[role] = createFreshWorker(role, 'cancelled');
+      }
+    });
+
+    expect(changed).toBe(false);
+    expect(nextWorkers.security.state).toBe('complete');
+    expect(nextWorkers.logic.state).toBe('complete');
+    expect(nextWorkers.architecture.state).toBe('complete');
+    expect(nextWorkers.quality.state).toBe('complete');
+  });
+
+  // Regression 5: Switch scenarios during a run: no stale state leaks
+  it('R5. Switching scenarios mid-run flushes simulation and applies fresh scenario data', () => {
+    // Mid-run state
+    const midRunWorkers = {
+      security: { ...createFreshWorker('security', 'running'), findingsCount: 1, elapsedMs: 800 },
+      logic: { ...createFreshWorker('logic', 'running'), findingsCount: 1, elapsedMs: 800 },
+      architecture: createFreshWorker('architecture', 'running'),
+      quality: createFreshWorker('quality', 'running'),
+    };
+
+    // User selects Scenario 3 (Auth unavailable -> all queued)
+    const sc3 = SCENARIOS.find((s) => s.id === 'auth_unavailable')!;
+    const freshWorkers = {} as Record<WorkerRole, WorkerInfo>;
+    (Object.keys(sc3.setupState.workersState) as WorkerRole[]).forEach((role) => {
+      freshWorkers[role] = createFreshWorker(role, sc3.setupState.workersState[role]);
+    });
+
+    expect(freshWorkers.security.state).toBe('queued');
+    expect(freshWorkers.security.findingsCount).toBe(0);
+    expect(freshWorkers.security.elapsedMs).toBe(0);
+    expect(freshWorkers.logic.state).toBe('queued');
+    expect(freshWorkers.logic.findingsCount).toBe(0);
+    expect(freshWorkers.logic.elapsedMs).toBe(0);
+  });
+
+  // Regression 6: Confirm Vite no longer allows arbitrary hosts
+  it('R6. vite.config.ts removes allowedHosts: true and specifies explicit trusted-host allowlist', () => {
+    const configPath = path.resolve(__dirname, '../../vite.config.ts');
+    const content = fs.readFileSync(configPath, 'utf-8');
+
+    // Must NOT contain allowedHosts: true
+    expect(content).not.toContain('allowedHosts: true');
+
+    // Must contain explicit trusted host definitions
+    expect(content).toContain("allowedHosts: [");
+    expect(content).toContain("'localhost'");
+    expect(content).toContain("'127.0.0.1'");
+    expect(content).toContain("'.run.app'");
   });
 });

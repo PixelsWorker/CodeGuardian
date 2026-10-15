@@ -46,6 +46,27 @@ export default function App() {
   // Command prompt input
   const [commandInput, setCommandInput] = useState<string>('');
 
+  const handleCancelRunningWorkersOnly = () => {
+    setWorkers((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      (Object.keys(next) as WorkerRole[]).forEach((role) => {
+        if (next[role].state === 'running') {
+          changed = true;
+          next[role] = createFreshWorker(role, 'cancelled');
+        }
+      });
+      return changed ? next : prev;
+    });
+  };
+
+  const handleNavigateScreen = (screen: ActiveScreen) => {
+    if (activeScreen === 'multi_agent' && screen !== 'multi_agent') {
+      handleCancelRunningWorkersOnly();
+    }
+    setActiveScreen(screen);
+  };
+
   // Keyboard navigation shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,22 +75,22 @@ export default function App() {
         return;
       }
 
-      if (e.key === '1') setActiveScreen('welcome');
-      if (e.key === '2') setActiveScreen('auth');
-      if (e.key === '3') setActiveScreen('pr_input');
-      if (e.key === '4') setActiveScreen('inspection');
-      if (e.key === '5') setActiveScreen('multi_agent');
-      if (e.key === '6') setActiveScreen('validation');
-      if (e.key === '7') setActiveScreen('report');
-      if (e.key === '8') setActiveScreen('publish');
-      if (e.key === '9') setActiveScreen('scenarios');
+      if (e.key === '1') handleNavigateScreen('welcome');
+      if (e.key === '2') handleNavigateScreen('auth');
+      if (e.key === '3') handleNavigateScreen('pr_input');
+      if (e.key === '4') handleNavigateScreen('inspection');
+      if (e.key === '5') handleNavigateScreen('multi_agent');
+      if (e.key === '6') handleNavigateScreen('validation');
+      if (e.key === '7') handleNavigateScreen('report');
+      if (e.key === '8') handleNavigateScreen('publish');
+      if (e.key === '9') handleNavigateScreen('scenarios');
       if (e.key === '?' || e.key === 'h' || e.key === 'H') setIsDocsOpen(true);
       if (e.key === 'Escape') setIsDocsOpen(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [activeScreen]);
 
   // CLI Command Dispatcher
   const handleExecuteCommand = (cmd: string) => {
@@ -77,15 +98,15 @@ export default function App() {
     if (!trimmed) return;
 
     if (trimmed === 'codeguardian --help' || trimmed === 'help') {
-      setActiveScreen('welcome');
+      handleNavigateScreen('welcome');
     } else if (trimmed === 'codeguardian auth status' || trimmed.startsWith('auth')) {
-      setActiveScreen('auth');
+      handleNavigateScreen('auth');
     } else if (trimmed.startsWith('codeguardian review') || trimmed.startsWith('review')) {
-      setActiveScreen('multi_agent');
+      handleNavigateScreen('multi_agent');
     } else if (trimmed.startsWith('codeguardian report') || trimmed.startsWith('report')) {
-      setActiveScreen('report');
+      handleNavigateScreen('report');
     } else if (trimmed.startsWith('codeguardian publish') || trimmed.startsWith('publish')) {
-      setActiveScreen('publish');
+      handleNavigateScreen('publish');
     } else if (trimmed === 'codeguardian docs' || trimmed === 'docs') {
       setIsDocsOpen(true);
     } else if (trimmed === 'clear') {
@@ -93,12 +114,12 @@ export default function App() {
     } else {
       // General feedback
       alert(`Simulated command executed: "${trimmed}"\nNavigating to matching review screen.`);
-      setActiveScreen('multi_agent');
+      handleNavigateScreen('multi_agent');
     }
   };
 
   const handleStartReview = () => {
-    setActiveScreen('multi_agent');
+    handleNavigateScreen('multi_agent');
   };
 
   const handleApplyScenario = (scenario: ScenarioDefinition) => {
@@ -147,7 +168,7 @@ export default function App() {
         noColor={noColor}
         setNoColor={setNoColor}
         activeScreen={activeScreen}
-        setActiveScreen={setActiveScreen}
+        setActiveScreen={handleNavigateScreen}
         onOpenDocs={() => setIsDocsOpen(true)}
         commandInput={commandInput}
         setCommandInput={setCommandInput}
@@ -156,7 +177,7 @@ export default function App() {
         {activeScreen === 'welcome' && (
           <ScreenAWelcome
             noColor={noColor}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
             onRunDefaultDemo={handleStartReview}
           />
         )}
@@ -168,7 +189,7 @@ export default function App() {
             setGithubAuth={setGithubAuth}
             codexAuth={codexAuth}
             setCodexAuth={setCodexAuth}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
           />
         )}
 
@@ -177,15 +198,15 @@ export default function App() {
             noColor={noColor}
             prUrl={prUrl}
             setPrUrl={setPrUrl}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
           />
         )}
 
         {activeScreen === 'inspection' && (
           <ScreenDInspection
             noColor={noColor}
-            onNavigate={setActiveScreen}
-            onStartWorkerRun={() => setActiveScreen('multi_agent')}
+            onNavigate={handleNavigateScreen}
+            onStartWorkerRun={() => handleNavigateScreen('multi_agent')}
           />
         )}
 
@@ -194,24 +215,25 @@ export default function App() {
             noColor={noColor}
             workers={workers}
             setWorkers={setWorkers}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
             onCancelAll={handleCancelAllWorkers}
+            onLeaveWhileRunning={handleCancelRunningWorkersOnly}
             onRetryLane={handleRetryWorkerLane}
-            onRunValidation={() => setActiveScreen('validation')}
+            onRunValidation={() => handleNavigateScreen('validation')}
           />
         )}
 
         {activeScreen === 'validation' && (
           <ScreenFFindingsValidation
             noColor={noColor}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
           />
         )}
 
         {activeScreen === 'report' && (
           <ScreenGReport
             noColor={noColor}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
           />
         )}
 
@@ -222,7 +244,7 @@ export default function App() {
             setStaleSha={setStaleSha}
             outcomeType={publishOutcome}
             setOutcomeType={setPublishOutcome}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
           />
         )}
 
@@ -230,7 +252,7 @@ export default function App() {
           <ScreenIScenarios
             noColor={noColor}
             onApplyScenario={handleApplyScenario}
-            onNavigate={setActiveScreen}
+            onNavigate={handleNavigateScreen}
           />
         )}
       </TerminalChrome>
