@@ -3,7 +3,7 @@ import { validateGitHubPullRequestUrl } from '../utils/urlValidator';
 import { createFreshWorker } from '../utils/workerFactory';
 import { SCENARIOS } from '../data/scenarios';
 import { WorkerRole, WorkerInfo } from '../types/contract';
-import { resolveServerNetworkConfig } from '../utils/serverConfig';
+import { resolveServerNetworkConfig, isValidPreviewHost, DEFAULT_TRUSTED_HOSTS } from '../utils/serverConfig';
 import fs from 'fs';
 import path from 'path';
 
@@ -339,22 +339,35 @@ describe('CodeGuardian G00 Navigation Lifecycle & Vite Hardening Regressions', (
   });
 
   // Regression 6: Confirm Vite no longer allows arbitrary hosts
-  it('R6. vite.config.ts removes allowedHosts: true and specifies explicit trusted-host allowlist', () => {
+  it('R6. vite.config.ts removes allowedHosts: true, avoids regional wildcard, and uses serverConfig directly', () => {
     const configPath = path.resolve(__dirname, '../../vite.config.ts');
     const content = fs.readFileSync(configPath, 'utf-8');
 
     // Must NOT contain allowedHosts: true
     expect(content).not.toContain('allowedHosts: true');
 
-    // Must contain explicit trusted host definitions and bind locally
-    expect(content).toContain("allowedHosts: trustedPreviewHosts");
-    expect(content).toContain("'localhost'");
-    expect(content).toContain("'127.0.0.1'");
-    expect(content).toContain("'ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app'");
+    // Must NOT contain broad regional wildcard or duplicated trustedPreviewHosts array
+    expect(content).not.toContain('.asia-northeast1.run.app');
+    expect(content).not.toContain('const trustedPreviewHosts');
+    expect(content).not.toContain('export const trustedPreviewHosts');
+
+    // Must use serverConfig directly
+    expect(content).toContain('allowedHosts: serverConfig.allowedHosts');
+    expect(content).toContain('host: serverConfig.host');
+    expect(content).toContain('port: serverConfig.port');
   });
 });
 
 describe('Vite Server Network Binding Resolution', () => {
+  it('DEFAULT_TRUSTED_HOSTS only contains exact approved hostnames and strictly excludes wildcards', () => {
+    expect(DEFAULT_TRUSTED_HOSTS).toContain('localhost');
+    expect(DEFAULT_TRUSTED_HOSTS).toContain('127.0.0.1');
+    expect(DEFAULT_TRUSTED_HOSTS).toContain('ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app');
+    expect(DEFAULT_TRUSTED_HOSTS).toContain('ais-pre-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app');
+    expect(DEFAULT_TRUSTED_HOSTS).not.toContain('.asia-northeast1.run.app');
+    expect(DEFAULT_TRUSTED_HOSTS.some(h => h.startsWith('.') || h.includes('*'))).toBe(false);
+  });
+
   it('Binds to 127.0.0.1 by default when no environment variables are set', () => {
     const config = resolveServerNetworkConfig({});
     expect(config.host).toBe('127.0.0.1');
@@ -401,12 +414,71 @@ describe('Vite Server Network Binding Resolution', () => {
     expect(c2.host).toBe('0.0.0.0');
   });
 
-  it('Includes trusted host allowlist matching AI Studio preview domain and localhost', () => {
+  it('Includes trusted host allowlist matching exact AI Studio preview hostnames and rejects broad regional wildcard', () => {
     const config = resolveServerNetworkConfig({});
     expect(config.allowedHosts).toContain('localhost');
     expect(config.allowedHosts).toContain('127.0.0.1');
     expect(config.allowedHosts).toContain('ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app');
     expect(config.allowedHosts).toContain('ais-pre-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app');
-    expect(config.allowedHosts).toContain('.asia-northeast1.run.app');
+    expect(config.allowedHosts).not.toContain('.asia-northeast1.run.app');
+    expect(config.allowedHosts).not.toContain('*.asia-northeast1.run.app');
+  });
+
+  it('Validates and dynamically adds approved AIS_APPLET_HOST', () => {
+    const config = resolveServerNetworkConfig({
+      AIS_APPLET_HOST: 'ais-custom-runner-123.asia-northeast1.run.app',
+    });
+    expect(config.allowedHosts).toContain('ais-custom-runner-123.asia-northeast1.run.app');
+  });
+
+  it('Rejects invalid or unsafe AIS_APPLET_HOST values (URLs, wildcards, malformed, or unexpected domains)', () => {
+    const invalidHosts = [
+      'https://ais-dev.asia-northeast1.run.app',
+      'http://localhost:3000',
+      '*.asia-northeast1.run.app',
+      '.asia-northeast1.run.app',
+      'ais-dev.asia-northeast1.run.app:8080',
+      'ais-dev.asia-northeast1.run.app/path',
+      'evil-attacker.com',
+      'attacker.run.app',
+      'ais-dev.asia-northeast1.run.app.evil.com',
+      '   ais-dev-123.asia-northeast1.run.app   ',
+      'ais--invalid.asia-northeast1.run.app',
+    ];
+
+    for (const invalidHost of invalidHosts) {
+      const config = resolveServerNetworkConfig({ AIS_APPLET_HOST: invalidHost });
+      expect(config.allowedHosts).not.toContain(invalidHost);
+      expect(config.allowedHosts).toEqual(DEFAULT_TRUSTED_HOSTS);
+    }
+  });
+
+  it('isValidPreviewHost accurately distinguishes valid preview hostnames from unsafe inputs', () => {
+    // Valid
+    expect(isValidPreviewHost('ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app')).toBe(true);
+    expect(isValidPreviewHost('ais-applet-uuid.us-central1.run.app')).toBe(true);
+    expect(isValidPreviewHost('ais-service-123.europe-west1.run.app')).toBe(true);
+
+    // Invalid: non-string / empty
+    expect(isValidPreviewHost('')).toBe(false);
+    expect(isValidPreviewHost(null)).toBe(false);
+    expect(isValidPreviewHost(undefined)).toBe(false);
+    expect(isValidPreviewHost(12345)).toBe(false);
+
+    // Invalid: URLs and paths
+    expect(isValidPreviewHost('https://ais-service.asia-northeast1.run.app')).toBe(false);
+    expect(isValidPreviewHost('ais-service.asia-northeast1.run.app/test')).toBe(false);
+    expect(isValidPreviewHost('ais-service.asia-northeast1.run.app:3000')).toBe(false);
+
+    // Invalid: wildcards and leading/trailing dots
+    expect(isValidPreviewHost('*.asia-northeast1.run.app')).toBe(false);
+    expect(isValidPreviewHost('.asia-northeast1.run.app')).toBe(false);
+    expect(isValidPreviewHost('ais-service.asia-northeast1.run.app.')).toBe(false);
+
+    // Invalid: unexpected domain or missing ais- prefix
+    expect(isValidPreviewHost('attacker.run.app')).toBe(false);
+    expect(isValidPreviewHost('google.com')).toBe(false);
+    expect(isValidPreviewHost('ais-service.attacker.com')).toBe(false);
+    expect(isValidPreviewHost('ais-service.run.app.attacker.com')).toBe(false);
   });
 });
