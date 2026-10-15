@@ -13,6 +13,7 @@ import {
   AuditScreen, 
   RepositorySnapshot, 
   JulesActivity, 
+  JulesActivityState,
   RepositoryAuditCoverage, 
   RepositoryAuditFinding, 
   RepositoryAuditReport, 
@@ -47,6 +48,85 @@ import {
   DEFAULT_AUDIT_FINDINGS, 
   DEFAULT_AUDIT_REPORT 
 } from './data/auditScenarios';
+
+export const canLaunchAudit = (
+  auth: 'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited',
+  isVerified: boolean,
+  snapshot: RepositorySnapshot,
+  planApproved: boolean
+): boolean => {
+  return (
+    auth === 'authenticated' &&
+    isVerified &&
+    Boolean(snapshot.verified_audit_commit_sha) &&
+    snapshot.verified_audit_commit_sha === snapshot.intended_commit_sha &&
+    planApproved
+  );
+};
+
+export const createFreshAuditActivities = (
+  activitiesState: Record<string, JulesActivityState>
+): JulesActivity[] => {
+  return DEFAULT_JULES_ACTIVITIES.map((base) => {
+    const targetState = activitiesState[base.id] || 'queued';
+    let progress = 0;
+    let durationMs = 0;
+    let candidateFindingsCount = base.candidateFindingsCount;
+    let currentAction = base.currentAction;
+    let logs = [...base.logs];
+
+    if (targetState === 'complete') {
+      progress = 100;
+      durationMs = base.durationMs;
+    } else if (targetState === 'running') {
+      progress = 45;
+      durationMs = 2500;
+      currentAction = 'Analyzing AST and caller dependencies...';
+      logs = [
+        `[00:01.00] Session initialized for ${base.name}`,
+        '[00:02.50] Parsing syntax tree and extracting symbols...',
+      ];
+    } else if (targetState === 'cancelled') {
+      progress = 30;
+      durationMs = 1500;
+      currentAction = 'Cancelled by operator signal';
+      logs = [
+        `[00:01.00] Session initialized for ${base.name}`,
+        '[00:01.50] CANCELLED: Operator abort signal received.',
+      ];
+    } else if (targetState === 'timed_out') {
+      progress = 80;
+      durationMs = 15000;
+      currentAction = 'Hard timeout exceeded (15m cap)';
+      logs = [
+        `[00:01.00] Session initialized for ${base.name}`,
+        '[05:00.00] Large dependency traversal in progress...',
+        '[15:00.00] ERROR: Operation timed out after 15m hard cap.',
+      ];
+    } else if (targetState === 'queued') {
+      progress = 0;
+      durationMs = 0;
+      candidateFindingsCount = 0;
+      currentAction = 'Waiting for preflight authorization';
+      logs = [];
+    } else if (targetState === 'failed') {
+      progress = 10;
+      durationMs = 1000;
+      currentAction = 'Preflight failed or rejected';
+      logs = ['[00:00.50] Preflight failed closed.'];
+    }
+
+    return {
+      ...base,
+      state: targetState,
+      progress,
+      durationMs,
+      candidateFindingsCount,
+      currentAction,
+      logs,
+    };
+  });
+};
 
 const INITIAL_WORKERS: Record<WorkerRole, WorkerInfo> = {
   security: createFreshWorker("security", "complete"),
@@ -104,7 +184,42 @@ export default function App() {
     });
   };
 
+  const handleCancelRunningAuditActivitiesOnly = () => {
+    setAuditActivities((prev) => {
+      let changed = false;
+      const next = prev.map((a) => {
+        if (a.state === 'running') {
+          changed = true;
+          return { ...a, state: 'cancelled' as JulesActivityState };
+        }
+        return a;
+      });
+      return changed ? next : prev;
+    });
+  };
+
+  const handleSwitchWorkflow = (mode: WorkflowMode) => {
+    if (activeWorkflow === mode) return;
+    if (activeWorkflow === 'pr_review' && activeScreen === 'multi_agent') {
+      handleCancelRunningWorkersOnly();
+    }
+    if (activeWorkflow === 'repo_audit' && auditScreen === 'audit_activity') {
+      handleCancelRunningAuditActivitiesOnly();
+    }
+    setAutoStartToken(null);
+    setAuditAutoStartToken(null);
+    setActiveWorkflow(mode);
+    if (mode === 'pr_review') {
+      setActiveScreen('welcome');
+    } else {
+      setAuditScreen('audit_repo');
+    }
+  };
+
   const handleNavigateScreen = (screen: ActiveScreen) => {
+    if (activeWorkflow === 'repo_audit' && auditScreen === 'audit_activity') {
+      handleCancelRunningAuditActivitiesOnly();
+    }
     if (activeScreen === 'multi_agent' && screen !== 'multi_agent') {
       handleCancelRunningWorkersOnly();
     }
@@ -124,46 +239,62 @@ export default function App() {
 
   // Full Repository Audit Handlers
   const handleNavigateAudit = (screen: AuditScreen) => {
+    if (activeWorkflow === 'pr_review' && activeScreen === 'multi_agent') {
+      handleCancelRunningWorkersOnly();
+    }
+    if (auditScreen === 'audit_activity' && screen !== 'audit_activity') {
+      handleCancelRunningAuditActivitiesOnly();
+    }
+    setAuditAutoStartToken(null);
     setActiveWorkflow('repo_audit');
     setAuditScreen(screen);
   };
 
   const handleLaunchAudit = () => {
     setActiveWorkflow('repo_audit');
-    setAuditAutoStartToken((prev) => (prev ? prev + 1 : 1));
-    setAuditScreen('audit_activity');
+    if (canLaunchAudit(julesAuth, isShaVerified, auditSnapshot, planApproved)) {
+      setAuditAutoStartToken((prev) => (prev ? prev + 1 : 1));
+      setAuditScreen('audit_activity');
+    } else {
+      setAuditAutoStartToken(null);
+      setAuditScreen('audit_preflight');
+    }
   };
 
   const handleCancelAuditActivities = () => {
-    setAuditActivities((prev) =>
-      prev.map((a) => (a.state === 'running' ? { ...a, state: 'cancelled' } : a))
-    );
+    handleCancelRunningAuditActivitiesOnly();
   };
 
   const handleApplyAuditScenario = (scenario: AuditScenarioDefinition) => {
-    setAuditSnapshot((prev) => ({
-      ...prev,
+    const newSnapshot: RepositorySnapshot = {
+      ...auditSnapshot,
       owner: scenario.snapshotState.owner,
       repo: scenario.snapshotState.repo,
       requested_branch: scenario.snapshotState.branch,
       intended_commit_sha: scenario.snapshotState.intendedSha,
       verified_audit_commit_sha: scenario.snapshotState.isShaVerified ? scenario.snapshotState.intendedSha : null,
-    }));
+    };
+    setAuditSnapshot(newSnapshot);
     setIsShaVerified(scenario.snapshotState.isShaVerified);
     setJulesAuth(scenario.snapshotState.julesAuth);
     setPlanApproved(scenario.snapshotState.planApproved);
+    setAuditAutoStartToken(null);
 
-    // Apply activity states
-    setAuditActivities((prev) =>
-      prev.map((a) => {
-        const targetState = scenario.snapshotState.activitiesState[a.id] || 'queued';
-        return {
-          ...a,
-          state: targetState,
-          progress: targetState === 'complete' ? 100 : targetState === 'running' ? 45 : 0,
-        };
-      })
-    );
+    // Apply fresh activity states and logs without stale telemetry
+    setAuditActivities(createFreshAuditActivities(scenario.snapshotState.activitiesState));
+
+    // Synchronize report status, snapshot, and limitations
+    setAuditReport((prev) => ({
+      ...prev,
+      repository: newSnapshot,
+      status: scenario.snapshotState.status,
+      limitations: scenario.snapshotState.isTimeout
+        ? [
+            ...DEFAULT_AUDIT_REPORT.limitations,
+            'Dependency activity timed out; supply chain coverage remains partial.',
+          ]
+        : DEFAULT_AUDIT_REPORT.limitations,
+    }));
 
     setActiveWorkflow('repo_audit');
     setAuditScreen(scenario.initialScreen);
@@ -172,8 +303,16 @@ export default function App() {
   // Keyboard navigation shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept typing when in an input element
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      // Don't intercept typing when in an input, textarea, select, or editable element, or modifier held
+      const target = e.target as HTMLElement | null;
+      const isInput = Boolean(
+        target && (
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+          target.isContentEditable
+        )
+      );
+      const hasModifier = e.ctrlKey || e.altKey || e.metaKey;
+      if (isInput || hasModifier) {
         return;
       }
 
@@ -210,7 +349,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeWorkflow, activeScreen, auditScreen]);
+  }, [activeWorkflow, activeScreen, auditScreen, julesAuth, isShaVerified, auditSnapshot, planApproved]);
 
   // Unified CLI Command Dispatcher
   const handleExecuteCommand = (cmd: string) => {
@@ -238,18 +377,14 @@ export default function App() {
     } else if (trimmed.startsWith('codeguardian publish') || trimmed.startsWith('publish')) {
       handleNavigateScreen('publish');
     } else if (trimmed === 'codeguardian mode pr' || trimmed === 'mode pr') {
-      setActiveWorkflow('pr_review');
-      setActiveScreen('welcome');
+      handleSwitchWorkflow('pr_review');
     } else if (trimmed === 'codeguardian mode audit' || trimmed === 'mode audit') {
-      setActiveWorkflow('repo_audit');
-      setAuditScreen('audit_repo');
+      handleSwitchWorkflow('repo_audit');
     } else if (trimmed === 'codeguardian docs' || trimmed === 'docs') {
       setIsDocsOpen(true);
     } else if (trimmed === 'clear') {
       setCommandInput('');
     } else {
-      // General feedback
-      alert(`Simulated command executed: "${trimmed}"`);
       if (trimmed.includes('audit')) {
         handleLaunchAudit();
       } else {
@@ -310,7 +445,7 @@ export default function App() {
         activeScreen={activeScreen}
         setActiveScreen={handleNavigateScreen}
         activeWorkflow={activeWorkflow}
-        setActiveWorkflow={setActiveWorkflow}
+        setActiveWorkflow={handleSwitchWorkflow}
         auditScreen={auditScreen}
         setAuditScreen={handleNavigateAudit}
         onOpenDocs={() => setIsDocsOpen(true)}
@@ -413,6 +548,8 @@ export default function App() {
                 noColor={noColor}
                 snapshot={auditSnapshot}
                 setSnapshot={setAuditSnapshot}
+                setIsShaVerified={setIsShaVerified}
+                setPlanApproved={setPlanApproved}
                 onNavigate={handleNavigateAudit}
                 onStartAudit={() => handleNavigateAudit('audit_preflight')}
               />
@@ -448,6 +585,7 @@ export default function App() {
                 setActivities={setAuditActivities}
                 onNavigate={handleNavigateAudit}
                 onCancelAudit={handleCancelAuditActivities}
+                onRunAudit={handleLaunchAudit}
                 autoStartToken={auditAutoStartToken}
               />
             )}

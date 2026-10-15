@@ -173,7 +173,7 @@ describe('CodeGuardian G06 Full Repository Audit Integration Tests', () => {
       fireEvent.click(screen.getByText(/Tier 4/i));
     });
 
-    expect(screen.getByText(/Filter: independently_verified/i)).toBeDefined();
+    expect(screen.getByText(/Filter: independently[ _]verified/i)).toBeDefined();
     expect(screen.getByText(/src\/utils\/serverConfig\.ts/i)).toBeDefined();
   });
 
@@ -183,6 +183,12 @@ describe('CodeGuardian G06 Full Repository Audit Integration Tests', () => {
 
     act(() => {
       fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[B\] Preflight/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Approve Execution Plan/i));
     });
     act(() => {
       fireEvent.click(screen.getByText(/\[D\] Jules Activity/i));
@@ -293,19 +299,255 @@ describe('CodeGuardian G06 Full Repository Audit Integration Tests', () => {
     expect(screen.getByText(/\[AUTH_ERROR\] Missing GCP Credentials/i)).toBeDefined();
   });
 
-  // Test 12: CLI Command Dispatcher handles audit commands
-  it('12. CLI Command Dispatcher executes codeguardian audit command and launches workflow', () => {
+  // Test 12: CLI Command Dispatcher enforces central preflight gate when unapproved
+  it('12. CLI Command Dispatcher enforces central preflight gate when unapproved and launches when approved', () => {
     render(<App />);
 
     const input = screen.getByPlaceholderText(/Type CLI command/i);
     const enterBtn = screen.getByText(/Enter ↵/i);
 
+    // Initial state: planApproved is false. CLI command must redirect to View B
     act(() => {
       fireEvent.change(input, { target: { value: 'codeguardian audit PixelsWorker/CodeGuardian' } });
       fireEvent.click(enterBtn);
     });
 
+    expect(screen.getByText(/AUDIT VIEW B: PREFLIGHT INTEGRITY & OPERATOR PLAN APPROVAL/i)).toBeDefined();
+
+    // Now approve plan and launch
+    const approveBtn = screen.getByText(/Approve Execution Plan/i);
+    act(() => {
+      fireEvent.click(approveBtn);
+    });
+
+    const launchBtn = screen.getByText(/Launch Jules Audit Session/i);
+    act(() => {
+      fireEvent.click(launchBtn);
+    });
+
     // Navigates to audit activity
     expect(screen.getByText(/AUDIT VIEW D: JULES AUDIT ACTIVITIES/i)).toBeDefined();
+  });
+
+  // Test 13: Direct Activity Run/Re-run button respects central authorization gate
+  it('13. Activity Run button respects central authorization gate and redirects to View B when unapproved', () => {
+    render(<App />);
+
+    // Switch to audit and navigate directly to Activity screen
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[D\] Jules Activity/i));
+    });
+
+    expect(screen.getByText(/AUDIT VIEW D: JULES AUDIT ACTIVITIES/i)).toBeDefined();
+
+    // Since planApproved is false initially, clicking Run/Re-run should redirect to View B
+    const runBtn = screen.getByText(/Re-run Jules Analysis|Run Jules Analysis/i);
+    act(() => {
+      fireEvent.click(runBtn);
+    });
+
+    // Should redirect to Preflight (View B)
+    expect(screen.getByText(/AUDIT VIEW B: PREFLIGHT INTEGRITY & OPERATOR PLAN APPROVAL/i)).toBeDefined();
+  });
+
+  // Test 14: Editing snapshot or choosing preset resets SHA verification and revokes plan approval
+  it('14. Modifying snapshot parameters resets verification and revokes plan approval', () => {
+    render(<App />);
+
+    // Switch to audit preflight
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[B\] Preflight/i));
+    });
+
+    // Approve the plan
+    act(() => {
+      fireEvent.click(screen.getByText(/Approve Execution Plan/i));
+    });
+    expect(screen.getByText(/OPERATOR APPROVED/i)).toBeDefined();
+
+    // Navigate to View A (Repo)
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+
+    // Click sample snapshot preset (facebook/react)
+    const presetBtn = screen.getByText(/facebook\/react @ a28189/i);
+    act(() => {
+      fireEvent.click(presetBtn);
+    });
+
+    // Navigate back to View B
+    act(() => {
+      fireEvent.click(screen.getByText(/Proceed to Audit Preflight/i));
+    });
+
+    // Plan approval must have been revoked and verification reset
+    expect(screen.queryByText(/OPERATOR APPROVED/i)).toBeNull();
+    expect(screen.getByText(/Approve Execution Plan/i)).toBeDefined();
+  });
+
+  // Test 15: Simulating drift or toggling auth revokes plan approval
+  it('15. Simulating SHA drift or toggling auth immediately revokes plan approval', () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[B\] Preflight/i));
+    });
+
+    // Approve plan first
+    act(() => {
+      fireEvent.click(screen.getByText(/Approve Execution Plan/i));
+    });
+    expect(screen.getByText(/OPERATOR APPROVED/i)).toBeDefined();
+
+    // Simulate drift
+    act(() => {
+      fireEvent.click(screen.getByText(/Simulate Drift/i));
+    });
+
+    // Approval must be revoked immediately
+    expect(screen.queryByText(/OPERATOR APPROVED/i)).toBeNull();
+    expect(screen.getByText(/REFUSED \(Stale Branch\)/i)).toBeDefined();
+
+    // Verify SHA again
+    act(() => {
+      fireEvent.click(screen.getByText(/Verify SHA/i));
+    });
+    // Approve plan again
+    act(() => {
+      fireEvent.click(screen.getByText(/Approve Execution Plan/i));
+    });
+    expect(screen.getByText(/OPERATOR APPROVED/i)).toBeDefined();
+
+    // Toggle Auth to unauthenticated
+    act(() => {
+      fireEvent.click(screen.getByText(/Toggle Auth/i));
+    });
+
+    // Plan approval must be revoked immediately
+    expect(screen.queryByText(/OPERATOR APPROVED/i)).toBeNull();
+    expect(screen.getByText(/\[AUTH_ERROR\] Missing GCP Credentials/i)).toBeDefined();
+  });
+
+  // Test 16: Cross-workflow navigation cancels only active running workers/activities without clearing completed results
+  it('16. Cross-workflow switching cancels only running items without wiping completed items', () => {
+    render(<App />);
+
+    // In PR Review, navigate to workers
+    act(() => {
+      fireEvent.click(screen.getByText(/\[5\] Workers/i));
+    });
+
+    // Start simulation
+    act(() => {
+      fireEvent.click(screen.getByText(/Re-run Simulation/i));
+    });
+
+    // Switch workflow to Repo Audit via top deck
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+
+    // Switch back to PR Review
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-pr-review'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[5\] Workers/i));
+    });
+
+    // The workers that were running should be cancelled, not left running
+    expect(screen.queryByText(/\[RUNNING\]/i)).toBeNull();
+  });
+
+  // Test 17: Keyboard shortcut guard ignores focus in inputs, textareas, selects, and modifier keys
+  it('17. Keyboard navigation ignores keypresses inside form inputs and with modifiers', () => {
+    render(<App />);
+
+    // Focus CLI input and press '2' (which normally opens Auth screen)
+    const cliInput = screen.getByPlaceholderText(/Type CLI command/i);
+    cliInput.focus();
+
+    act(() => {
+      fireEvent.keyDown(cliInput, { key: '2', code: 'Digit2' });
+    });
+
+    // Should remain on Welcome screen
+    expect(screen.getByText(/1\. Review Pull Request/i)).toBeDefined();
+
+    // Test modifier key (e.g. Ctrl+2) on window
+    act(() => {
+      fireEvent.keyDown(window, { key: '2', code: 'Digit2', ctrlKey: true });
+    });
+
+    // Should still remain on Welcome screen
+    expect(screen.getByText(/1\. Review Pull Request/i)).toBeDefined();
+  });
+
+  // Test 18: Applying an audit scenario synchronizes report status, snapshot, and limitations
+  it('18. Applying an audit scenario synchronizes report status and metadata', () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[S\] Scenarios/i));
+    });
+
+    // Apply Partial Timeout scenario
+    const partialBtn = screen.getByTestId('simulate-audit_partial_timeout');
+    act(() => {
+      fireEvent.click(partialBtn);
+    });
+
+    // Navigate to View F (AUDIT.md)
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+
+    // Status in report should reflect PARTIAL
+    expect(screen.getAllByText(/PARTIAL/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Dependency activity timed out; supply chain coverage remains partial\./i)).toBeDefined();
+  });
+
+  // Test 19: Clipboard failure fallback handles writeText rejection safely
+  it('19. AUDIT.md Preview handles clipboard copy failure gracefully', async () => {
+    render(<App />);
+
+    // Mock navigator.clipboard.writeText to reject
+    const originalClipboard = navigator.clipboard;
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockRejectedValue(new Error('Clipboard denied')),
+      },
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+
+    const copyBtn = screen.getByText(/Copy Artifact/i);
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    // Verify failure notification is shown
+    expect(screen.getByText(/Clipboard copy failed/i)).toBeDefined();
+
+    // Restore clipboard
+    Object.assign(navigator, { clipboard: originalClipboard });
   });
 });

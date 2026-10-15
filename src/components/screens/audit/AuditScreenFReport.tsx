@@ -27,6 +27,7 @@ export const AuditScreenFReport: React.FC<AuditScreenFReportProps> = ({
 }) => {
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [copyFailed, setCopyFailed] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'preview' | 'markdown' | 'json'>('preview');
 
   const verifiedFindings = report.findings.filter((f) => f.verification === 'verified');
   const rejectedFindings = report.findings.filter((f) => f.verification === 'rejected');
