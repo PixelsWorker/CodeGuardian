@@ -1,15 +1,17 @@
-# G00 - Complete CLI UX Demo (Draft Scope)
+# G00 - Complete CLI UX Demo (Accepted Scope)
 
 **Group:** G00 - Complete CLI UX Demo  
 **Phase:** Full product terminal UI/UX, all MVP CLI interactions, with **safe mocks only**  
-**Status:** DRAFT - NOT APPROVED. A nine-screen React/Vite **browser UX reference** exists on remote `main`, but a native CLI implementation/acceptance and executable G00 TODO are not verified.  
-**Suggested branch:** `feat/g00-cli-ux-demo` (separate authorization required; not verified as an existing remote branch)
+**Status:** DIRECTION ACCEPTED — nine-screen browser prototype walkthrough accepted as UX design reference and FROZEN at `e8e5844`. Native Ink CLI package (`ink/`) is the G00 deliverable; it is not yet implemented. G00 Ink implementation requires separate branch/worktree/dependency authorization.  
+**Suggested branch:** `feat/g00-ink-cli-demo` (separate authorization required; not verified as an existing remote branch)
 
 ## Goal
 
-**Current visual reference:** remote `main` contains a synthetic React/Vite terminal-style G00 prototype with screens A–I and browser test source. Its existence does not prove a native Ink/terminal executable, successful tests or Rockson's G00 acceptance. G06/Jules audit UX belongs to a separate future design track.
+**Accepted UX design reference:** the nine-screen React/Vite browser prototype (`src/`) has been accepted by the operator as the walkthrough reference for G00. It is FROZEN at `e8e5844`. No further browser prototype development is authorized.
 
-Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rockson in one navigable CLI workflow without requiring API keys, GitHub permissions, or real Codex calls. Obtain explicit approval before implementing G01 real PR retrieval.
+**Native Ink CLI deliverable:** port the accepted browser interaction patterns to real Ink terminal components, initially with mock data. The native terminal application lives in `ink/` with the CLI binary named `codeguardian`. It runs inside Windows Terminal, Warp, Kitty, GNOME Terminal and other compatible terminals.
+
+Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rockson in one navigable Ink CLI workflow without requiring API keys, GitHub permissions, or real Codex calls. Obtain explicit approval before implementing G01 real PR retrieval.
 
 ## In scope - the entire agreed CLI MVP experience
 
@@ -30,24 +32,25 @@ Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rocks
 - Codex SDK/model requests or PR-Agent calls.
 - Real GitHub review publication, even after a simulated confirmation.
 - Docker credential persistence, unattended webhooks, external services.
-- Future browser dashboard. The existing browser mock is a **reference**, not the native CLI deliverable.
+- Further development of the browser prototype. The browser mock at `e8e5844` is the **frozen design reference**, not the G00 Ink deliverable.
 - G06 repository-audit screens, Jules/GitHub cloud connections, live audit sessions and `AUDIT.md` generation.
 
 ## Done when
 
-1. All above CLI screens/flows can be demonstrated consistently with clearly marked fixtures and **DEMO ONLY** indicators.
+1. All above CLI screens/flows can be demonstrated consistently with clearly marked fixtures and **DEMO ONLY** indicators inside the Ink CLI.
 2. The entire terminal user journey (including canceled, denied, partial, stale, failure cases) is reviewable in one deliverable.
 3. Responsive terminal widths and color-disabled output are checked; critical accessibility concerns and visible state cues addressed.
 4. Existing relevant build/lint/type and safe mock smoke checks are run with actual commands/results (selected when G00 setup is approved).
-5. One group PR contains all G00 scope and its tests. Rockson explicitly approves the complete demo; without approval, G01 cannot start.
+5. One group PR contains all G00 scope and its tests. Rockson explicitly approves the complete Ink CLI demo; without approval, G01 cannot start.
 
 ## Dependencies and estimate
 
-- Dependencies: accepted project architecture, accepted mock schema, confirmed dev environment, initialized Git repository and approved branch plan, G00 scope approval.
+- Dependencies: accepted project architecture, accepted mock schema, confirmed Windows dev environment (Node 24 LTS, pnpm, TypeScript, Ink 8.0), initialized Git repository and approved branch plan, G00 scope approval.
 - Estimate: 2-3 working days after prerequisites are met; revisit if terminal UI expectations change.
 - Contract: `API-CONTRACT.md` v1 draft, only mock fixtures at G00.
 - Protected files allowed to be changed: NONE yet. G00 execution TODO must name exact permitted protected paths if edits become necessary.
 - Branch/PR: NOT CREATED.
+- **Ink package location:** `ink/` at repository root (`E:\Projects\CodeGuardian\ink\`). Separate `package.json`. CLI binary: `codeguardian`.
 
 ## Proposed acceptance demonstration
 
@@ -61,4 +64,7 @@ Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rocks
 
 ## Governance
 
-This file is a GROUP BRIEF, not an executable `TODO.md`. Once Rockson approves setup and G00 scope, prepare one bounded G00 TODO using `sprint-code.md`, and include the risk-based `sprint-test.md` test plan IN that TODO. An authorized G00 branch or PR does not grant push/merge permission by default.
+This file is a GROUP BRIEF, not an executable `TODO.md`. Once Rockson approves setup and G00 Ink scope, prepare one bounded G00 TODO using `sprint-code.md`, and include the risk-based `sprint-test.md` test plan IN that TODO. An authorized G00 branch or PR does not grant push/merge permission by default.
+
+**Browser prototype status:** `src/` is FROZEN at `e8e5844`. Operator walkthrough has been accepted. Do not extend the browser prototype. The accepted UX patterns in the browser reference are the source of truth for porting to Ink components.
+

@@ -1,9 +1,9 @@
-# CodeGuardian - Proposed Architecture
+# CodeGuardian - Architecture
 
-**Status:** Architecture candidate, awaiting approval  
+**Status:** Architecture candidate — accepted direction decisions applied 2026-10-16  
 **Version:** 0.1.0-planning  
 **Target:** `PixelsWorker/CodeGuardian`  
-**Date:** 2026-10-14
+**Date:** 2026-10-14 / **Updated:** 2026-10-16
 
 ## 1. Architectural principle
 
@@ -88,27 +88,41 @@ Record input refs, worker roles, deadlines, structured results, failure reasons,
 
 Upgrades follow: bump pinned version/digest -> run smoke and contract tests -> validate review output -> deploy only with release approval -> rollback when needed. No permanent fork is planned.
 
-## 10. Technology decisions (all PROPOSED until accepted)
+## 10. Technology decisions (D-01–D-08 accepted direction; D-09 proposed)
+
+**Accepted product direction (2026-10-16):** CodeGuardian is a native terminal application, not a standalone desktop application. The browser prototype (`src/`) is frozen at `e8e5844` as the accepted UX design reference only.
+
+**Repository layout (target):**
+```
+E:\Projects\CodeGuardian\
+├── src\          Browser UX reference — FROZEN at e8e5844 (design reference only)
+├── ink\          Native terminal application package
+│   ├── package.json
+│   └── src\cli.tsx  src\App.tsx  src\components\  src\screens\  src\core\
+├── integrations\
+│   └── pr-agent\   Future G04 plain-diff adapter (isolated, no GitHub access)
+```
 
 | Decision | Proposal | Why | Trade-off/approval needed |
 |---|---|---|---|
 | D-01 Runtime | Node.js 24 LTS + TypeScript | Stable, matches manager and SDK | Accept exact pin/upgrade policy |
-| D-02 Frontend | CLI-first UX, no browser dashboard in G00 | Delivers initial product workflow | G00 complete terminal UX approval |
+| D-02 Frontend | **Native Ink CLI inside `ink/`** — browser prototype frozen at `e8e5844` as design reference | Delivers initial product workflow in terminal | G00 complete Ink terminal UX acceptance required; browser prototype must not be extended |
 | D-03 Codex | `@openai/codex-sdk` + Codex CLI | Structured events/output | Validate actual version and login |
-| D-04 PR-Agent | Optional, external Docker A2A adapter in G04 | Independently upgradable | Requires model endpoint |
+| D-04 PR-Agent | Optional, external Docker A2A adapter in G04 — inside `integrations/pr-agent/`, isolated behind CodeGuardian adapter; no direct GitHub access | Independently upgradable | Plain-diff mode avoids GitHub token but runner must isolate filesystem/env/credentials; provider API access and external diff sending need separate approval |
 | D-05 HTTP | No Fastify server for G00-G03 | No API trigger needed yet | Revisit at G05 |
 | D-06 Persistence | Local run artifacts first; decide SQLite at G02/G03 | Keep initial setup lean | Approve durable-state scope |
 | D-07 Publication | Separate, confirmation-gated `COMMENT` publisher | Secure GitHub boundary | Approve actual operation G03 |
 | D-08 Security | Trusted developer-controlled repositories initially | Credential isolation not yet demonstrated | Mandatory threat review before forks/webhooks |
-| D-09 Repository audit | Optional Google Jules full-repo evidence producer in G06 | Complement PR-specific Codex specialists | Requires separate pilot, cloud permissions, snapshot proof, versioning and cost controls |
+| D-09 Repository audit | Optional Google Jules full-repo evidence producer in G06 | Complement PR-specific Codex specialists | Requires separate pilot, cloud permissions, snapshot proof, versioning and cost controls; does not delay G00–G03 |
 
 ## 11. Exit gates
 
-- **Architecture/setup**: decisions accepted, repository and environment identified, initial commit action approved separately, G00 boundaries confirmed.
-- **G00**: complete mock terminal demo shown and explicitly approved.
+- **Architecture/setup**: decisions accepted (D-01–D-08 direction decisions applied 2026-10-16), Windows repository and environment identified, G00 Ink CLI boundaries confirmed. Browser prototype frozen at `e8e5844`.
+- **G00**: complete mock Ink terminal demo shown and explicitly approved.
 - **G01+**: real CLI/business-function integration, actual test results and diff review, and group PR-specific authorization.
 
 No Docker build, Codex login, or PR review was performed while producing this document.
+
 
 ## 12. Optional Jules G06 architecture (PROPOSED, NOT APPROVED)
 

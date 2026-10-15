@@ -1,10 +1,10 @@
 # CodeGuardian — Full Development Roadmap
 
-**Status:** PLANNING BASELINE — NOT implementation authorization  
-**Updated:** 2026-10-15  
+**Status:** PLANNING BASELINE — updated 2026-10-16 with accepted product direction decisions  
+**Updated:** 2026-10-16  
 **Product:** CLI-first, multi-agent GitHub pull-request review platform  
 **Repository:** https://github.com/PixelsWorker/CodeGuardian  
-**Canonical Fedora checkout:** `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`  
+**Active Windows checkout:** `E:\Projects\CodeGuardian\` (relocated 2026-10-16)  
 **Active planned development branch:** `dev` (future G00 feature branch requires separate approval)  
 **Delivery model:** One group = one independently reviewed acceptance unit, including its tests and integration checks.
 
@@ -20,13 +20,13 @@ A developer supplies a GitHub PR URL. CodeGuardian reads the approved PR context
 - **GitHub reader:** Read-only PR metadata, diff and branch/SHA inspection.
 - **Validator/synthesizer:** Schema, file and changed-line verification, deduplication, and coverage warnings.
 - **Publisher:** Separate, one-time approval-gated GitHub writing component, implemented no earlier than G03.
-- **PR-Agent worker:** Optional external, version-pinned A2A integration in G04; not a dependency for the Codex-first MVP.
+- **PR-Agent worker:** Optional external, version-pinned A2A integration in G04; not a dependency for the Codex-first MVP. Isolated behind a CodeGuardian adapter; no direct GitHub access.
 
 Real deployment, unsupervised publication, automated PR merges, direct model-controlled infrastructure commands, arbitrary-hostile PR execution, and a web dashboard are excluded from G00–G03.
 
 ## 2. Verified Git starting point
 
-**2026-10-15 update (pre-governance-update source):** remote `main` `${expected}`; remote `dev` `${dev}`. Git histories have been reconciled. The earlier table below remains historical provenance. `main` now contains a React/Vite browser UX reference, its manifest and tests, but the native CLI, local test results and G00 acceptance remain unverified.
+**2026-10-16 update (local governance patch baseline):** local `main` HEAD `e8e58443c9e13129bc2ee9459751c9944eef3da9`, zero divergence from `origin/main`. Browser prototype (`src/`) is **FROZEN at this SHA** as the accepted UX design reference. `dev` branch pre-patch: `a39a37525ba5a5645dec8e382be0f47c735d1d0e`. Git histories have been reconciled. `main` now contains a React/Vite browser UX reference, its manifest and tests, but the native CLI, local test results and G00 acceptance remain unverified.
 
 At the start of this roadmap, the live GitHub references were:
 
@@ -215,16 +215,18 @@ For **every** group:
 
 ## 14. Immediate next group run
 
-**NEXT: PRE-G00 approval/setup, then G00 — Complete CLI UX Demo.**
+**NEXT: PRE-G00 approval/setup, then G00 — Native Ink CLI Demo.**
 
-1. Review the **Google AI Studio G00 mock UX** independently as design exploration. It must remain mock-only and cannot replace native terminal acceptance.
-2. Confirm architecture decisions, mock contract, complete G00 screen inventory, command names and precise framework/package versions.
-3. Verify the Fedora execution environment; fix or work around the Codex `bwrap` failure only through approved, security-respecting configuration.
-4. Draft and review one executable G00 TODO, including terminal test matrix and branch/dependency permissions.
-5. Only after explicit authorization, let Codex implement the local terminal CLI with mock fixtures.
-6. Review actual G00 implementation, tests and terminal demonstration; approve G01 only if the complete CLI UX is accepted.
+1. The **browser G00 mock UX** (nine screens, `src/`) is accepted as the walkthrough reference and is FROZEN at `e8e5844`. No further browser development is authorized.
+2. Confirm architecture decisions, mock contract, complete G00 screen inventory in `G00-CLI-WIREFRAMES.md`, command names and precise framework/package versions for the Ink package (`ink/`).
+3. Verify the Windows execution environment; confirm Node 24 LTS, pnpm, TypeScript, Ink 8.0 availability.
+4. Draft and review one executable G00 TODO for the Ink CLI, including terminal test matrix and branch/dependency permissions.
+5. Only after explicit authorization, let Codex implement the local terminal CLI with mock fixtures inside `ink/`.
+6. Review actual G00 Ink implementation, tests and terminal demonstration; approve G01 only if the complete Ink CLI UX is accepted.
 
-**Current release state:** React/Vite browser UX prototype source and tests exist on `main`, but native CLI implementation, local test outcomes, real GitHub/Codex/Jules calls and G00 acceptance remain unverified. This document approves no implementation, new branch, live audit, publication or deployment.
+**G04 note:** PR-Agent integration goes inside `integrations/pr-agent/`, isolated behind a CodeGuardian adapter. No direct GitHub access. Plain-diff mode avoids a GitHub platform token but requires explicit runner filesystem/env/credential isolation. Separate approval needed before provider API access or external diff sending.
+
+**Current release state (2026-10-16):** React/Vite browser UX prototype (`src/`) frozen at `e8e5844` as accepted design reference. Repository relocated to `E:\Projects\CodeGuardian\` (single clean checkout, no linked worktrees). Native Ink CLI implementation, local test outcomes, real GitHub/Codex/Jules calls and G00 Ink acceptance remain unverified. This document approves no implementation, new branch, live audit, publication or deployment.
 
 ## 15. Source-of-truth references
 
@@ -236,3 +238,4 @@ For **every** group:
 - `SETUP.md`, `HANDOFF.md`, `REPO-INITIALIZATION.md` — earlier setup/history records, potentially stale after reconciliation.
 - `TECH-RESEARCH.md` — prior source checks and known unverified local integration claims.
 - Parent workspace governance documents and repository `AGENTS.md` — approvals, protected paths and group process.
+
