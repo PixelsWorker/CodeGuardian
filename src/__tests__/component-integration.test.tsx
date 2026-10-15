@@ -9,7 +9,9 @@ describe('CodeGuardian G00 React Component Integration Tests', () => {
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
+    act(() => {
+      vi.clearAllTimers();
+    });
     vi.useRealTimers();
   });
 
@@ -273,6 +275,130 @@ describe('CodeGuardian G00 React Component Integration Tests', () => {
     });
 
     // Reaches COMPLETE without self-cancellation
+    expect(screen.getAllByText(/\[COMPLETE\]/i).length).toBe(4);
+  });
+
+  // Test 9: Launching from inspection screen starts a new simulation automatically
+  it('9. Launching from inspection screen starts a new simulation automatically', async () => {
+    render(<App />);
+
+    // Navigate to Screen D (Inspection)
+    act(() => {
+      fireEvent.click(screen.getByText(/\[4\] Inspection/i));
+    });
+
+    expect(screen.getByText(/Screen D — PR Inspection/i)).toBeDefined();
+
+    // Click "Launch 4 Specialist Lanes"
+    act(() => {
+      fireEvent.click(screen.getByText(/Launch 4 Specialist Lanes/i));
+    });
+
+    // Should now be on Screen E and workers immediately enter [RUNNING]
+    expect(screen.getByText(/Screen E — Multi-Agent Specialist Activity Lanes/i)).toBeDefined();
+    const runningBadges = screen.getAllByText(/\[RUNNING\]/i);
+    expect(runningBadges.length).toBe(4);
+
+    // Advance through the simulation steps to completion (1900ms)
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // All 4 specialists complete
+    const completeBadges = screen.getAllByText(/\[COMPLETE\]/i);
+    expect(completeBadges.length).toBe(4);
+    expect(screen.getByText(/All specialists finished/i)).toBeDefined();
+  });
+
+  // Test 10: Simulated CLI review command starts a new simulation automatically
+  it('10. Simulated CLI review command starts a new simulation automatically', async () => {
+    render(<App />);
+
+    // Find the CLI command input and enter button
+    const input = screen.getByPlaceholderText(/Type CLI command/i);
+    const enterBtn = screen.getByText(/Enter ↵/i);
+
+    // Type "codeguardian review" and submit
+    act(() => {
+      fireEvent.change(input, { target: { value: 'codeguardian review' } });
+      fireEvent.click(enterBtn);
+    });
+
+    // Navigates to Screen E and starts simulation
+    expect(screen.getByText(/Screen E — Multi-Agent Specialist Activity Lanes/i)).toBeDefined();
+    const runningBadges = screen.getAllByText(/\[RUNNING\]/i);
+    expect(runningBadges.length).toBe(4);
+
+    // Advance timers through simulation
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    const completeBadges = screen.getAllByText(/\[COMPLETE\]/i);
+    expect(completeBadges.length).toBe(4);
+  });
+
+  // Test 11: Direct navigation to Screen E does NOT restart if already completed
+  it('11. Navigating to Screen E directly (via tab/nav) does NOT restart if already completed', async () => {
+    render(<App />);
+
+    // Launch from inspection screen first
+    act(() => {
+      fireEvent.click(screen.getByText(/\[4\] Inspection/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Launch 4 Specialist Lanes/i));
+    });
+    // Wait for completion
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getAllByText(/\[COMPLETE\]/i).length).toBe(4);
+
+    // Navigate away to Screen A (Welcome)
+    act(() => {
+      fireEvent.click(screen.getByText(/\[1\] Welcome/i));
+    });
+    expect(screen.getByText(/Launch Full Review Demo/i)).toBeDefined();
+
+    // Directly navigate back to Screen E via the nav button [5] Workers
+    act(() => {
+      fireEvent.click(screen.getByText(/\[5\] Workers/i));
+    });
+
+    // Workers must still be [COMPLETE], NOT reset to [RUNNING]
+    expect(screen.getAllByText(/\[COMPLETE\]/i).length).toBe(4);
+    expect(screen.queryByText(/\[RUNNING\]/i)).toBeNull();
+
+    // Even after advancing time, no unexpected run occurred
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getAllByText(/\[COMPLETE\]/i).length).toBe(4);
+    expect(screen.queryByText(/\[RUNNING\]/i)).toBeNull();
+  });
+
+  // Test 12: Launching under React StrictMode from inspection screen starts and finishes normally
+  it('12. Launching from inspection screen under React StrictMode completes without interruption', async () => {
+    render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[4\] Inspection/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Launch 4 Specialist Lanes/i));
+    });
+
+    expect(screen.getAllByText(/\[RUNNING\]/i).length).toBe(4);
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
     expect(screen.getAllByText(/\[COMPLETE\]/i).length).toBe(4);
   });
 });

@@ -42,6 +42,7 @@ export default function App() {
   const [workers, setWorkers] = useState<Record<WorkerRole, WorkerInfo>>(INITIAL_WORKERS);
   const [staleSha, setStaleSha] = useState<boolean>(false);
   const [publishOutcome, setPublishOutcome] = useState<'normal' | 'operator_denied' | 'denied_permission' | 'stale_head' | 'duplicate_warning'>('normal');
+  const [autoStartToken, setAutoStartToken] = useState<number | null>(null);
 
   // Command prompt input
   const [commandInput, setCommandInput] = useState<string>('');
@@ -64,7 +65,16 @@ export default function App() {
     if (activeScreen === 'multi_agent' && screen !== 'multi_agent') {
       handleCancelRunningWorkersOnly();
     }
+    setAutoStartToken(null);
     setActiveScreen(screen);
+  };
+
+  const handleLaunchReview = () => {
+    if (activeScreen === 'multi_agent') {
+      handleCancelRunningWorkersOnly();
+    }
+    setAutoStartToken((prev) => (prev ? prev + 1 : 1));
+    setActiveScreen('multi_agent');
   };
 
   // Keyboard navigation shortcuts
@@ -102,7 +112,7 @@ export default function App() {
     } else if (trimmed === 'codeguardian auth status' || trimmed.startsWith('auth')) {
       handleNavigateScreen('auth');
     } else if (trimmed.startsWith('codeguardian review') || trimmed.startsWith('review')) {
-      handleNavigateScreen('multi_agent');
+      handleLaunchReview();
     } else if (trimmed.startsWith('codeguardian report') || trimmed.startsWith('report')) {
       handleNavigateScreen('report');
     } else if (trimmed.startsWith('codeguardian publish') || trimmed.startsWith('publish')) {
@@ -114,15 +124,16 @@ export default function App() {
     } else {
       // General feedback
       alert(`Simulated command executed: "${trimmed}"\nNavigating to matching review screen.`);
-      handleNavigateScreen('multi_agent');
+      handleLaunchReview();
     }
   };
 
   const handleStartReview = () => {
-    handleNavigateScreen('multi_agent');
+    handleLaunchReview();
   };
 
   const handleApplyScenario = (scenario: ScenarioDefinition) => {
+    setAutoStartToken(null);
     setGithubAuth(scenario.setupState.githubAuth);
     setCodexAuth(scenario.setupState.codexAuth);
     setPrUrl(scenario.setupState.prUrl);
@@ -206,7 +217,7 @@ export default function App() {
           <ScreenDInspection
             noColor={noColor}
             onNavigate={handleNavigateScreen}
-            onStartWorkerRun={() => handleNavigateScreen('multi_agent')}
+            onStartWorkerRun={handleLaunchReview}
           />
         )}
 
@@ -219,6 +230,7 @@ export default function App() {
             onCancelAll={handleCancelAllWorkers}
             onRetryLane={handleRetryWorkerLane}
             onRunValidation={() => handleNavigateScreen('validation')}
+            autoStartToken={autoStartToken}
           />
         )}
 

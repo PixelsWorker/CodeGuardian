@@ -3,6 +3,7 @@ import { validateGitHubPullRequestUrl } from '../utils/urlValidator';
 import { createFreshWorker } from '../utils/workerFactory';
 import { SCENARIOS } from '../data/scenarios';
 import { WorkerRole, WorkerInfo } from '../types/contract';
+import { resolveServerNetworkConfig } from '../utils/serverConfig';
 import fs from 'fs';
 import path from 'path';
 
@@ -350,5 +351,62 @@ describe('CodeGuardian G00 Navigation Lifecycle & Vite Hardening Regressions', (
     expect(content).toContain("'localhost'");
     expect(content).toContain("'127.0.0.1'");
     expect(content).toContain("'ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app'");
+  });
+});
+
+describe('Vite Server Network Binding Resolution', () => {
+  it('Binds to 127.0.0.1 by default when no environment variables are set', () => {
+    const config = resolveServerNetworkConfig({});
+    expect(config.host).toBe('127.0.0.1');
+    expect(config.port).toBe(3000);
+  });
+
+  it('NODE_ENV=production alone does NOT trigger 0.0.0.0 binding (must remain 127.0.0.1)', () => {
+    const config = resolveServerNetworkConfig({ NODE_ENV: 'production' });
+    expect(config.host).toBe('127.0.0.1');
+  });
+
+  it('NODE_ENV=production with custom PORT alone does NOT trigger 0.0.0.0 binding', () => {
+    const config = resolveServerNetworkConfig({ NODE_ENV: 'production', PORT: '8080' });
+    expect(config.host).toBe('127.0.0.1');
+    expect(config.port).toBe(8080);
+  });
+
+  it('PORT alone does NOT trigger 0.0.0.0 binding', () => {
+    const config = resolveServerNetworkConfig({ PORT: '4000' });
+    expect(config.host).toBe('127.0.0.1');
+    expect(config.port).toBe(4000);
+  });
+
+  it('Verified AI Studio preview signal (AIS_APPLET_ID) authorizes 0.0.0.0 binding', () => {
+    const config = resolveServerNetworkConfig({ AIS_APPLET_ID: 'ec804501-49b9-4096-955b-fa575e66697f' });
+    expect(config.host).toBe('0.0.0.0');
+  });
+
+  it('Verified preview signal (K_SERVICE) authorizes 0.0.0.0 binding', () => {
+    const config = resolveServerNetworkConfig({ K_SERVICE: 'ais-dev-service' });
+    expect(config.host).toBe('0.0.0.0');
+  });
+
+  it('Verified preview signal (AIS_PREVIEW) authorizes 0.0.0.0 binding', () => {
+    const config = resolveServerNetworkConfig({ AIS_PREVIEW: 'true' });
+    expect(config.host).toBe('0.0.0.0');
+  });
+
+  it('Explicit opt-in environment variables (VITE_HOST_ALL or PREVIEW_HOST_ALL) authorize 0.0.0.0 binding', () => {
+    const c1 = resolveServerNetworkConfig({ VITE_HOST_ALL: 'true' });
+    expect(c1.host).toBe('0.0.0.0');
+
+    const c2 = resolveServerNetworkConfig({ PREVIEW_HOST_ALL: 'true' });
+    expect(c2.host).toBe('0.0.0.0');
+  });
+
+  it('Includes trusted host allowlist matching AI Studio preview domain and localhost', () => {
+    const config = resolveServerNetworkConfig({});
+    expect(config.allowedHosts).toContain('localhost');
+    expect(config.allowedHosts).toContain('127.0.0.1');
+    expect(config.allowedHosts).toContain('ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app');
+    expect(config.allowedHosts).toContain('ais-pre-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app');
+    expect(config.allowedHosts).toContain('.asia-northeast1.run.app');
   });
 });

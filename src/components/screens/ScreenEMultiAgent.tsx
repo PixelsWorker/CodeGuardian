@@ -25,6 +25,7 @@ interface ScreenEMultiAgentProps {
   onCancelAll: () => void;
   onRetryLane: (role: WorkerRole) => void;
   onRunValidation: () => void;
+  autoStartToken?: number | null;
 }
 
 export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
@@ -35,6 +36,7 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
   onCancelAll,
   onRetryLane,
   onRunValidation,
+  autoStartToken,
 }) => {
   const [activeLogRole, setActiveLogRole] = useState<WorkerRole | null>(null);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
@@ -187,6 +189,16 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
     }, 1900);
     timersRef.current.push(t3);
   };
+
+  // Handle auto-start trigger (e.g. from Inspection screen "Launch 4 Specialist Lanes", Welcome "Launch Full Review Demo", or CLI "codeguardian review")
+  useEffect(() => {
+    if (!autoStartToken) return;
+    handleStartDeterministicRun();
+    return () => {
+      clearScheduledTimers();
+      runGenerationRef.current += 1;
+    };
+  }, [autoStartToken]);
 
   const getWorkerIcon = (role: WorkerRole) => {
     switch (role) {
