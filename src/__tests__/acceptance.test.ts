@@ -345,10 +345,10 @@ describe('CodeGuardian G00 Navigation Lifecycle & Vite Hardening Regressions', (
     // Must NOT contain allowedHosts: true
     expect(content).not.toContain('allowedHosts: true');
 
-    // Must contain explicit trusted host definitions
-    expect(content).toContain("allowedHosts: [");
+    // Must contain explicit trusted host definitions and bind locally
+    expect(content).toContain("allowedHosts: trustedPreviewHosts");
     expect(content).toContain("'localhost'");
     expect(content).toContain("'127.0.0.1'");
-    expect(content).toContain("'.run.app'");
+    expect(content).toContain("'ais-dev-x2tg3lcsmgot7hyie7bj66-711888545375.asia-northeast1.run.app'");
   });
 });

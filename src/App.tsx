@@ -217,7 +217,6 @@ export default function App() {
             setWorkers={setWorkers}
             onNavigate={handleNavigateScreen}
             onCancelAll={handleCancelAllWorkers}
-            onLeaveWhileRunning={handleCancelRunningWorkersOnly}
             onRetryLane={handleRetryWorkerLane}
             onRunValidation={() => handleNavigateScreen('validation')}
           />

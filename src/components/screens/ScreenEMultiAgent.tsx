@@ -23,7 +23,6 @@ interface ScreenEMultiAgentProps {
   setWorkers: React.Dispatch<React.SetStateAction<Record<WorkerRole, WorkerInfo>>>;
   onNavigate: (screen: ActiveScreen) => void;
   onCancelAll: () => void;
-  onLeaveWhileRunning?: () => void;
   onRetryLane: (role: WorkerRole) => void;
   onRunValidation: () => void;
 }
@@ -34,13 +33,11 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
   setWorkers,
   onNavigate,
   onCancelAll,
-  onLeaveWhileRunning,
   onRetryLane,
   onRunValidation,
 }) => {
   const [activeLogRole, setActiveLogRole] = useState<WorkerRole | null>(null);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const isSimulatingRef = useRef<boolean>(false);
 
   // Timer refs and generation counter for bulletproof simulation lifecycle
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -51,23 +48,17 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
     timersRef.current = [];
   };
 
+  // Child unmount cleanup: clears timers and invalidates run generation without calling unstable parent callbacks
   useEffect(() => {
     return () => {
       clearScheduledTimers();
       runGenerationRef.current += 1;
-      // If user navigates away while simulation is actively progressing,
-      // cancel only the running workers in the parent state
-      if (isSimulatingRef.current) {
-        isSimulatingRef.current = false;
-        onLeaveWhileRunning?.();
-      }
     };
-  }, [onLeaveWhileRunning]);
+  }, []);
 
   const handleCancelAll = () => {
     clearScheduledTimers();
     runGenerationRef.current += 1;
-    isSimulatingRef.current = false;
     setIsSimulating(false);
     onCancelAll();
   };
@@ -84,7 +75,6 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
     clearScheduledTimers();
     runGenerationRef.current += 1;
     const currentGen = runGenerationRef.current;
-    isSimulatingRef.current = true;
     setIsSimulating(true);
 
     // Reset to running
@@ -193,7 +183,6 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
           findingsCount: 1,
         },
       }));
-      isSimulatingRef.current = false;
       setIsSimulating(false);
     }, 1900);
     timersRef.current.push(t3);
