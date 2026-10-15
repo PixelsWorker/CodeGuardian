@@ -8,6 +8,16 @@ import {
   WorkerInfo, 
   ScenarioDefinition 
 } from './types/contract';
+import { 
+  WorkflowMode, 
+  AuditScreen, 
+  RepositorySnapshot, 
+  JulesActivity, 
+  RepositoryAuditCoverage, 
+  RepositoryAuditFinding, 
+  RepositoryAuditReport, 
+  AuditScenarioDefinition 
+} from './types/auditContract';
 import { TerminalChrome } from './components/TerminalChrome';
 import { ScreenAWelcome } from './components/screens/ScreenAWelcome';
 import { ScreenBAuth } from './components/screens/ScreenBAuth';
@@ -18,8 +28,25 @@ import { ScreenFFindingsValidation } from './components/screens/ScreenFFindingsV
 import { ScreenGReport } from './components/screens/ScreenGReport';
 import { ScreenHPublish } from './components/screens/ScreenHPublish';
 import { ScreenIScenarios } from './components/screens/ScreenIScenarios';
+
+// Audit Screen Components
+import { AuditScreenARepoSelect } from './components/screens/audit/AuditScreenARepoSelect';
+import { AuditScreenBPreflight } from './components/screens/audit/AuditScreenBPreflight';
+import { AuditScreenCCoverage } from './components/screens/audit/AuditScreenCCoverage';
+import { AuditScreenDActivity } from './components/screens/audit/AuditScreenDActivity';
+import { AuditScreenEVerification } from './components/screens/audit/AuditScreenEVerification';
+import { AuditScreenFReport } from './components/screens/audit/AuditScreenFReport';
+import { AuditScreenScenarios } from './components/screens/audit/AuditScreenScenarios';
+
 import { HandoffDocsModal } from './components/modals/HandoffDocsModal';
 import { createFreshWorker } from './utils/workerFactory';
+import { 
+  DEFAULT_REPOSITORY_SNAPSHOT, 
+  DEFAULT_JULES_ACTIVITIES, 
+  DEFAULT_COVERAGE_LEDGER, 
+  DEFAULT_AUDIT_FINDINGS, 
+  DEFAULT_AUDIT_REPORT 
+} from './data/auditScenarios';
 
 const INITIAL_WORKERS: Record<WorkerRole, WorkerInfo> = {
   security: createFreshWorker("security", "complete"),
@@ -29,13 +56,17 @@ const INITIAL_WORKERS: Record<WorkerRole, WorkerInfo> = {
 };
 
 export default function App() {
+  // Top-level workflow mode: 'pr_review' (G00) or 'repo_audit' (G06)
+  const [activeWorkflow, setActiveWorkflow] = useState<WorkflowMode>('pr_review');
+
+  // PR Review Navigation & Screens
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('welcome');
   const [terminalWidth, setTerminalWidth] = useState<TerminalWidth>('standard');
   const [terminalTheme, setTerminalTheme] = useState<TerminalTheme>('terminal-dark');
   const [noColor, setNoColor] = useState<boolean>(false);
   const [isDocsOpen, setIsDocsOpen] = useState<boolean>(false);
 
-  // Core state machine
+  // PR Review State Machine
   const [githubAuth, setGithubAuth] = useState<AuthState>('authenticated');
   const [codexAuth, setCodexAuth] = useState<AuthState>('authenticated');
   const [prUrl, setPrUrl] = useState<string>('https://github.com/example/demo/pull/42');
@@ -43,6 +74,18 @@ export default function App() {
   const [staleSha, setStaleSha] = useState<boolean>(false);
   const [publishOutcome, setPublishOutcome] = useState<'normal' | 'operator_denied' | 'denied_permission' | 'stale_head' | 'duplicate_warning'>('normal');
   const [autoStartToken, setAutoStartToken] = useState<number | null>(null);
+
+  // Full Repository Audit (G06) State Machine
+  const [auditScreen, setAuditScreen] = useState<AuditScreen>('audit_repo');
+  const [auditSnapshot, setAuditSnapshot] = useState<RepositorySnapshot>(DEFAULT_REPOSITORY_SNAPSHOT);
+  const [julesAuth, setJulesAuth] = useState<'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited'>('authenticated');
+  const [isShaVerified, setIsShaVerified] = useState<boolean>(true);
+  const [planApproved, setPlanApproved] = useState<boolean>(false);
+  const [auditActivities, setAuditActivities] = useState<JulesActivity[]>(DEFAULT_JULES_ACTIVITIES);
+  const [coverageLedger, setCoverageLedger] = useState<RepositoryAuditCoverage[]>(DEFAULT_COVERAGE_LEDGER);
+  const [auditFindings, setAuditFindings] = useState<RepositoryAuditFinding[]>(DEFAULT_AUDIT_FINDINGS);
+  const [auditReport, setAuditReport] = useState<RepositoryAuditReport>(DEFAULT_AUDIT_REPORT);
+  const [auditAutoStartToken, setAuditAutoStartToken] = useState<number | null>(null);
 
   // Command prompt input
   const [commandInput, setCommandInput] = useState<string>('');
@@ -66,6 +109,7 @@ export default function App() {
       handleCancelRunningWorkersOnly();
     }
     setAutoStartToken(null);
+    setActiveWorkflow('pr_review');
     setActiveScreen(screen);
   };
 
@@ -73,8 +117,56 @@ export default function App() {
     if (activeScreen === 'multi_agent') {
       handleCancelRunningWorkersOnly();
     }
+    setActiveWorkflow('pr_review');
     setAutoStartToken((prev) => (prev ? prev + 1 : 1));
     setActiveScreen('multi_agent');
+  };
+
+  // Full Repository Audit Handlers
+  const handleNavigateAudit = (screen: AuditScreen) => {
+    setActiveWorkflow('repo_audit');
+    setAuditScreen(screen);
+  };
+
+  const handleLaunchAudit = () => {
+    setActiveWorkflow('repo_audit');
+    setAuditAutoStartToken((prev) => (prev ? prev + 1 : 1));
+    setAuditScreen('audit_activity');
+  };
+
+  const handleCancelAuditActivities = () => {
+    setAuditActivities((prev) =>
+      prev.map((a) => (a.state === 'running' ? { ...a, state: 'cancelled' } : a))
+    );
+  };
+
+  const handleApplyAuditScenario = (scenario: AuditScenarioDefinition) => {
+    setAuditSnapshot((prev) => ({
+      ...prev,
+      owner: scenario.snapshotState.owner,
+      repo: scenario.snapshotState.repo,
+      requested_branch: scenario.snapshotState.branch,
+      intended_commit_sha: scenario.snapshotState.intendedSha,
+      verified_audit_commit_sha: scenario.snapshotState.isShaVerified ? scenario.snapshotState.intendedSha : null,
+    }));
+    setIsShaVerified(scenario.snapshotState.isShaVerified);
+    setJulesAuth(scenario.snapshotState.julesAuth);
+    setPlanApproved(scenario.snapshotState.planApproved);
+
+    // Apply activity states
+    setAuditActivities((prev) =>
+      prev.map((a) => {
+        const targetState = scenario.snapshotState.activitiesState[a.id] || 'queued';
+        return {
+          ...a,
+          state: targetState,
+          progress: targetState === 'complete' ? 100 : targetState === 'running' ? 45 : 0,
+        };
+      })
+    );
+
+    setActiveWorkflow('repo_audit');
+    setAuditScreen(scenario.initialScreen);
   };
 
   // Keyboard navigation shortcuts
@@ -85,24 +177,42 @@ export default function App() {
         return;
       }
 
-      if (e.key === '1') handleNavigateScreen('welcome');
-      if (e.key === '2') handleNavigateScreen('auth');
-      if (e.key === '3') handleNavigateScreen('pr_input');
-      if (e.key === '4') handleNavigateScreen('inspection');
-      if (e.key === '5') handleNavigateScreen('multi_agent');
-      if (e.key === '6') handleNavigateScreen('validation');
-      if (e.key === '7') handleNavigateScreen('report');
-      if (e.key === '8') handleNavigateScreen('publish');
-      if (e.key === '9') handleNavigateScreen('scenarios');
-      if (e.key === '?' || e.key === 'h' || e.key === 'H') setIsDocsOpen(true);
-      if (e.key === 'Escape') setIsDocsOpen(false);
+      if (e.key === '?' || e.key === 'h' || e.key === 'H') {
+        setIsDocsOpen(true);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setIsDocsOpen(false);
+        return;
+      }
+
+      if (activeWorkflow === 'pr_review') {
+        if (e.key === '1') handleNavigateScreen('welcome');
+        if (e.key === '2') handleNavigateScreen('auth');
+        if (e.key === '3') handleNavigateScreen('pr_input');
+        if (e.key === '4') handleNavigateScreen('inspection');
+        if (e.key === '5') handleNavigateScreen('multi_agent');
+        if (e.key === '6') handleNavigateScreen('validation');
+        if (e.key === '7') handleNavigateScreen('report');
+        if (e.key === '8') handleNavigateScreen('publish');
+        if (e.key === '9') handleNavigateScreen('scenarios');
+      } else {
+        if (e.key === '1') handleNavigateScreen('welcome');
+        if (e.key === 'a' || e.key === 'A') handleNavigateAudit('audit_repo');
+        if (e.key === 'b' || e.key === 'B') handleNavigateAudit('audit_preflight');
+        if (e.key === 'c' || e.key === 'C') handleNavigateAudit('audit_coverage');
+        if (e.key === 'd' || e.key === 'D') handleNavigateAudit('audit_activity');
+        if (e.key === 'e' || e.key === 'E') handleNavigateAudit('audit_verification');
+        if (e.key === 'f' || e.key === 'F') handleNavigateAudit('audit_report');
+        if (e.key === 's' || e.key === 'S') handleNavigateAudit('audit_scenarios');
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeScreen]);
+  }, [activeWorkflow, activeScreen, auditScreen]);
 
-  // CLI Command Dispatcher
+  // Unified CLI Command Dispatcher
   const handleExecuteCommand = (cmd: string) => {
     const trimmed = cmd.trim();
     if (!trimmed) return;
@@ -110,21 +220,41 @@ export default function App() {
     if (trimmed === 'codeguardian --help' || trimmed === 'help') {
       handleNavigateScreen('welcome');
     } else if (trimmed === 'codeguardian auth status' || trimmed.startsWith('auth')) {
-      handleNavigateScreen('auth');
+      if (activeWorkflow === 'repo_audit') {
+        handleNavigateAudit('audit_preflight');
+      } else {
+        handleNavigateScreen('auth');
+      }
     } else if (trimmed.startsWith('codeguardian review') || trimmed.startsWith('review')) {
       handleLaunchReview();
+    } else if (trimmed.startsWith('codeguardian audit') || trimmed.startsWith('audit')) {
+      handleLaunchAudit();
     } else if (trimmed.startsWith('codeguardian report') || trimmed.startsWith('report')) {
-      handleNavigateScreen('report');
+      if (activeWorkflow === 'repo_audit') {
+        handleNavigateAudit('audit_report');
+      } else {
+        handleNavigateScreen('report');
+      }
     } else if (trimmed.startsWith('codeguardian publish') || trimmed.startsWith('publish')) {
       handleNavigateScreen('publish');
+    } else if (trimmed === 'codeguardian mode pr' || trimmed === 'mode pr') {
+      setActiveWorkflow('pr_review');
+      setActiveScreen('welcome');
+    } else if (trimmed === 'codeguardian mode audit' || trimmed === 'mode audit') {
+      setActiveWorkflow('repo_audit');
+      setAuditScreen('audit_repo');
     } else if (trimmed === 'codeguardian docs' || trimmed === 'docs') {
       setIsDocsOpen(true);
     } else if (trimmed === 'clear') {
       setCommandInput('');
     } else {
       // General feedback
-      alert(`Simulated command executed: "${trimmed}"\nNavigating to matching review screen.`);
-      handleLaunchReview();
+      alert(`Simulated command executed: "${trimmed}"`);
+      if (trimmed.includes('audit')) {
+        handleLaunchAudit();
+      } else {
+        handleLaunchReview();
+      }
     }
   };
 
@@ -138,10 +268,8 @@ export default function App() {
     setCodexAuth(scenario.setupState.codexAuth);
     setPrUrl(scenario.setupState.prUrl);
     setStaleSha(scenario.setupState.staleSha ?? false);
-    // Explicitly reset publish outcome to 'normal' unless scenario defines an override
     setPublishOutcome(scenario.setupState.publishOutcome ?? 'normal');
 
-    // Create fresh decoupled worker telemetry for each role
     const nextWorkers = {} as Record<WorkerRole, WorkerInfo>;
     (Object.keys(scenario.setupState.workersState) as WorkerRole[]).forEach((role) => {
       const state = scenario.setupState.workersState[role];
@@ -149,6 +277,7 @@ export default function App() {
     });
     setWorkers(nextWorkers);
 
+    setActiveWorkflow('pr_review');
     setActiveScreen(scenario.initialScreen);
   };
 
@@ -180,91 +309,173 @@ export default function App() {
         setNoColor={setNoColor}
         activeScreen={activeScreen}
         setActiveScreen={handleNavigateScreen}
+        activeWorkflow={activeWorkflow}
+        setActiveWorkflow={setActiveWorkflow}
+        auditScreen={auditScreen}
+        setAuditScreen={handleNavigateAudit}
         onOpenDocs={() => setIsDocsOpen(true)}
         commandInput={commandInput}
         setCommandInput={setCommandInput}
         onExecuteCommand={handleExecuteCommand}
       >
-        {activeScreen === 'welcome' && (
-          <ScreenAWelcome
-            noColor={noColor}
-            onNavigate={handleNavigateScreen}
-            onRunDefaultDemo={handleStartReview}
-          />
-        )}
+        {activeWorkflow === 'pr_review' ? (
+          <>
+            {activeScreen === 'welcome' && (
+              <ScreenAWelcome
+                noColor={noColor}
+                onNavigate={handleNavigateScreen}
+                onRunDefaultDemo={handleStartReview}
+                onLaunchRepoAudit={() => {
+                  setActiveWorkflow('repo_audit');
+                  setAuditScreen('audit_repo');
+                }}
+              />
+            )}
 
-        {activeScreen === 'auth' && (
-          <ScreenBAuth
-            noColor={noColor}
-            githubAuth={githubAuth}
-            setGithubAuth={setGithubAuth}
-            codexAuth={codexAuth}
-            setCodexAuth={setCodexAuth}
-            onNavigate={handleNavigateScreen}
-          />
-        )}
+            {activeScreen === 'auth' && (
+              <ScreenBAuth
+                noColor={noColor}
+                githubAuth={githubAuth}
+                setGithubAuth={setGithubAuth}
+                codexAuth={codexAuth}
+                setCodexAuth={setCodexAuth}
+                onNavigate={handleNavigateScreen}
+              />
+            )}
 
-        {activeScreen === 'pr_input' && (
-          <ScreenCPullRequest
-            noColor={noColor}
-            prUrl={prUrl}
-            setPrUrl={setPrUrl}
-            onNavigate={handleNavigateScreen}
-          />
-        )}
+            {activeScreen === 'pr_input' && (
+              <ScreenCPullRequest
+                noColor={noColor}
+                prUrl={prUrl}
+                setPrUrl={setPrUrl}
+                onNavigate={handleNavigateScreen}
+              />
+            )}
 
-        {activeScreen === 'inspection' && (
-          <ScreenDInspection
-            noColor={noColor}
-            onNavigate={handleNavigateScreen}
-            onStartWorkerRun={handleLaunchReview}
-          />
-        )}
+            {activeScreen === 'inspection' && (
+              <ScreenDInspection
+                noColor={noColor}
+                onNavigate={handleNavigateScreen}
+                onStartWorkerRun={handleLaunchReview}
+              />
+            )}
 
-        {activeScreen === 'multi_agent' && (
-          <ScreenEMultiAgent
-            noColor={noColor}
-            workers={workers}
-            setWorkers={setWorkers}
-            onNavigate={handleNavigateScreen}
-            onCancelAll={handleCancelAllWorkers}
-            onRetryLane={handleRetryWorkerLane}
-            onRunValidation={() => handleNavigateScreen('validation')}
-            autoStartToken={autoStartToken}
-          />
-        )}
+            {activeScreen === 'multi_agent' && (
+              <ScreenEMultiAgent
+                noColor={noColor}
+                workers={workers}
+                setWorkers={setWorkers}
+                onNavigate={handleNavigateScreen}
+                onCancelAll={handleCancelAllWorkers}
+                onRetryLane={handleRetryWorkerLane}
+                onRunValidation={() => handleNavigateScreen('validation')}
+                autoStartToken={autoStartToken}
+              />
+            )}
 
-        {activeScreen === 'validation' && (
-          <ScreenFFindingsValidation
-            noColor={noColor}
-            onNavigate={handleNavigateScreen}
-          />
-        )}
+            {activeScreen === 'validation' && (
+              <ScreenFFindingsValidation
+                noColor={noColor}
+                onNavigate={handleNavigateScreen}
+              />
+            )}
 
-        {activeScreen === 'report' && (
-          <ScreenGReport
-            noColor={noColor}
-            onNavigate={handleNavigateScreen}
-          />
-        )}
+            {activeScreen === 'report' && (
+              <ScreenGReport
+                noColor={noColor}
+                onNavigate={handleNavigateScreen}
+              />
+            )}
 
-        {activeScreen === 'publish' && (
-          <ScreenHPublish
-            noColor={noColor}
-            staleSha={staleSha}
-            setStaleSha={setStaleSha}
-            outcomeType={publishOutcome}
-            setOutcomeType={setPublishOutcome}
-            onNavigate={handleNavigateScreen}
-          />
-        )}
+            {activeScreen === 'publish' && (
+              <ScreenHPublish
+                noColor={noColor}
+                staleSha={staleSha}
+                setStaleSha={setStaleSha}
+                outcomeType={publishOutcome}
+                setOutcomeType={setPublishOutcome}
+                onNavigate={handleNavigateScreen}
+              />
+            )}
 
-        {activeScreen === 'scenarios' && (
-          <ScreenIScenarios
-            noColor={noColor}
-            onApplyScenario={handleApplyScenario}
-            onNavigate={handleNavigateScreen}
-          />
+            {activeScreen === 'scenarios' && (
+              <ScreenIScenarios
+                noColor={noColor}
+                onApplyScenario={handleApplyScenario}
+                onNavigate={handleNavigateScreen}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {auditScreen === 'audit_repo' && (
+              <AuditScreenARepoSelect
+                noColor={noColor}
+                snapshot={auditSnapshot}
+                setSnapshot={setAuditSnapshot}
+                onNavigate={handleNavigateAudit}
+                onStartAudit={() => handleNavigateAudit('audit_preflight')}
+              />
+            )}
+
+            {auditScreen === 'audit_preflight' && (
+              <AuditScreenBPreflight
+                noColor={noColor}
+                snapshot={auditSnapshot}
+                julesAuth={julesAuth}
+                setJulesAuth={setJulesAuth}
+                isShaVerified={isShaVerified}
+                setIsShaVerified={setIsShaVerified}
+                planApproved={planApproved}
+                setPlanApproved={setPlanApproved}
+                onNavigate={handleNavigateAudit}
+                onApproveAndLaunch={handleLaunchAudit}
+              />
+            )}
+
+            {auditScreen === 'audit_coverage' && (
+              <AuditScreenCCoverage
+                noColor={noColor}
+                coverageLedger={coverageLedger}
+                onNavigate={handleNavigateAudit}
+              />
+            )}
+
+            {auditScreen === 'audit_activity' && (
+              <AuditScreenDActivity
+                noColor={noColor}
+                activities={auditActivities}
+                setActivities={setAuditActivities}
+                onNavigate={handleNavigateAudit}
+                onCancelAudit={handleCancelAuditActivities}
+                autoStartToken={auditAutoStartToken}
+              />
+            )}
+
+            {auditScreen === 'audit_verification' && (
+              <AuditScreenEVerification
+                noColor={noColor}
+                findings={auditFindings}
+                onNavigate={handleNavigateAudit}
+              />
+            )}
+
+            {auditScreen === 'audit_report' && (
+              <AuditScreenFReport
+                noColor={noColor}
+                report={auditReport}
+                onNavigate={handleNavigateAudit}
+              />
+            )}
+
+            {auditScreen === 'audit_scenarios' && (
+              <AuditScreenScenarios
+                noColor={noColor}
+                onApplyScenario={handleApplyAuditScenario}
+                onNavigate={handleNavigateAudit}
+              />
+            )}
+          </>
         )}
       </TerminalChrome>
 

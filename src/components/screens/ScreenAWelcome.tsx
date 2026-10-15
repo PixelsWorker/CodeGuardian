@@ -1,17 +1,31 @@
 import React from 'react';
 import { ActiveScreen } from '../../types/contract';
-import { Play, Key, FileText, CheckCircle2, AlertTriangle, ArrowRight, BookOpen } from 'lucide-react';
+import { 
+  Play, 
+  Key, 
+  FileText, 
+  CheckCircle2, 
+  AlertTriangle, 
+  ArrowRight, 
+  FolderTree, 
+  ShieldCheck, 
+  Layers, 
+  GitPullRequest, 
+  Cpu 
+} from 'lucide-react';
 
 interface ScreenAWelcomeProps {
   noColor: boolean;
   onNavigate: (screen: ActiveScreen) => void;
   onRunDefaultDemo: () => void;
+  onLaunchRepoAudit?: () => void;
 }
 
 export const ScreenAWelcome: React.FC<ScreenAWelcomeProps> = ({
   noColor,
   onNavigate,
   onRunDefaultDemo,
+  onLaunchRepoAudit,
 }) => {
   return (
     <div className="space-y-5">
@@ -24,200 +38,224 @@ export const ScreenAWelcome: React.FC<ScreenAWelcomeProps> = ({
 | |__| (_) | (_| |  __/| |_| | |_| | (_| | |  | | | (_| | | | |
  \\____\\___/ \\__,_|\\___| \\____|\\__,_|\\__,_|_|  |_|_|\\__,_|_| |_|`}
         </pre>
-        <div className="mt-2 text-xs text-zinc-400 flex items-center justify-between border-b border-zinc-800 pb-2">
-          <span>Multi-Agent GitHub Pull Request Review Platform (CLI UX Exploration)</span>
-          <span className="font-mono text-amber-400 font-semibold">[G00 DRAFT SPEC]</span>
+        <div className="mt-2 text-xs text-zinc-400 flex flex-wrap items-center justify-between border-b border-zinc-800 pb-2 gap-2">
+          <span>Unified Code Integrity Platform: Multi-Agent PR Review & Full Repository Audit</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-cyan-400 font-semibold">[G00 PR REVIEW]</span>
+            <span className="font-mono text-amber-400 font-semibold">[G06 REPO AUDIT]</span>
+          </div>
         </div>
       </div>
 
-      {/* Simulated System Status Box */}
+      {/* Two Primary Interactive Workflows Banner */}
+      <div className="space-y-2">
+        <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+          <span>SELECT ACTIVE WORKFLOW</span>
+          <span className="text-[10px] text-zinc-500 font-normal">Independent contract boundaries</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {/* Workflow 1: Pull Request Review */}
+          <div className={`p-4 rounded-lg border flex flex-col justify-between space-y-3 transition group ${
+            noColor
+              ? 'border-zinc-700 bg-zinc-900 text-zinc-100'
+              : 'border-cyan-500/40 bg-cyan-950/20 hover:border-cyan-400/80 hover:bg-cyan-950/30 text-zinc-200'
+          }`}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-sm text-cyan-300">
+                  <GitPullRequest className="w-4 h-4 text-cyan-400" />
+                  <span>1. Review Pull Request</span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 text-[10px] font-mono font-bold">
+                  G00-G03 MVP
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Codex multi-agent PR review capability. Simulates 4 specialist lanes (Security, Logic, Architecture, Quality) with diff-anchored validation, P0-P3 severity breakdown, and confirmation-gated GitHub <code className="text-cyan-300 font-mono">COMMENT</code> review publication.
+              </p>
+              <div className="font-mono text-[10px] text-zinc-500 space-y-0.5 pt-1">
+                <div>• Target: Diff hunks & changed lines</div>
+                <div>• Engine: OpenAI Codex specialist workers</div>
+                <div>• Safety: Stale-SHA refusal & one-time approval nonce</div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
+              <button
+                onClick={onRunDefaultDemo}
+                className={`px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1.5 transition ${
+                  noColor ? 'bg-zinc-100 text-zinc-900' : 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-sm'
+                }`}
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Launch Full Review Demo (PR #42)</span>
+              </button>
+              <button
+                onClick={() => onNavigate('scenarios')}
+                className="text-xs text-zinc-400 hover:text-cyan-300 font-mono"
+              >
+                11 PR Scenarios →
+              </button>
+            </div>
+          </div>
+
+          {/* Workflow 2: Full Repository Audit */}
+          <div className={`p-4 rounded-lg border flex flex-col justify-between space-y-3 transition group ${
+            noColor
+              ? 'border-zinc-700 bg-zinc-900 text-zinc-100'
+              : 'border-amber-500/40 bg-amber-950/20 hover:border-amber-400/80 hover:bg-amber-950/30 text-zinc-200'
+          }`}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
+                  <FolderTree className="w-4 h-4 text-amber-400" />
+                  <span>2. Audit Full Repository</span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-amber-900/60 text-amber-300 border border-amber-700/60 text-[10px] font-mono font-bold">
+                  G06 PROPOSED
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Proposed Google Jules repository-wide auditing capability. Enforces pinned commit SHA verification, operator plan approval gate, 6-level coverage ledger, and independent Manager caller tracing to reject model hallucinations before exporting <code className="text-amber-300 font-mono">AUDIT.md</code>.
+              </p>
+              <div className="font-mono text-[10px] text-zinc-500 space-y-0.5 pt-1">
+                <div>• Target: Pinned full commit snapshot & 38 tracked files</div>
+                <div>• Engine: Google Jules (v1alpha) + Manager Verification</div>
+                <div>• Safety: Ephemeral sandbox, no PR auto-create, no write tools</div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  if (onLaunchRepoAudit) {
+                    onLaunchRepoAudit();
+                  } else {
+                    onNavigate('inspection');
+                  }
+                }}
+                className={`px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1.5 transition ${
+                  noColor ? 'bg-zinc-100 text-zinc-900' : 'bg-amber-500 hover:bg-amber-400 text-black shadow-sm'
+                }`}
+                data-testid="launch-repo-audit-btn"
+              >
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Launch Full Repository Audit</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (onLaunchRepoAudit) {
+                    onLaunchRepoAudit();
+                  }
+                }}
+                className="text-xs text-zinc-400 hover:text-amber-300 font-mono"
+              >
+                Audit Views & Ledger →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Simulated System Preflight Status Box */}
       <div className={`p-3 rounded border text-xs ${
         noColor 
           ? 'border-zinc-700 bg-zinc-900' 
-          : 'border-cyan-900/40 bg-cyan-950/20 text-zinc-300'
+          : 'border-zinc-800 bg-black/40 text-zinc-300'
       }`}>
-        <div className="flex items-center justify-between mb-1.5 font-bold">
-          <span className="text-cyan-300">AUTHENTICATION PREFLIGHT (SIMULATED):</span>
-          <span className="text-[10px] text-zinc-500 font-normal">Check: `codeguardian auth status`</span>
+        <div className="flex items-center justify-between mb-2 font-bold">
+          <span className="text-zinc-200">INTEGRATION PREFLIGHT HEALTH (SIMULATED):</span>
+          <span className="text-[10px] text-zinc-500 font-normal">CLI Check: `codeguardian auth status`</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-          <div className="flex items-center justify-between p-1.5 rounded bg-black/40 border border-zinc-800">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
+          <div className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
             <span className="text-zinc-400">GitHub CLI:</span>
-            <span className="text-emerald-400 font-semibold">[SIGNED IN] (demo user: alex-dev)</span>
+            <span className="text-emerald-400 font-semibold">[READY] alex-dev</span>
           </div>
-          <div className="flex items-center justify-between p-1.5 rounded bg-black/40 border border-zinc-800">
+          <div className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
             <span className="text-zinc-400">Codex CLI:</span>
-            <span className="text-emerald-400 font-semibold">[SIGNED IN] (device token valid)</span>
+            <span className="text-emerald-400 font-semibold">[READY] Token OK</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
+            <span className="text-zinc-400">Google Jules:</span>
+            <span className="text-emerald-400 font-semibold">[READY] v1alpha</span>
           </div>
         </div>
       </div>
 
-      {/* Primary Actions Grid */}
-      <div className="space-y-2">
-        <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-          PRIMARY SIMULATED WORKFLOWS
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <button
-            onClick={onRunDefaultDemo}
-            className={`p-3 rounded text-left border transition flex items-start justify-between group ${
-              noColor
-                ? 'border-zinc-600 bg-zinc-900 hover:bg-zinc-800 text-zinc-100'
-                : 'border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-100'
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-1.5 font-bold text-xs">
-                <Play className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
-                Launch Full Review Demo (PR #42)
-              </div>
-              <div className="text-[11px] text-zinc-400 mt-1">
-                Runs 4 specialists on <code className="text-cyan-300">example/demo#42</code> with live progress and findings.
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-cyan-400 opacity-60 group-hover:opacity-100 transition transform group-hover:translate-x-0.5" />
-          </button>
+      {/* Quick Discovery Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+        <button
+          onClick={() => onNavigate('auth')}
+          className="p-2.5 rounded text-left border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-200 transition"
+        >
+          <div className="flex items-center gap-1.5 font-bold text-xs text-amber-300 mb-1">
+            <Key className="w-3.5 h-3.5" />
+            Auth Preflight
+          </div>
+          <div className="text-[11px] text-zinc-400">
+            Test signed-out, expired session, and device-code views.
+          </div>
+        </button>
 
-          <button
-            onClick={() => onNavigate('auth')}
-            className={`p-3 rounded text-left border transition flex items-start justify-between group ${
-              noColor
-                ? 'border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-100'
-                : 'border-zinc-800 bg-zinc-900/70 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-200'
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-1.5 font-bold text-xs">
-                <Key className="w-3.5 h-3.5 text-amber-400" />
-                Inspect Auth Preflight Scenarios
-              </div>
-              <div className="text-[11px] text-zinc-400 mt-1">
-                Test signed-out, expired session, and device-code login views.
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-zinc-400 opacity-60 group-hover:opacity-100 transition" />
-          </button>
+        <button
+          onClick={() => onNavigate('report')}
+          className="p-2.5 rounded text-left border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-200 transition"
+        >
+          <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-300 mb-1">
+            <FileText className="w-3.5 h-3.5" />
+            PR Review Report
+          </div>
+          <div className="text-[11px] text-zinc-400">
+            Inspect P0-P3 findings, Markdown, and API-CONTRACT JSON.
+          </div>
+        </button>
 
-          <button
-            onClick={() => onNavigate('report')}
-            className={`p-3 rounded text-left border transition flex items-start justify-between group ${
-              noColor
-                ? 'border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-100'
-                : 'border-zinc-800 bg-zinc-900/70 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-200'
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-1.5 font-bold text-xs">
-                <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                View Report & Canonical Schema
-              </div>
-              <div className="text-[11px] text-zinc-400 mt-1">
-                Inspect P0-P3 breakdown, Markdown render, and API-CONTRACT v1 JSON.
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-zinc-400 opacity-60 group-hover:opacity-100 transition" />
-          </button>
-
-          <button
-            onClick={() => onNavigate('scenarios')}
-            className={`p-3 rounded text-left border transition flex items-start justify-between group ${
-              noColor
-                ? 'border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-100'
-                : 'border-zinc-800 bg-zinc-900/70 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-200'
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-1.5 font-bold text-xs">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                Test All 11 Edge Scenarios
-              </div>
-              <div className="text-[11px] text-zinc-400 mt-1">
-                Stale SHA, worker timeout, rate limit, duplicate publication, etc.
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-zinc-400 opacity-60 group-hover:opacity-100 transition" />
-          </button>
-        </div>
+        <button
+          onClick={() => onNavigate('scenarios')}
+          className="p-2.5 rounded text-left border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-200 transition"
+        >
+          <div className="flex items-center gap-1.5 font-bold text-xs text-red-300 mb-1">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Edge Test Scenarios
+          </div>
+          <div className="text-[11px] text-zinc-400">
+            Stale SHA, worker timeout, duplicate publish, etc.
+          </div>
+        </button>
       </div>
 
       {/* Command Vocabulary Reference */}
       <div className="p-3 rounded border border-zinc-800/80 bg-black/40 text-xs space-y-2">
         <div className="font-bold text-zinc-300 flex items-center justify-between">
           <span>PROPOSED CLI COMMAND VOCABULARY</span>
-          <span className="text-[10px] text-zinc-500 font-normal">Click to copy/simulate</span>
+          <span className="text-[10px] text-zinc-500 font-normal">Simulated terminal execution</span>
         </div>
         <div className="space-y-1 font-mono text-[11px]">
-          <div className="text-zinc-400">
-            <code className="text-cyan-300 font-bold">codeguardian --help</code>
-            <span className="text-zinc-500 ml-2">— Display command discovery, options & policy info</span>
-          </div>
-          <div className="text-zinc-400">
-            <code className="text-cyan-300 font-bold">codeguardian auth status</code>
-            <span className="text-zinc-500 ml-2">— Preflight inspection of GitHub & Codex credentials</span>
-          </div>
           <div className="text-zinc-400">
             <code className="text-cyan-300 font-bold">codeguardian review &lt;PR_URL&gt; --demo</code>
             <span className="text-zinc-500 ml-2">— Run multi-agent review on target pull request</span>
           </div>
           <div className="text-zinc-400">
-            <code className="text-cyan-300 font-bold">codeguardian report &lt;RUN_ID&gt; --format markdown|json</code>
-            <span className="text-zinc-500 ml-2">— Display consolidated findings</span>
+            <code className="text-amber-300 font-bold">codeguardian audit &lt;OWNER/REPO&gt; --sha &lt;COMMIT_SHA&gt;</code>
+            <span className="text-zinc-500 ml-2">— Launch full repository audit with pinned snapshot</span>
           </div>
           <div className="text-zinc-400">
-            <code className="text-cyan-300 font-bold">codeguardian publish &lt;RUN_ID&gt; --dry-run</code>
-            <span className="text-zinc-500 ml-2">— Preview GitHub review comment with safe confirmation</span>
+            <code className="text-zinc-300 font-bold">codeguardian auth status</code>
+            <span className="text-zinc-500 ml-2">— Inspect GitHub, Codex, and Google Jules credentials</span>
           </div>
-        </div>
-      </div>
-
-      {/* Recently Simulated Runs Table & Empty State */}
-      <div className="border border-zinc-800/80 rounded overflow-hidden text-xs">
-        <div className="px-3 py-2 bg-zinc-900/70 border-b border-zinc-800 text-zinc-400 font-semibold flex items-center justify-between">
-          <span>RECENT SIMULATED RUNS</span>
-          <span className="text-[10px] text-zinc-500">Local prototype memory</span>
-        </div>
-        <div className="divide-y divide-zinc-800/60 font-mono text-[11px]">
-          <div className="p-2.5 flex items-center justify-between hover:bg-zinc-900/40 transition">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-zinc-200 font-semibold">demo-run-0042-7f9a</span>
-              <span className="text-zinc-500">example/demo#42</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-amber-400">2 P1 | 2 P2</span>
-              <span className="text-emerald-400 font-medium">READY</span>
-              <button
-                onClick={() => onNavigate('report')}
-                className="text-cyan-400 hover:underline"
-              >
-                Inspect →
-              </button>
-            </div>
-          </div>
-          <div className="p-2.5 flex items-center justify-between hover:bg-zinc-900/40 transition">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-zinc-200 font-semibold">demo-run-0041-part</span>
-              <span className="text-zinc-500">example/demo#38</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-zinc-400">1 P1 | 1 P3</span>
-              <span className="text-amber-400 font-medium">PARTIAL</span>
-              <button
-                onClick={() => onNavigate('report')}
-                className="text-cyan-400 hover:underline"
-              >
-                Inspect →
-              </button>
-            </div>
+          <div className="text-zinc-400">
+            <code className="text-zinc-300 font-bold">codeguardian report &lt;RUN_ID&gt; --format markdown|json</code>
+            <span className="text-zinc-500 ml-2">— Display consolidated findings</span>
           </div>
         </div>
       </div>
 
       {/* Keyboard Shortcuts Hint */}
-      <div className="text-[11px] text-zinc-500 flex flex-wrap items-center justify-between border-t border-zinc-900 pt-2">
-        <span>Keyboard shortcuts: <strong className="text-zinc-400">[1-9]</strong> Screen Jump • <strong className="text-zinc-400">[Enter]</strong> Launch Demo • <strong className="text-zinc-400">[?]</strong> Docs</span>
-        <span className="text-amber-500/80">NO GITHUB CREDENTIALS OR API KEYS REQUIRED</span>
+      <div className="text-[11px] text-zinc-500 flex flex-wrap items-center justify-between border-t border-zinc-900 pt-2 font-mono">
+        <span>Shortcuts: <strong className="text-zinc-400">[1-9]</strong> PR Screens • <strong className="text-zinc-400">[A-F]</strong> Audit Views • <strong className="text-zinc-400">[?]</strong> Docs</span>
+        <span className="text-amber-500/80">SAFE SYNTHETIC PROTOTYPE • NO SECRET TOKENS STORED</span>
       </div>
     </div>
   );
