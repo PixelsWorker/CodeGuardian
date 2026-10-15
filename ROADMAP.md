@@ -26,6 +26,8 @@ Real deployment, unsupervised publication, automated PR merges, direct model-con
 
 ## 2. Verified Git starting point
 
+**2026-10-15 update (pre-governance-update source):** remote `main` `${expected}`; remote `dev` `${dev}`. Git histories have been reconciled. The earlier table below remains historical provenance. `main` now contains a React/Vite browser UX reference, its manifest and tests, but the native CLI, local test results and G00 acceptance remain unverified.
+
 At the start of this roadmap, the live GitHub references were:
 
 | Ref | Verified SHA | Notes |
@@ -35,7 +37,7 @@ At the start of this roadmap, the live GitHub references were:
 
 Prior comparison showed zero file differences between those two baselines. Creating this roadmap on `dev` intentionally makes `dev` ahead in documentation without changing `main`. Do not re-run historical Git-reconciliation tasks.
 
-The repository has planning documents but no CodeGuardian application, package manifest, real CLI, tests, or configured build pipeline. Some existing planning files retain historical Git descriptions from before reconciliation. Treat them as historical; use live Git references for new work. Do not edit protected documents incidentally.
+At this update's live remote checkpoint the repository contains browser prototype source, package manifest and tests, **not** a verified native CLI or working real PR review system. Some existing planning files retain historical Git descriptions from before reconciliation. Treat them as historical; use live Git references for new work. Do not edit protected documents incidentally.
 
 ## 3. Group roadmap and effort forecast
 
@@ -50,6 +52,7 @@ The day estimates for G00–G05 follow `PROJECT-BRIEF.md`. They are working-day 
 | **G03** | Separate publisher posts one verified, human-approved `COMMENT` review | **3–5 days** | **13–21 days** | Permission, stale-SHA, replay and duplicate safeguards |
 | **G04** | Optional PR-Agent A2A adapter contributes normalized findings | **3–5 days** | 16–26 days if included | Provider configuration and integration contract tests |
 | **G05** | Signed GitHub events trigger safe, deduplicated automated reviews | **5–8 days** | 21–34 days with G04 | Independent security/identity/webhook approval |
+| **G06 (PROPOSED, OPTIONAL)** | Jules repository audit, verified coverage and `AUDIT.md` | **TBD after pilot** | Not included in G00-G05 estimates | Separate source access, pilot, security and human acceptance |
 
 **Primary MVP:** G00–G03 = approximately 13–21 working days of implementation (around 3–5 work weeks), excluding PRE-G00, approval waits, sandbox repairs, and surprises.  
 **Extended delivery:** G00–G05 = approximately 21–34 working days (around 4–7 work weeks) when G04 is included. G04 is optional, not a blocker for an independently approved G05.  
@@ -89,7 +92,7 @@ Decision checklist:
 | Package management | pnpm, exact pinned version + lockfile | Install only after explicit package approval |
 | Data | Local JSON mock fixtures | No real secrets, tokens, authentication, or network access |
 
-**Optional design track — Google AI Studio (visual reference only):** Prototype the look and navigation of a terminal using synthetic data in a browser-based React mock. Do not sync it to `main` or `dev`, deploy it, connect external services, or treat it as the accepted native CLI. Codex implements the actual terminal from the approved UX behaviors and contract.
+**Existing design track — Google AI Studio (visual reference only):** A nine-screen React/Vite browser mock with synthetic scenarios and test source now exists on remote `main`. This is a design reference, **not** accepted native CLI G00, and no tests were run by this governance review. Any further AI Studio sync/deployment still needs the applicable approval; Codex's native terminal implementation remains a separate accepted scope.
 
 **Required G00 screens and flows:**
 - Welcome/help, command discovery, invalid commands and terminal controls.
@@ -173,13 +176,30 @@ Decision checklist:
 
 **Exit:** Verified, safe event-triggered runs with approved publication policy and observability.
 
-## 11. Explicitly deferred work / release decisions
+## 11. G06 — Optional Jules repository-wide audit (PROPOSED, NOT APPROVED)
+
+**Outcome:** A developer requests a pinned-snapshot **repository-wide audit**, Jules proposes systemic findings, and the CodeGuardian Manager verifies source evidence and coverage independently before presenting a separately approved `AUDIT.md`. This is not PR-diff review and does not modify G00–G05 costs/estimates, dependencies or the PR publication contract. G06 effort is **TBD** until an authorized pilot. G04/G05 are not mandatory dependencies.
+
+**Six proposed mock-only UX stages:**
+1. Select repository, branch, intended full SHA and inventory/exclusions.
+2. Jules API/App permission and rate/cost preflight, pending plan and explicit human plan approval.
+3. Coverage ledger: inventoried, inspected, context-analyzed, independently verified, excluded, unknown.
+4. Jules worker progress, partial output, errors, cancellation and timeouts.
+5. Manager source verification of claims, callers and dependency impact; classify verified/rejected/inconclusive.
+6. `JULES-AUDIT.md` preliminary view and `AUDIT.md` final draft, limits and remediation priorities.
+
+**Architecture/security:** Google's Jules API is experimental `v1alpha` (Sources/Sessions/Activities). Use separately authorized credentials, `requirePlanApproval: true` and never enable `AUTO_CREATE_PR` for audit work. An audit-only prompt is **not** a read-only boundary. Prefer an approved disposable repository mirror, least privilege and bounded cloud execution. The API selects a `startingBranch` rather than an immutable SHA; independent source identity evidence is mandatory. Unknown inspection coverage must remain unknown. See `ARCHITECTURE.md` D-09/section 12 and `API-CONTRACT.md` section 8.
+
+**Pilot acceptance (not executed):** Freeze a permitted snapshot/mirror, approve access, plan and spend; inspect activity outputs and source identity; independently fact-check findings and omissions; collect coverage, false-positive rates, failures and runtime/cost evidence; only then decide whether to implement G06. A repository-published `AUDIT.md` requires its own Git approval.
+
+## 12. Explicitly deferred work / release decisions
+
 
 - Web dashboard, team accounts, multi-tenancy, enterprise administration and reporting analytics: separate future groups, not counted in G00–G05.
 - Code modifications, automatic approvals, automated PR merges, production service deployment and broad untrusted-fork execution: excluded until independently proposed and authorized.
 - License, branch protection, mandatory CI checks, release artifacts, security policy and any public launch: require explicit project/governance decisions.
 
-## 12. Standard group execution and release rules
+## 13. Standard group execution and release rules
 
 For **every** group:
 1. Read parent and repository `AGENTS.md`; inspect live branch SHAs, local worktrees, clean index and active Git operations.
@@ -193,7 +213,7 @@ For **every** group:
 
 **Branch approach proposed for G00:** create `feat/g00-cli-ux-demo` from a verified `dev` head in its own authorized worktree; develop and test there; target a G00 PR to `dev`. The branch, worktree and PR are NOT created or authorized by this roadmap. Do not mutate the canonical `main` checkout.
 
-## 13. Immediate next group run
+## 14. Immediate next group run
 
 **NEXT: PRE-G00 approval/setup, then G00 — Complete CLI UX Demo.**
 
@@ -204,9 +224,9 @@ For **every** group:
 5. Only after explicit authorization, let Codex implement the local terminal CLI with mock fixtures.
 6. Review actual G00 implementation, tests and terminal demonstration; approve G01 only if the complete CLI UX is accepted.
 
-**Current release state:** Documentation-only roadmap; no product code, package installation, new G00 branch, model call, GitHub review publication, or deployment is authorized by publishing this file.
+**Current release state:** React/Vite browser UX prototype source and tests exist on `main`, but native CLI implementation, local test outcomes, real GitHub/Codex/Jules calls and G00 acceptance remain unverified. This document approves no implementation, new branch, live audit, publication or deployment.
 
-## 14. Source-of-truth references
+## 15. Source-of-truth references
 
 - `PROJECT-BRIEF.md` — accepted/proposed product definition, original G00–G05 groups and group estimates.
 - `ARCHITECTURE.md` — D-01–D-08, trust boundaries, security and operational design.

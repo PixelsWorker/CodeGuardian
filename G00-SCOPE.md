@@ -2,10 +2,12 @@
 
 **Group:** G00 - Complete CLI UX Demo  
 **Phase:** Full product terminal UI/UX, all MVP CLI interactions, with **safe mocks only**  
-**Status:** DRAFT - NOT APPROVED, no implementation TODO or branch created  
-**Suggested branch:** `feat/g00-cli-ux-demo` (cannot create before an initial commit/approval)
+**Status:** DRAFT - NOT APPROVED. A nine-screen React/Vite **browser UX reference** exists on remote `main`, but a native CLI implementation/acceptance and executable G00 TODO are not verified.  
+**Suggested branch:** `feat/g00-cli-ux-demo` (separate authorization required; not verified as an existing remote branch)
 
 ## Goal
+
+**Current visual reference:** remote `main` contains a synthetic React/Vite terminal-style G00 prototype with screens A–I and browser test source. Its existence does not prove a native Ink/terminal executable, successful tests or Rockson's G00 acceptance. G06/Jules audit UX belongs to a separate future design track.
 
 Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rockson in one navigable CLI workflow without requiring API keys, GitHub permissions, or real Codex calls. Obtain explicit approval before implementing G01 real PR retrieval.
 
@@ -28,7 +30,8 @@ Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rocks
 - Codex SDK/model requests or PR-Agent calls.
 - Real GitHub review publication, even after a simulated confirmation.
 - Docker credential persistence, unattended webhooks, external services.
-- Future browser dashboard. G00 need not choose a frontend framework for a nonexistent web dashboard.
+- Future browser dashboard. The existing browser mock is a **reference**, not the native CLI deliverable.
+- G06 repository-audit screens, Jules/GitHub cloud connections, live audit sessions and `AUDIT.md` generation.
 
 ## Done when
 

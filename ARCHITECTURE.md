@@ -100,6 +100,7 @@ Upgrades follow: bump pinned version/digest -> run smoke and contract tests -> v
 | D-06 Persistence | Local run artifacts first; decide SQLite at G02/G03 | Keep initial setup lean | Approve durable-state scope |
 | D-07 Publication | Separate, confirmation-gated `COMMENT` publisher | Secure GitHub boundary | Approve actual operation G03 |
 | D-08 Security | Trusted developer-controlled repositories initially | Credential isolation not yet demonstrated | Mandatory threat review before forks/webhooks |
+| D-09 Repository audit | Optional Google Jules full-repo evidence producer in G06 | Complement PR-specific Codex specialists | Requires separate pilot, cloud permissions, snapshot proof, versioning and cost controls |
 
 ## 11. Exit gates
 
@@ -108,3 +109,21 @@ Upgrades follow: bump pinned version/digest -> run smoke and contract tests -> v
 - **G01+**: real CLI/business-function integration, actual test results and diff review, and group PR-specific authorization.
 
 No Docker build, Codex login, or PR review was performed while producing this document.
+
+## 12. Optional Jules G06 architecture (PROPOSED, NOT APPROVED)
+
+G06 is a **separate repository-wide audit workflow**. It does not change G00's complete native terminal UX, G01-G03 PR review responsibilities, G03's publication boundary, or G04-G05 estimates.
+
+**Proposed data path:** trusted GitHub reader inventories all tracked files and records `owner/repo + intended full SHA + manifest digest` -> isolated Jules audit worker proposes candidate findings and coverage evidence -> independent evidence reader fetches source at verified SHA and traces dependencies -> deterministic CodeGuardian Manager fact-checks, rejects or marks inconclusive -> preliminary `JULES-AUDIT.md` and approval-gated final `AUDIT.md`.
+
+Jules integration uses Google's experimental `v1alpha` Sources, Sessions and Activities API (https://developers.google.com/jules/api). Jules requires its own key and approved GitHub App connection. Set `requirePlanApproval: true` and require explicit human plan review. Do not enable `AUTO_CREATE_PR`. Neither an audit-only prompt nor those flags make a coding agent technically read-only. Its hosted environment can execute commands and modify its workspace; prefer a separately approved disposable audit mirror and least-privileged access instead of granting write authority to active product branches.
+
+**Snapshot identity:** Google sessions use `githubRepoContext.startingBranch`, not a fixed SHA parameter. Independently establish which revision Jules inspected; otherwise the report must be marked partial/inconclusive and must not advertise full-codebase verification.
+
+**Coverage:** distinguish inventoried, inspected, context-analyzed, independently verified, excluded and unknown files. Activity messages alone cannot prove every file was examined. Require direct source/line/symbol and cross-module/callsite evidence for each verified defect; Jules confidence is never proof.
+
+**Reporting / validation:** `API-CONTRACT.md` section 8 defines a separately proposed audit payload. Do not reuse PR changed-hunk constraints for repo-wide findings or weaken the canonical PR contract to accommodate them. External activity content is untrusted and cannot control Docker, manager policy, credentials, approval or publishing.
+
+**Six-stage G06 mock UX proposal:** repository selection; Jules/permissions/plan preflight; coverage; audit activity; Manager fact-checking; final audit preview. This may be explored in a separate synthetic UI prototype. It is **not a G00 requirement**, and no Jules session or backend is approved by its presence.
+
+**Decision gate:** D-09 and a G06 group acceptance require a cost/rate/security/retention threat review, mirrored-source access decision, end-to-end failure testing, snapshot proof and an approved report-publishing policy. G06 effort estimate remains TBD until a controlled pilot.

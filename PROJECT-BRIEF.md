@@ -17,6 +17,7 @@ The first real implementation uses Codex CLI through the official TypeScript SDK
 - **CodeGuardian Manager:** deterministic TypeScript orchestration, job state, scheduling, cleanup, verification; AI synthesis is a separate, bounded Codex task.
 - **CodeGuardianMini:** specialist Codex review workers with distinct security, logic, architecture, and quality instructions.
 - **PR-Agent worker (later):** optional independently configured, version-pinned A2A review source.
+- **Jules audit worker (proposed G06):** independently verified, repository-wide architecture/defect audit candidates, distinct from PR-diff specialists; no GitHub publisher authority.
 - **Publisher:** isolated GitHub writing boundary, limited to validated `COMMENT` reviews and approved PRs.
 
 ## 3. Functional MVP scope (G01-G03, after G00 approval)
@@ -52,12 +53,13 @@ One group is one unit of acceptance. Tests and real integrations are part of the
 | **G03 - Controlled Publication** | Human previews and authorizes exactly one GitHub review for the verified head SHA | G02 | 3-5 working days | FUTURE |
 | **G04 - PR-Agent Integration** | Optional A2A review worker returns normalized findings alongside Codex workers | G03 plus model provider connection | 3-5 working days | LATER |
 | **G05 - GitHub Automation** | Signed/authorized events trigger safely deduplicated unattended reviews, with separate service auth | Independently accepted automation/security design; G04 optional | 5-8 working days | LATER |
+| **G06 - Repository-Wide Audit (Jules)** | Optional pinned-snapshot audit with evidence-backed coverage and independently verified `AUDIT.md` | Separate approved pilot, access/contract/security gates; not a G00-G05 prerequisite | TBD | PROPOSED ONLY |
 
 The provisional Codex-first MVP forecast is approximately four weeks of developer work, subject to validated environment, credentials, and security gates.
 
 ## 6. G00 special rule
 
-For this CLI-first application, **G00 is the entire agreed CLI/terminal UX demo**, not a future browser dashboard. It covers all MVP terminal flows with safe mock PR data, simulated workers, simulated authentication outcomes, representative progress and error states, report display, and **mock-only** publication confirmation. It is delivered in one branch and one PR when separately approved. No real GitHub API calls or Codex model calls are required for G00 acceptance.
+For this CLI-first application, **G00 is the entire agreed CLI/terminal UX demo**, not a future browser dashboard. A nine-screen React/Vite browser mock exists on remote `main` as a *visual reference*, not proof of a native CLI or acceptance. It covers all MVP terminal flows with safe mock PR data, simulated workers, simulated authentication outcomes, representative progress and error states, report display, and **mock-only** publication confirmation. It is delivered in one branch and one PR when separately approved. No real GitHub API calls or Codex model calls are required for G00 acceptance.
 
 Rockson must explicitly approve the complete G00 demo before G01 can begin. This packet does not create a G00 TODO or approve any local branch or push.
 
@@ -74,4 +76,5 @@ Track scope, dependencies, estimated versus actual effort, repository branch and
 - Confirm first-target platform: Fedora/Linux with Docker (preferred for initial validation), or another verified host.
 - Select repository license and intended visibility policy (currently public; MIT suggested, not approved).
 - Approve proposed G00 terminal screens, workflows, and mock scenarios in `G00-SCOPE.md`.
-- Explicitly authorize a specific first GitHub commit if planning docs should be published to `main`.
+- Historical reconciliation of remote `main` and `dev` is COMPLETE; recheck live refs and authorize each future operation separately.
+- Separately decide whether a Google Jules G06 pilot is worthwhile; do not expand G00-G05 scope or forecasts automatically.

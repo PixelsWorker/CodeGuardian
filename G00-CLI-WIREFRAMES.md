@@ -1,6 +1,6 @@
 # G00 - Proposed CLI UX Wireframes (MOCK ONLY)
 
-**Status:** Illustrative screen sketches for scope approval. Commands and output are proposals, NOT implemented or tested.
+**Status:** Illustrative **native terminal** sketches; proposed commands are NOT implemented/tested as a native CLI. A separate React/Vite G00 browser mock exists on remote `main`; this governance review did not run its tests.
 
 ## 1. CLI command vocabulary to confirm
 
@@ -87,4 +87,4 @@ Result in G00: SIMULATED CONFIRMATION ONLY.
 - GitHub write not allowed: no prompt that suggests automatic rights.
 - Narrow terminal and NO_COLOR: statuses remain understandable without ANSI colors.
 
-**Approval request:** Confirm these are the complete G00 terminal behaviors and whether the proposed command vocabulary is acceptable. No executable files exist yet.
+**Approval request:** Confirm these complete native terminal behaviors and command names. Browser prototype source/test files exist; a native CLI executable and accepted G00 walkthrough are not verified. Optional G06 repository-audit UX is separately proposed and is not part of these screens.

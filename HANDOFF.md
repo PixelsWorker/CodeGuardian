@@ -1,66 +1,40 @@
 # CodeGuardian - Development Manager Handoff
 
-**Product/group:** CodeGuardian / architecture and setup review (PRE-G00)  
-**Date:** 2026-10-14  
-**Status:** Documentation delivered to `dev`; architecture/G00 acceptance pending. DOC-01 local documentation corrections authorized; further Git actions not authorized.
+**Prepared:** 2026-10-15
+**Status:** PREPARED - NOT TRANSFERRED; this is a repository planning handoff, not authorization to start G00 or G06 implementation.
+**Product/group:** CodeGuardian / PRE-G00 architecture and setup review.
 
-## 1. Project goal and scope
+## Goal and separate workflows
 
-Build a CLI-first multi-agent GitHub PR review product: deterministic CodeGuardian Manager orchestrates specialist CodeGuardianMini Codex CLI/SDK workers, validates consolidated findings, and delegates all GitHub writes to an approval-gated publisher. PR-Agent A2A and webhooks are subsequent optional groups, not MVP prerequisites.
+The proposed primary product is a **native CLI-first GitHub PR reviewer**. A deterministic Manager coordinates bounded Codex specialist workers and independent source checks, while a separately authorized deterministic publisher handles future `COMMENT` reviews.
 
-ChatGPT account login is a supported possible Codex local auth method without an OpenAI Platform API key. If a key becomes available later, keep the CLI/SDK adapter. Workspace Agent API tokens are not required for this Docker-based project.
+**Existing G00 evidence:** `main` contains a nine-screen React/Vite *browser* terminal-style mock and test source; native CLI implementation and explicit G00 acceptance are NOT VERIFIED. The browser reference may guide UX review but does not substitute for the required native terminal walkthrough.
 
-## 2. Repository identity / current state
+**Optional G06 proposal:** Use Google Jules for repository-wide candidate findings, a pinned Git snapshot and tracked-file inventory, independent Manager source verification, coverage ledger, preliminary `JULES-AUDIT.md`, and separately approved final `AUDIT.md`. This is not part of G00 or the currently forecast G00–G05 groups.
 
-- Repo: https://github.com/PixelsWorker/CodeGuardian (public; owner PixelsWorker).
-- Canonical checkout: `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`.
-- Local `dev` / `origin/dev`: `1b9f8bd7422548e0f05cdd7d445b9ea4a8be6ff7`.
-- Local `main`: `1bb57572f3c1a544c71bb6e519f4428db22e3086`, an ancestor of `dev`.
-- Remote `origin/main`: `dfe6daa7190a24215ccfc5537e5780fe56b2909d`; no common ancestor with `dev`. Integration remains unresolved.
-- DOC-01 preflight: clean working tree on `dev`; no unfinished merge, rebase, or cherry-pick. Authorized local edits remain uncommitted.
-- No application implementation, configured build system, or test runner exists. Host runtime/Docker/authentication remain unverified.
-- G00 branch `feat/g00-cli-ux-demo`: PROPOSED ONLY, not authorized.
+## Verified remote state and limits
 
-## 3. Documentation delivery completed on `dev`
+| Ref | Verified prior-to-update SHA | Evidence |
+|---|---|---|
+| `main` | `3c9db33177e7ee8e2c6310ac05af21839f0cac08` | Browser mock, package manifest, test source, planning docs, Vite host configuration |
+| `dev` | `a39a37525ba5a5645dec8e382be0f47c735d1d0e` | Documentation baseline, no browser package manifest |
 
-The ten packet files (`README.md`, `PROJECT-BRIEF.md`, `ARCHITECTURE.md`, `TECH-RESEARCH.md`, `API-CONTRACT.md`, `SETUP.md`, `G00-SCOPE.md`, `G00-CLI-WIREFRAMES.md`, `REPO-INITIALIZATION.md`, and `HANDOFF.md`) were created, committed, and pushed at `1b9f8bd`. Repository `AGENTS.md` was introduced at `1bb5757`.
+Reconciliation of independent Git histories is DONE (historical merge `e3e6b281e517a2d884309d527650ba9329e76d8e`); do not repeat it. The original branch SHAs above are timestamped checkpoints, not future instructions.
 
-Initial documentation delivery is resolved **for `dev` only**. It neither integrates the packet into remote `main` nor approves architecture, technologies, or G00. DOC-01 permits local corrections to five specified files only; staging, commits, pushes, merges, and PR operations remain prohibited.
+Canonical Fedora checkout: `/home/rockson/Projects/PixelsWorker/CodeGuardian/CodeGuardian`. Its current clean status, branch, worktrees, sandbox (`bwrap`), Node/package tool, Docker and authenticated account state are UNKNOWN to this review. `.coderabbit.yaml` was reported locally but is absent from the inspected remote `main` tree. No build/test was executed.
 
-## 4. Open decisions and blockers
+## Governing documents and approval gates
 
-| ID | Stage | Decision needed | Effect |
-|---|---|---|---|
-| B01 | Setup | Accept Codex-first scope, component isolation, and proposed stack | Architecture can't be marked approved |
-| B02 | Git integration | Approve a plan preserving independent remote `main` and `dev` histories | Packet remains on `dev`; no main integration authorized |
-| B08 | License/protection | Select license and repository rules/status checks | No license or protection change authorized |
-| B03 | G00 | Approve complete CLI mock UX scope and command vocabulary | Do not issue executable G00 TODO |
-| B04 | G00 setup | Project root verified; confirm runtime environment, available Docker, and package tool | Cannot verify local commands |
-| B05 | G02 real AI | Verify allowed ChatGPT Codex login (and device-code permissions where needed) OR later independent API auth | G02 may become blocked, not G00 |
-| B06 | G04 | Choose and configure supported PR-Agent model provider | PR-Agent later integration blocked until solved |
-| B07 | G05 | Approve unattended identity/webhook/sandbox design | No automation until then |
+- `PROJECT-BRIEF.md`, `ARCHITECTURE.md`, `ROADMAP.md`: proposed architecture; G06 D-09 remains proposed.
+- `G00-SCOPE.md`, `G00-CLI-WIREFRAMES.md`: required mock-only **native CLI** journey and acceptance tests; browser reference is not enough.
+- `API-CONTRACT.md`: canonical PR findings rules; proposed repository-wide audit types must not defeat PR changed-hunk checks.
+- `TECH-RESEARCH.md`: current official Jules API evidence plus known untested runtime details.
+- `SETUP.md` and `REPO-INITIALIZATION.md`: current remote observations and Git history.
 
-Do not loop on B05/B06 while G00 mock demo can proceed after its independent approvals.
+**Pending decisions:** architecture D-01–D-08 and G00 scope/stack acceptance; native CLI vs browser UX mapping; approved local execution approach (including prior reported `bwrap` issue); license/protection rules; allowed implementation paths and Git actions. G02 Codex auth, G04 provider setup, G05 webhooks and optional G06 Jules pilot are later gates.
 
-## 5. Scope exclusion and security policy
+## Next requested action / stop
 
-- G00 is a full **simulated terminal experience**, NOT real Codex or GitHub integration.
-- Don't add web dashboard, server, PR-Agent dependencies, or persistent production services to G00.
-- No destructive Git actions, unapproved package additions, credentials in docs, real GitHub posting, merge, push, deployment, or changes to protected governance files.
-- Dirty canonical checkout or uncertain base => STOP, report a safe Git plan rather than creating/switching branches.
-- Worker containers are read-only and must not get arbitrary GitHub write credentials; ChatGPT session-credential isolation is an explicit unresolved security gate.
+**Development Manager: review setup, architecture and full G00 design only.** Independently inspect the local checkout and actual test results, identify missing authorizations, and request the exact group plan approval before passing bounded implementation to Codex. G01 is blocked until Rockson explicitly approves the complete G00 native CLI demo.
 
-## 6. Immediate next action (approval gate)
-
-Review the five-file DOC-01 local diff. Stop after verification; do not stage, commit, push, create/switch branches or worktrees, merge, pull, reset, or open a PR. A future documentation commit/PR process and a separate history integration plan need explicit authorization.
-
-Architecture and MVP/G00 scope acceptance, license selection, and G00 branch/TODO approval remain pending. After those approvals, prepare a bounded TODO per `sprint-code.md` with the `sprint-test.md` plan, then stop before implementation until specifically authorized.
-
-## 7. Evidence standard
-
-- Verified baseline: canonical checkout, branch references above, clean preflight, documentation delivery to remote `dev`, and unrelated remote histories.
-- NOT verified: Docker builds, dependency installation/compatibility, Codex or gh login, PR review calls, application builds/tests, CI, runtime integration, or review publication.
-- Documentation commits and push to `dev` occurred; no application implementation, main integration, or deployment is established.
-- Untouched packet files retain preparation-time repository claims; current repository evidence in this handoff and `SETUP.md` supersedes them. Proposed architecture and API-contract decisions are unchanged.
-
-**Next requested decision:** Review the local documentation diff. Further Git actions, history integration, and G00 implementation require new explicit authorization.
+G06 requires a separate pilot approval for source/mirror and Jules permissions, plan review, rate/cost policy, snapshot proof and report publication. No Jules session, external repo grant, app installation, report publication, implementation, deployment, merge or release has been executed by this handoff.

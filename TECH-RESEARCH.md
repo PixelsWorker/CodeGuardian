@@ -1,8 +1,8 @@
 # CodeGuardian - Technical Research and Verification
 
-**As of:** 2026-10-14  
+**Original research as of:** 2026-10-14; **current Git/Jules addendum:** 2026-10-15  
 **Scope:** Source-level checks and planning; NOT running CodeGuardian  
-**Caution:** Release latest-tags may change after this date. No dependency or Docker compatibility test has run.
+**Caution:** Earlier empty-repository and independent-history entries are dated historical research, superseded by the 2026-10-15 Git checkpoint below. Version tags may change; no dependency or Docker compatibility test has run in this documentation update.
 
 ## Verified sources
 
@@ -52,3 +52,21 @@ A key acquired later does NOT mean dropping CLI. The Codex adapter can remain th
 ## Proposed dependency posture
 
 Use exact tested versions and a lockfile when implementing G00/G01; do not bake authentication files into images or commit them. Research verifies upstream availability only, not compatibility with CodeGuardian.
+
+## Addendum - 2026-10-15 source research
+
+**Repository:** `PixelsWorker/CodeGuardian` remote `main` `3c9db33177e7ee8e2c6310ac05af21839f0cac08`, remote `dev` `a39a37525ba5a5645dec8e382be0f47c735d1d0e`. Inspected Git tree and `AGENTS.md`, `API-CONTRACT.md`, `ARCHITECTURE.md`, `G00-CLI-WIREFRAMES.md`, `G00-SCOPE.md`, `HANDOFF.md`, `PROJECT-BRIEF.md`, `README.md`, `REPO-INITIALIZATION.md`, `ROADMAP.md`, `SETUP.md`, `TECH-RESEARCH.md`, `package.json` and `vite.config.ts`. Current remote `main` includes a browser mock and tests; no accepted native CLI or passing local tests were established. `.coderabbit.yaml` was absent from remote `main`.
+
+| Topic | Official / repository evidence, checked 2026-10-15 | Planning consequence |
+|---|---|---|
+| Jules API | https://developers.google.com/jules/api — experimental `v1alpha`, Sources/Sessions/Activities, separate API key via `X-Goog-Api-Key` and Jules GitHub App connection | Adapter optional and version-isolated; not a turnkey full-codebase audit |
+| Jules plans | https://developers.google.com/jules/api — plans automatically approved unless `requirePlanApproval: true` | Require human plan approval during a separately approved audit pilot |
+| Jules PR creation | https://developers.google.com/jules/api — `AUTO_CREATE_PR` optional; default does not automatically open a PR | Never enable automatic PR creation in the pilot, but this alone does **not** enforce no writes |
+| Jules source identity | https://developers.google.com/jules/api/reference/rest/v1alpha/sessions — `githubRepoContext.startingBranch`, no documented immutable SHA pin field | Independent exact-source/SHA identity gate; abort verified claim if ambiguous |
+| Jules activity evidence | https://developers.google.com/jules/api/reference/rest/v1alpha/sessions.activities — agent messages/progress/artifacts | No guaranteed full-file inspection ledger; file coverage needs separate evidence |
+| Current browser prototype | Verified `package.json` and React/Vite screen/test source on GitHub `main` at stated SHA | Browser reference ≠ native CLI; test scripts present ≠ executed/pass |
+| Native stack | Prior Node/TypeScript/Ink candidates in planning documents, not installed/verified here | Recheck exact runtime, security and compatibility before any new dependency authorization |
+
+**Risks to resolve before G06:** external source/code exposure, least-privileged disposable mirror, cloud command execution, prompt injection, credential handling, plan approval semantics, snapshot verification, API alpha compatibility, bounded usage/latency/rate limits, reporting and retention. Jules output is untrusted; CodeGuardian Manager independently verifies claims before a `verified` label.
+
+**Execution status:** NO Jules API session, account connection, GitHub App installation, mirror, audit, model call, report publication, application build, test, dependency installation or deployment was performed by this research/documentation update. G00–G05 forecast unchanged; G06 estimate TBD.
