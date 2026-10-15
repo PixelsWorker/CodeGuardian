@@ -3,7 +3,8 @@ import {
   RepositoryAuditFinding, 
   RepositoryAuditCoverage, 
   RepositoryAuditReport, 
-  JulesActivity, 
+  JulesActivity,
+  JulesActivityState,
   AuditScenarioDefinition 
 } from '../types/auditContract';
 
@@ -676,199 +677,421 @@ export const AUDIT_SCENARIOS: AuditScenarioDefinition[] = [
 
 export interface SynchronizedAuditData {
   snapshot: RepositorySnapshot;
+  activities: JulesActivity[];
   coverage: RepositoryAuditCoverage[];
   findings: RepositoryAuditFinding[];
   report: RepositoryAuditReport;
 }
+export interface AuditContextParams {
+  owner: string;
+  repo: string;
+  branch?: string;
+  intendedSha?: string;
+  isShaVerified?: boolean;
+  exclusionPatterns?: string[];
+  scenario?: AuditScenarioDefinition;
+}
 
-export function getAuditDataForRepository(
+export function createActivitiesForTarget(
   owner: string,
   repo: string,
-  intendedSha: string = '',
-  isVerified: boolean = false
-): SynchronizedAuditData {
-  const isCodeGuardian = owner === 'PixelsWorker' && repo === 'CodeGuardian';
-  const isReact = owner === 'facebook' && repo === 'react';
+  activitiesState?: Record<string, JulesActivityState>,
+  customScope?: string
+): JulesActivity[] {
+  const isCodeGuardian = owner === "PixelsWorker" && repo === "CodeGuardian";
+  const isReact = owner === "facebook" && repo === "react";
 
-  if (isCodeGuardian) {
+  return DEFAULT_JULES_ACTIVITIES.map((base) => {
+    const targetState = activitiesState ? activitiesState[base.id] || "queued" : "queued";
+    let targetScope = base.targetScope;
+    let logs: string[] = [];
+    let candidateFindingsCount = 0;
+    let currentAction = "Waiting for preflight authorization";
+    let progress = 0;
+    let durationMs = 0;
+
+    if (!isCodeGuardian) {
+      if (isReact) {
+        if (base.id === "act_arch") targetScope = "packages/react, packages/react-dom";
+        else if (base.id === "act_sec") targetScope = "packages/react, security policies";
+        else if (base.id === "act_correct") targetScope = "packages/react-reconciler";
+        else if (base.id === "act_deps") targetScope = "package.json, build scripts";
+      } else {
+        targetScope = customScope || (owner + "/" + repo);
+      }
+      logs = ["[00:00.00] Queued for repository: " + owner + "/" + repo];
+      candidateFindingsCount = 0;
+      currentAction = "Waiting for preflight authorization";
+      if (activitiesState) {
+        if (targetState === "complete") progress = 100;
+        else if (targetState === "running") progress = 45;
+        else if (targetState === "cancelled") progress = 30;
+      }
+    } else {
+      // CodeGuardian
+      if (activitiesState) {
+        candidateFindingsCount = base.candidateFindingsCount;
+        currentAction = base.currentAction;
+        logs = [...base.logs];
+        if (targetState === "complete") {
+          progress = 100;
+          durationMs = base.durationMs;
+        } else if (targetState === "running") {
+          progress = 45;
+          durationMs = 2500;
+          currentAction = "Analyzing AST and caller dependencies...";
+          logs = [
+            "[00:01.00] Session initialized for " + base.name,
+            "[00:02.50] Parsing syntax tree and extracting symbols...",
+          ];
+        } else if (targetState === "cancelled") {
+          progress = 30;
+          durationMs = 1500;
+          currentAction = "Cancelled by operator signal";
+          logs = [
+            "[00:01.00] Session initialized for " + base.name,
+            "[00:01.50] CANCELLED: Operator abort signal received.",
+          ];
+        } else if (targetState === "timed_out") {
+          progress = 80;
+          durationMs = 15000;
+          currentAction = "Hard timeout exceeded (15m cap)";
+          logs = [
+            "[00:01.00] Session initialized for " + base.name,
+            "[05:00.00] Large dependency traversal in progress...",
+            "[15:00.00] ERROR: Operation timed out after 15m hard cap.",
+          ];
+        } else if (targetState === "queued") {
+          progress = 0;
+          durationMs = 0;
+          candidateFindingsCount = 0;
+          currentAction = "Waiting for preflight authorization";
+          logs = [];
+        } else if (targetState === "failed") {
+          progress = 10;
+          durationMs = 1000;
+          currentAction = "Preflight failed or rejected";
+          logs = ["[00:00.50] Preflight failed closed."];
+        }
+      } else {
+        logs = ["[00:00.00] Queued for CodeGuardian (unverified)"];
+      }
+    }
+
+    return {
+      ...base,
+      targetScope,
+      state: targetState,
+      progress,
+      durationMs,
+      candidateFindingsCount,
+      currentAction,
+      logs,
+    };
+  });
+}
+
+export function synchronizeAuditContext(params: AuditContextParams): SynchronizedAuditData {
+  const {
+    owner,
+    repo,
+    branch = "main",
+    intendedSha = "",
+    isShaVerified = false,
+    exclusionPatterns,
+    scenario,
+  } = params;
+
+  if (scenario) {
+    const { owner: sOwner, repo: sRepo, intendedSha: sSha, isShaVerified: sVerified, status, activitiesState, isTimeout } = scenario.snapshotState;
+    if (sOwner === "PixelsWorker" && sRepo === "CodeGuardian") {
+      const snapshot: RepositorySnapshot = {
+        ...DEFAULT_REPOSITORY_SNAPSHOT,
+        requested_branch: scenario.snapshotState.branch || "main",
+        intended_commit_sha: sSha,
+        verified_audit_commit_sha: sVerified ? sSha : null,
+      };
+
+      const activities = createActivitiesForTarget(sOwner, sRepo, activitiesState);
+
+      if (scenario.id === "audit_partial_timeout" || isTimeout) {
+        const coverage = DEFAULT_COVERAGE_LEDGER.map((c) =>
+          c.module === "package.json" || c.path.includes("vite.config")
+            ? {
+                ...c,
+                level: "unknown" as const,
+                evidence_references: [],
+                exclusion_or_unknown_reason: "15m timeout exceeded during dependency traversal.",
+              }
+            : c
+        );
+        const findings = DEFAULT_AUDIT_FINDINGS.filter((f) => f.source_activity_id !== "act_deps");
+        return {
+          snapshot,
+          activities,
+          coverage,
+          findings,
+          report: {
+            ...DEFAULT_AUDIT_REPORT,
+            repository: snapshot,
+            status: "partial",
+            findings,
+            coverage,
+            limitations: [
+              ...DEFAULT_AUDIT_REPORT.limitations,
+              "Dependency activity timed out; supply chain coverage remains partial.",
+            ],
+            report_digest: "sha256:4d60e71ab8735fbc249870196238bcde2489c091d3e867b31278eabcf0012345-partial",
+          },
+        };
+      }
+
+      if (
+        scenario.id === "audit_operator_cancelled" ||
+        scenario.id === "audit_missing_auth" ||
+        scenario.id === "audit_stale_commit" ||
+        scenario.id === "audit_plan_rejected"
+      ) {
+        const coverage = DEFAULT_COVERAGE_LEDGER.map((c) => ({
+          ...c,
+          level: "inventoried" as const,
+          evidence_references: [],
+        }));
+        return {
+          snapshot,
+          activities,
+          coverage,
+          findings: [],
+          report: {
+            schema_version: "1.0.0",
+            audit_id: "audit-run-aborted",
+            repository: snapshot,
+            status,
+            findings: [],
+            coverage,
+            architecture_summary: "Audit session did not complete. No verified systemic findings exist.",
+            limitations: [
+              "Audit was interrupted, unauthenticated, or blocked by preflight invariants.",
+              "No source evidence or manager fact-checked claims collected.",
+            ],
+            executed_checks: ["git rev-parse HEAD (pinned commit check)"],
+            jules_session_ids: [],
+            generated_at: "2026-10-15T04:30:00.000Z",
+            report_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          },
+        };
+      }
+
+      return {
+        snapshot,
+        activities,
+        coverage: DEFAULT_COVERAGE_LEDGER,
+        findings: DEFAULT_AUDIT_FINDINGS,
+        report: {
+          ...DEFAULT_AUDIT_REPORT,
+          repository: snapshot,
+          status,
+          findings: DEFAULT_AUDIT_FINDINGS,
+          coverage: DEFAULT_COVERAGE_LEDGER,
+        },
+      };
+    }
+
+    // External scenario (e.g. audit_invalid_repo with UnknownOrg/NonExistent$Repo)
+    return synchronizeAuditContext({
+      owner: sOwner,
+      repo: sRepo,
+      branch: scenario.snapshotState.branch,
+      intendedSha: sSha,
+      isShaVerified: sVerified,
+    });
+  }
+
+  // No scenario: Context-based synchronization (manual edits, preset clicks, etc.)
+  const isCodeGuardian = owner === "PixelsWorker" && repo === "CodeGuardian";
+  const isReact = owner === "facebook" && repo === "react";
+
+  // Check if CodeGuardian matches verified baseline
+  const isCodeGuardianBaseline =
+    isCodeGuardian &&
+    (branch === "main" || !branch) &&
+    (intendedSha === DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha || !intendedSha) &&
+    isShaVerified;
+
+  if (isCodeGuardianBaseline) {
     const snapshot: RepositorySnapshot = {
       ...DEFAULT_REPOSITORY_SNAPSHOT,
+      requested_branch: branch || "main",
       intended_commit_sha: intendedSha || DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha,
-      verified_audit_commit_sha: isVerified ? (intendedSha || DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha) : null,
+      verified_audit_commit_sha: isShaVerified ? (intendedSha || DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha) : null,
+      exclusion_patterns: exclusionPatterns || DEFAULT_REPOSITORY_SNAPSHOT.exclusion_patterns,
     };
     return {
       snapshot,
+      activities: DEFAULT_JULES_ACTIVITIES,
       coverage: DEFAULT_COVERAGE_LEDGER,
       findings: DEFAULT_AUDIT_FINDINGS,
       report: {
         ...DEFAULT_AUDIT_REPORT,
         repository: snapshot,
+      },
+    };
+  }
+
+  if (isCodeGuardian) {
+    // Same repository (CodeGuardian), but DIFFERENT SHA or branch or unverified!
+    // Must invalidate previous findings and report readiness!
+    const effectiveSha = intendedSha || DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha;
+    const snapshot: RepositorySnapshot = {
+      owner: "PixelsWorker",
+      repo: "CodeGuardian",
+      requested_branch: branch,
+      intended_commit_sha: effectiveSha,
+      verified_audit_commit_sha: isShaVerified ? effectiveSha : null,
+      tracked_files: DEFAULT_REPOSITORY_SNAPSHOT.tracked_files,
+      total_files_count: DEFAULT_REPOSITORY_SNAPSHOT.total_files_count,
+      tracked_file_manifest_digest: "sha256:unverified-drift-manifest-digest-0000000000000000000000",
+      exclusion_patterns: exclusionPatterns || DEFAULT_REPOSITORY_SNAPSHOT.exclusion_patterns,
+    };
+
+    const unverifiedCoverage: RepositoryAuditCoverage[] = DEFAULT_COVERAGE_LEDGER.map((c) => ({
+      ...c,
+      level: "inventoried",
+      evidence_references: [],
+      exclusion_or_unknown_reason: "Unverified commit snapshot: pending independent verification.",
+    }));
+
+    const activities = createActivitiesForTarget("PixelsWorker", "CodeGuardian", undefined, "src/core, ARCHITECTURE.md");
+
+    return {
+      snapshot,
+      activities,
+      coverage: unverifiedCoverage,
+      findings: [],
+      report: {
+        schema_version: "1.0.0",
+        audit_id: "audit-run-unverified-codeguardian",
+        repository: snapshot,
+        status: "blocked",
+        findings: [],
+        coverage: unverifiedCoverage,
+        architecture_summary: "Repository snapshot (PixelsWorker/CodeGuardian @ " + branch + ":" + effectiveSha.slice(0, 10) + "). Unverified commit SHA or branch drift detected; previous audit findings and report readiness invalidated.",
+        limitations: [
+          "Intended commit SHA has not completed independent source verification.",
+          "Previous audit findings and report readiness invalidated due to snapshot drift.",
+        ],
+        executed_checks: ["git rev-parse HEAD (unverified commit check)"],
+        jules_session_ids: [],
+        generated_at: "2026-10-15T04:30:00.000Z",
+        report_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
       },
     };
   }
 
   if (isReact) {
+    const effectiveSha = intendedSha || EXTERNAL_REACT_SNAPSHOT.intended_commit_sha;
     const snapshot: RepositorySnapshot = {
       ...EXTERNAL_REACT_SNAPSHOT,
-      intended_commit_sha: intendedSha || EXTERNAL_REACT_SNAPSHOT.intended_commit_sha,
-      verified_audit_commit_sha: isVerified ? (intendedSha || EXTERNAL_REACT_SNAPSHOT.intended_commit_sha) : null,
+      requested_branch: branch || EXTERNAL_REACT_SNAPSHOT.requested_branch,
+      intended_commit_sha: effectiveSha,
+      verified_audit_commit_sha: isShaVerified ? effectiveSha : null,
+      exclusion_patterns: exclusionPatterns || EXTERNAL_REACT_SNAPSHOT.exclusion_patterns,
     };
+    const activities = createActivitiesForTarget("facebook", "react", undefined, "packages/react, packages/react-dom");
     return {
       snapshot,
+      activities,
       coverage: EXTERNAL_REACT_COVERAGE,
       findings: [],
       report: {
-        schema_version: '1.0.0',
-        audit_id: 'audit-run-external-react',
+        schema_version: "1.0.0",
+        audit_id: "audit-run-external-react",
         repository: snapshot,
-        status: 'blocked',
+        status: "blocked",
         findings: [],
         coverage: EXTERNAL_REACT_COVERAGE,
-        architecture_summary: 'External repository snapshot (facebook/react). No CodeGuardian audit evidence has been asserted or verified.',
+        architecture_summary: "External repository snapshot (facebook/react). No CodeGuardian audit evidence has been asserted or verified.",
         limitations: [
-          'External repository snapshot has not completed CodeGuardian Manager independent verification.',
-          'No baseline findings or coverage evidence exist for this external repository.',
+          "External repository snapshot has not completed CodeGuardian Manager independent verification.",
+          "No baseline findings or coverage evidence exist for this external repository.",
         ],
         executed_checks: [
-          'git rev-parse HEAD (pinned commit check)',
-          'git ls-files -s (manifest check)',
+          "git rev-parse HEAD (external repository snapshot: unverified)",
+          "git ls-files -s (manifest check)",
         ],
         jules_session_ids: [],
-        generated_at: '2026-10-15T04:30:00.000Z',
-        report_digest: 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        generated_at: "2026-10-15T04:30:00.000Z",
+        report_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       },
     };
   }
 
   // Generic external / unknown repository
+  const effectiveSha = intendedSha || "0000000000000000000000000000000000000000";
   const snapshot: RepositorySnapshot = {
     owner,
     repo,
-    requested_branch: 'main',
-    intended_commit_sha: intendedSha || '0000000000000000000000000000000000000000',
-    verified_audit_commit_sha: isVerified ? intendedSha : null,
-    tracked_file_manifest_digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    requested_branch: branch,
+    intended_commit_sha: effectiveSha,
+    verified_audit_commit_sha: isShaVerified ? effectiveSha : null,
+    tracked_file_manifest_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
     total_files_count: 0,
     tracked_files: [],
-    exclusion_patterns: [],
+    exclusion_patterns: exclusionPatterns || [],
   };
+
+  const activities = createActivitiesForTarget(owner, repo, undefined, owner + "/" + repo);
 
   return {
     snapshot,
+    activities,
     coverage: [],
     findings: [],
     report: {
-      schema_version: '1.0.0',
-      audit_id: `audit-run-${owner.toLowerCase()}-${repo.toLowerCase()}`,
+      schema_version: "1.0.0",
+      audit_id: "audit-run-" + owner.toLowerCase().replace(/[^a-z0-9]/g, "-") + "-" + repo.toLowerCase().replace(/[^a-z0-9]/g, "-"),
       repository: snapshot,
-      status: 'failed',
+      status: "failed",
       findings: [],
       coverage: [],
-      architecture_summary: `External repository snapshot (${owner}/${repo}). No source files inventoried or verified.`,
+      architecture_summary: "External repository snapshot (" + owner + "/" + repo + "). No source files inventoried or verified.",
       limitations: [
-        'External repository snapshot has not completed CodeGuardian Manager independent verification.',
-        'No source evidence or independent caller verifications available.',
+        "External repository snapshot has not completed CodeGuardian Manager independent verification.",
+        "No source evidence or independent caller verifications available.",
       ],
-      executed_checks: [
-        'git rev-parse HEAD (pinned commit check)',
-      ],
+      executed_checks: ["git rev-parse HEAD (pinned commit check)"],
       jules_session_ids: [],
-      generated_at: '2026-10-15T04:30:00.000Z',
-      report_digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+      generated_at: "2026-10-15T04:30:00.000Z",
+      report_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
     },
   };
 }
 
+export function getAuditDataForRepository(
+  owner: string,
+  repo: string,
+  intendedSha: string = "",
+  isVerified: boolean = false,
+  branch: string = "main",
+  exclusionPatterns?: string[]
+): SynchronizedAuditData {
+  return synchronizeAuditContext({
+    owner,
+    repo,
+    branch,
+    intendedSha,
+    isShaVerified: isVerified,
+    exclusionPatterns,
+  });
+}
+
 export function getAuditDataForScenario(scenario: AuditScenarioDefinition): SynchronizedAuditData {
-  const { owner, repo, intendedSha, isShaVerified, status } = scenario.snapshotState;
-
-  if (owner === 'PixelsWorker' && repo === 'CodeGuardian') {
-    const snapshot: RepositorySnapshot = {
-      ...DEFAULT_REPOSITORY_SNAPSHOT,
-      intended_commit_sha: intendedSha,
-      verified_audit_commit_sha: isShaVerified ? intendedSha : null,
-    };
-
-    if (scenario.id === 'audit_partial_timeout') {
-      const coverage = DEFAULT_COVERAGE_LEDGER.map((c) =>
-        c.module === 'package.json' || c.path.includes('vite.config')
-          ? {
-              ...c,
-              level: 'unknown' as const,
-              evidence_references: [],
-              exclusion_or_unknown_reason: '15m timeout exceeded during dependency traversal.',
-            }
-          : c
-      );
-      const findings = DEFAULT_AUDIT_FINDINGS.filter((f) => f.source_activity_id !== 'act_deps');
-      return {
-        snapshot,
-        coverage,
-        findings,
-        report: {
-          ...DEFAULT_AUDIT_REPORT,
-          repository: snapshot,
-          status: 'partial',
-          findings,
-          coverage,
-          limitations: [
-            ...DEFAULT_AUDIT_REPORT.limitations,
-            'Dependency activity timed out; supply chain coverage remains partial.',
-          ],
-          report_digest: 'sha256:4d60e71ab8735fbc249870196238bcde2489c091d3e867b31278eabcf0012345-partial',
-        },
-      };
-    }
-
-    if (
-      scenario.id === 'audit_operator_cancelled' ||
-      scenario.id === 'audit_missing_auth' ||
-      scenario.id === 'audit_stale_commit' ||
-      scenario.id === 'audit_plan_rejected'
-    ) {
-      const coverage = DEFAULT_COVERAGE_LEDGER.map((c) => ({
-        ...c,
-        level: 'inventoried' as const,
-        evidence_references: [],
-      }));
-      return {
-        snapshot,
-        coverage,
-        findings: [],
-        report: {
-          schema_version: '1.0.0',
-          audit_id: 'audit-run-aborted',
-          repository: snapshot,
-          status,
-          findings: [],
-          coverage,
-          architecture_summary: 'Audit session did not complete. No verified systemic findings exist.',
-          limitations: [
-            'Audit was interrupted, unauthenticated, or blocked by preflight invariants.',
-            'No source evidence or manager fact-checked claims collected.',
-          ],
-          executed_checks: ['git rev-parse HEAD (pinned commit check)'],
-          jules_session_ids: [],
-          generated_at: '2026-10-15T04:30:00.000Z',
-          report_digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
-        },
-      };
-    }
-
-    return {
-      snapshot,
-      coverage: DEFAULT_COVERAGE_LEDGER,
-      findings: DEFAULT_AUDIT_FINDINGS,
-      report: {
-        ...DEFAULT_AUDIT_REPORT,
-        repository: snapshot,
-        status,
-        findings: DEFAULT_AUDIT_FINDINGS,
-        coverage: DEFAULT_COVERAGE_LEDGER,
-      },
-    };
-  }
-
-  // External repository scenario (e.g. UnknownOrg/NonExistent$Repo)
-  return getAuditDataForRepository(owner, repo, intendedSha, isShaVerified);
+  return synchronizeAuditContext({
+    owner: scenario.snapshotState.owner,
+    repo: scenario.snapshotState.repo,
+    branch: scenario.snapshotState.branch,
+    intendedSha: scenario.snapshotState.intendedSha,
+    isShaVerified: scenario.snapshotState.isShaVerified,
+    scenario,
+  });
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { JulesActivity, JulesActivityState, AuditScreen } from '../../../types/auditContract';
+import { JulesActivity, JulesActivityState, AuditScreen, RepositorySnapshot, RepositoryAuditReport } from '../../../types/auditContract';
 import { 
   Play, 
   RotateCcw, 
@@ -21,6 +21,8 @@ interface AuditScreenDActivityProps {
   onCancelAudit: () => void;
   onRunAudit?: () => void;
   autoStartToken: number | null;
+  snapshot?: RepositorySnapshot;
+  report?: RepositoryAuditReport;
 }
 
 export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
@@ -31,11 +33,18 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
   onCancelAudit,
   onRunAudit,
   autoStartToken,
+  snapshot,
+  report,
 }) => {
   const [selectedActivityId, setSelectedActivityId] = useState<string>('act_arch');
   const [activeStep, setActiveStep] = useState<number>(0);
   const activeTimersRef = useRef<NodeJS.Timeout[]>([]);
   const runGenerationRef = useRef<number>(0);
+
+  const isCodeGuardian = snapshot ? (snapshot.owner === 'PixelsWorker' && snapshot.repo === 'CodeGuardian') : false;
+  const sessionId = report && report.jules_session_ids && report.jules_session_ids.length > 0
+    ? report.jules_session_ids[0]
+    : (isCodeGuardian && (!report || report.status === 'ready') ? 'jules-sess-2026-88a4' : null);
 
   const selectedActivity = activities.find((a) => a.id === selectedActivityId) || activities[0];
   const isAnyRunning = activities.some((a) => a.state === 'running');
@@ -156,7 +165,11 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
           </h2>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono">
-          <span className="text-zinc-500">Session: jules-sess-2026-88a4</span>
+          {sessionId ? (
+            <span className="text-zinc-500">Session: {sessionId}</span>
+          ) : (
+            <span className="text-zinc-500 font-mono">Session: None (Unverified)</span>
+          )}
           <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
             {totalCandidateFindings} CANDIDATE CLAIMS
           </span>

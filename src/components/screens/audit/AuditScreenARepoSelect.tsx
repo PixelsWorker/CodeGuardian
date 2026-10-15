@@ -91,11 +91,15 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
         verified_audit_commit_sha: null,
       });
     } else if (owner === 'PixelsWorker' && repo === 'CodeGuardian') {
+      const isBaselineSha = sha === DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha;
       setSnapshot({
         ...DEFAULT_REPOSITORY_SNAPSHOT,
         intended_commit_sha: sha,
-        verified_audit_commit_sha: null,
+        verified_audit_commit_sha: isBaselineSha ? sha : null,
       });
+      if (setIsShaVerified) setIsShaVerified(isBaselineSha);
+      if (setPlanApproved) setPlanApproved(isBaselineSha);
+      return;
     } else {
       setSnapshot((prev) => ({
         ...prev,

@@ -48,7 +48,10 @@ import {
   DEFAULT_AUDIT_FINDINGS, 
   DEFAULT_AUDIT_REPORT,
   EXTERNAL_REACT_SNAPSHOT,
-  EXTERNAL_REACT_COVERAGE
+  EXTERNAL_REACT_COVERAGE,
+  getAuditDataForRepository,
+  getAuditDataForScenario,
+  synchronizeAuditContext
 } from './data/auditScenarios';
 
 export const canLaunchAudit = (
@@ -271,110 +274,54 @@ export default function App() {
     handleCancelRunningAuditActivitiesOnly();
   };
 
+  const isApplyingScenarioRef = React.useRef<boolean>(false);
+
   const handleApplyAuditScenario = (scenario: AuditScenarioDefinition) => {
-    const isCodeGuardian = scenario.snapshotState.owner === 'PixelsWorker' && scenario.snapshotState.repo === 'CodeGuardian';
-    const isReact = scenario.snapshotState.owner === 'facebook' && scenario.snapshotState.repo === 'react';
+    isApplyingScenarioRef.current = true;
+    const synchronized = getAuditDataForScenario(scenario);
 
-    const selectedCoverage = isCodeGuardian 
-      ? DEFAULT_COVERAGE_LEDGER 
-      : isReact 
-      ? EXTERNAL_REACT_COVERAGE 
-      : [];
-    const selectedFindings = isCodeGuardian ? DEFAULT_AUDIT_FINDINGS : [];
-    const selectedManifestDigest = isCodeGuardian 
-      ? DEFAULT_REPOSITORY_SNAPSHOT.tracked_file_manifest_digest
-      : isReact
-      ? EXTERNAL_REACT_SNAPSHOT.tracked_file_manifest_digest
-      : 'sha256:0000000000000000000000000000000000000000000000000000000000000000';
-    const selectedFiles = isCodeGuardian
-      ? DEFAULT_REPOSITORY_SNAPSHOT.tracked_files
-      : isReact
-      ? EXTERNAL_REACT_SNAPSHOT.tracked_files
-      : [];
-    const selectedFileCount = isCodeGuardian
-      ? DEFAULT_REPOSITORY_SNAPSHOT.total_files_count
-      : isReact
-      ? EXTERNAL_REACT_SNAPSHOT.total_files_count
-      : 0;
-
-    const newSnapshot: RepositorySnapshot = {
-      ...auditSnapshot,
-      owner: scenario.snapshotState.owner,
-      repo: scenario.snapshotState.repo,
-      requested_branch: scenario.snapshotState.branch,
-      intended_commit_sha: scenario.snapshotState.intendedSha,
-      verified_audit_commit_sha: scenario.snapshotState.isShaVerified ? scenario.snapshotState.intendedSha : null,
-      tracked_files: selectedFiles,
-      total_files_count: selectedFileCount,
-      tracked_file_manifest_digest: selectedManifestDigest,
-    };
-    setAuditSnapshot(newSnapshot);
-    setCoverageLedger(selectedCoverage);
-    setAuditFindings(selectedFindings);
+    setAuditSnapshot(synchronized.snapshot);
+    setCoverageLedger(synchronized.coverage);
+    setAuditFindings(synchronized.findings);
+    setAuditReport(synchronized.report);
+    setAuditActivities(synchronized.activities);
     setIsShaVerified(scenario.snapshotState.isShaVerified);
     setJulesAuth(scenario.snapshotState.julesAuth);
     setPlanApproved(scenario.snapshotState.planApproved);
     setAuditAutoStartToken(null);
-
-    // Apply fresh activity states and logs without stale telemetry
-    setAuditActivities(createFreshAuditActivities(scenario.snapshotState.activitiesState));
-
-    // Synchronize report status, snapshot, coverage, findings, limitations, executed checks, and digest
-    const selectedExecutedChecks = isCodeGuardian
-      ? DEFAULT_AUDIT_REPORT.executed_checks
-      : isReact
-      ? ['git rev-parse HEAD (external repository snapshot: unverified)', 'Pending independent fact-checking audit']
-      : ['Repository identity unverified or invalid'];
-    const selectedReportDigest = isCodeGuardian
-      ? DEFAULT_AUDIT_REPORT.report_digest
-      : isReact
-      ? 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-      : 'sha256:0000000000000000000000000000000000000000000000000000000000000000';
-
-    setAuditReport({
-      ...DEFAULT_AUDIT_REPORT,
-      repository: newSnapshot,
-      status: scenario.snapshotState.status,
-      findings: selectedFindings,
-      coverage: selectedCoverage,
-      executed_checks: selectedExecutedChecks,
-      report_digest: selectedReportDigest,
-      limitations: scenario.snapshotState.isTimeout
-        ? [
-            ...DEFAULT_AUDIT_REPORT.limitations,
-            'Dependency activity timed out; supply chain coverage remains partial.',
-          ]
-        : DEFAULT_AUDIT_REPORT.limitations,
-    });
-
     setActiveWorkflow('repo_audit');
     setAuditScreen(scenario.initialScreen);
   };
 
-  // Synchronize audit evidence when snapshot repository identity changes outside scenarios (e.g. View A manual edits)
+  // Synchronize audit context (snapshot, activities, findings, coverage, and report) on context changes
   useEffect(() => {
-    const isCodeGuardian = auditSnapshot.owner === 'PixelsWorker' && auditSnapshot.repo === 'CodeGuardian';
-    const isReact = auditSnapshot.owner === 'facebook' && auditSnapshot.repo === 'react';
-
-    if (!isCodeGuardian) {
-      const selectedCoverage = isReact ? EXTERNAL_REACT_COVERAGE : [];
-      const selectedFindings: RepositoryAuditFinding[] = [];
-      setCoverageLedger(selectedCoverage);
-      setAuditFindings(selectedFindings);
-      setAuditReport((prev) => ({
-        ...prev,
-        repository: auditSnapshot,
-        findings: selectedFindings,
-        coverage: selectedCoverage,
-        executed_checks: isReact
-          ? ['git rev-parse HEAD (external repository snapshot: unverified)']
-          : ['Repository identity unverified or invalid'],
-        report_digest: isReact
-          ? 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-          : 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
-      }));
+    if (isApplyingScenarioRef.current) {
+      isApplyingScenarioRef.current = false;
+      return;
     }
-  }, [auditSnapshot.owner, auditSnapshot.repo]);
+
+    const isVerified = isShaVerified && auditSnapshot.verified_audit_commit_sha === auditSnapshot.intended_commit_sha;
+    const synchronized = getAuditDataForRepository(
+      auditSnapshot.owner,
+      auditSnapshot.repo,
+      auditSnapshot.intended_commit_sha,
+      isVerified,
+      auditSnapshot.requested_branch,
+      auditSnapshot.exclusion_patterns
+    );
+
+    setCoverageLedger(synchronized.coverage);
+    setAuditFindings(synchronized.findings);
+    setAuditReport(synchronized.report);
+    setAuditActivities(synchronized.activities);
+  }, [
+    auditSnapshot.owner,
+    auditSnapshot.repo,
+    auditSnapshot.requested_branch,
+    auditSnapshot.intended_commit_sha,
+    auditSnapshot.verified_audit_commit_sha,
+    isShaVerified,
+  ]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -658,6 +605,8 @@ export default function App() {
             {auditScreen === 'audit_activity' && (
               <AuditScreenDActivity
                 noColor={noColor}
+                snapshot={auditSnapshot}
+                report={auditReport}
                 activities={auditActivities}
                 setActivities={setAuditActivities}
                 onNavigate={handleNavigateAudit}

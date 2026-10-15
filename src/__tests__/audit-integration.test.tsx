@@ -653,4 +653,172 @@ describe('CodeGuardian G06 Full Repository Audit Integration Tests', () => {
     expect(screen.getAllByText(/facebook\/react/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/ServerConfig regional wildcard bypasses DNS host allowlist/i)).toBeNull();
   });
+
+  // Test 22: Transition 1: CodeGuardian → React → CodeGuardian preserves coverage, activities and report consistency
+  it('22. Transition 1: CodeGuardian → React → CodeGuardian maintains coverage, activities, and report consistency', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+
+    // Initial state: CodeGuardian baseline
+    act(() => {
+      fireEvent.click(screen.getByText(/\[C\] Coverage/i));
+    });
+    expect(screen.getByText(/src\/utils\/serverConfig\.ts/i)).toBeDefined();
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[D\] Jules Activity/i));
+    });
+    expect(screen.getByText(/Session jules-sess-2026-88a4/i)).toBeDefined();
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: READY/i)).toBeDefined();
+    expect(screen.getByText(/Modular TypeScript terminal architecture/i)).toBeDefined();
+
+    // Transition to React preset
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/facebook\/react @ a28189/i));
+    });
+
+    // Check React: Coverage, Activity, Report
+    act(() => {
+      fireEvent.click(screen.getByText(/\[C\] Coverage/i));
+    });
+    expect(screen.queryByText(/src\/utils\/serverConfig\.ts/i)).toBeNull();
+    expect(screen.getByText(/packages\/react\/index\.js/i)).toBeDefined();
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[D\] Jules Activity/i));
+    });
+    expect(screen.queryByText(/Session jules-sess-2026-88a4/i)).toBeNull();
+    expect(screen.queryByText(/serverConfig\.ts/i)).toBeNull();
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: BLOCKED/i)).toBeDefined();
+    expect(screen.queryByText(/Modular TypeScript terminal architecture/i)).toBeNull();
+    expect(screen.getByText(/External repository snapshot \(facebook\/react\)/i)).toBeDefined();
+
+    // Transition back to CodeGuardian preset
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/PixelsWorker\/CodeGuardian @ 3c9db3/i));
+    });
+
+    // Check CodeGuardian restored consistently
+    act(() => {
+      fireEvent.click(screen.getByText(/\[C\] Coverage/i));
+    });
+    expect(screen.getByText(/src\/utils\/serverConfig\.ts/i)).toBeDefined();
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[D\] Jules Activity/i));
+    });
+    expect(screen.getByText(/Session jules-sess-2026-88a4/i)).toBeDefined();
+
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: READY/i)).toBeDefined();
+    expect(screen.getByText(/Modular TypeScript terminal architecture/i)).toBeDefined();
+  });
+
+  // Test 23: Transition 2: Same repository → different SHA or branch invalidates previous findings and report readiness
+  it('23. Transition 2: Same repository with different SHA or branch invalidates previous findings and report readiness', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+
+    // Baseline report is READY
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: READY/i)).toBeDefined();
+    expect(screen.getAllByText(/AUDIT-FIND-001/i).length).toBeGreaterThan(0);
+
+    // Edit SHA in View A
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+
+    const shaInput = screen.getByPlaceholderText(/40-char commit SHA/i);
+    act(() => {
+      fireEvent.change(shaInput, { target: { value: '5d88ab210e789012345678901234567890123456' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Save Snapshot Configuration/i));
+    });
+
+    // View F: Report readiness must be invalidated (BLOCKED, not READY), findings must be cleared
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: BLOCKED/i)).toBeDefined();
+    expect(screen.queryByText(/STATUS: READY/i)).toBeNull();
+    expect(screen.queryByText(/AUDIT-FIND-001/i)).toBeNull();
+    expect(screen.getByText(/Unverified commit SHA or branch drift detected/i)).toBeDefined();
+
+    // View E: Manager Verification has 0 findings
+    act(() => {
+      fireEvent.click(screen.getByText(/\[E\] Verification/i));
+    });
+    expect(screen.queryByText(/AUDIT-FIND-001/i)).toBeNull();
+  });
+
+  // Test 24: Transition 3: External repository → View D → View F verifies no CodeGuardian-specific logs, architecture claims, or Jules session identity remain
+  it('24. Transition 3: External repository → View D → View F contains no CodeGuardian-specific logs, architecture claims, or Jules session identity', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+
+    // Select custom external repository in View A
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+    const ownerInput = screen.getByPlaceholderText(/Owner \(e\.g\. PixelsWorker\)/i);
+    const repoInput = screen.getByPlaceholderText(/Repo \(e\.g\. CodeGuardian\)/i);
+    const shaInput = screen.getByPlaceholderText(/40-char commit SHA/i);
+    act(() => {
+      fireEvent.change(ownerInput, { target: { value: 'external-org' } });
+      fireEvent.change(repoInput, { target: { value: 'cloud-agent' } });
+      fireEvent.change(shaInput, { target: { value: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Save Snapshot Configuration/i));
+    });
+
+    // View D: Activity Telemetry must NOT contain CodeGuardian references
+    act(() => {
+      fireEvent.click(screen.getByText(/\[D\] Jules Activity/i));
+    });
+    expect(screen.queryByText(/jules-sess-2026-88a4/i)).toBeNull();
+    expect(screen.queryByText(/3c9db33177/i)).toBeNull();
+    expect(screen.queryByText(/serverConfig\.ts/i)).toBeNull();
+    expect(screen.queryByText(/TerminalChrome\.tsx/i)).toBeNull();
+    expect(screen.queryByText(/ScreenEMultiAgent\.tsx/i)).toBeNull();
+
+    // View F: Report must NOT contain CodeGuardian architecture claims or session identity
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.queryByText(/Modular TypeScript terminal architecture/i)).toBeNull();
+    expect(screen.queryByText(/jules-sess-2026-88a4/i)).toBeNull();
+    expect(screen.queryByText(/AUDIT-FIND-001/i)).toBeNull();
+    expect(screen.getByText(/External repository snapshot \(external-org\/cloud-agent\)/i)).toBeDefined();
+    expect(screen.getByText(/STATUS: FAILED/i)).toBeDefined();
+  });
 });
