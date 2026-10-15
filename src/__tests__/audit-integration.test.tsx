@@ -821,4 +821,120 @@ describe('CodeGuardian G06 Full Repository Audit Integration Tests', () => {
     expect(screen.getByText(/External repository snapshot \(external-org\/cloud-agent\)/i)).toBeDefined();
     expect(screen.getByText(/STATUS: FAILED/i)).toBeDefined();
   });
+
+  // Test 25: Check A: Scenario synchronization guard — Default CodeGuardian → Apply Standard Success → Change branch or exclusion scope → Open AUDIT.md
+  it('25. Check A: Default CodeGuardian → Apply Standard Success → Change branch or exclusion scope invalidates previous READY findings', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+
+    // Step 1: Navigate to Scenarios and Apply Standard Success
+    act(() => {
+      fireEvent.click(screen.getByText(/\[S\] Scenarios/i));
+    });
+    const simulateBtn = screen.getByTestId('simulate-audit_standard_success');
+    act(() => {
+      fireEvent.click(simulateBtn);
+    });
+
+    // Verify Standard Success is applied (View F report is READY)
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: READY/i)).toBeDefined();
+    expect(screen.getAllByText(/AUDIT-FIND-001/i).length).toBeGreaterThan(0);
+
+    // Step 2: Change branch in View A
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+    const branchInput = screen.getByPlaceholderText(/main/i);
+    act(() => {
+      fireEvent.change(branchInput, { target: { value: 'feature/audit-test' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Save Snapshot Configuration/i));
+    });
+
+    // Step 3: Open AUDIT.md — previous READY findings must be invalidated, status BLOCKED, new branch reflected
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: BLOCKED/i)).toBeDefined();
+    expect(screen.queryByText(/STATUS: READY/i)).toBeNull();
+    expect(screen.queryByText(/AUDIT-FIND-001/i)).toBeNull();
+    expect(screen.getByText(/feature\/audit-test/i)).toBeDefined();
+
+    // Step 4: Test exclusion scope modification invalidates baseline findings
+    // Switch back to CodeGuardian preset first
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/PixelsWorker\/CodeGuardian @ 3c9db3/i));
+    });
+
+    // Now edit exclusion patterns
+    act(() => {
+      fireEvent.click(screen.getByText(/Edit Patterns/i));
+    });
+    const exclusionInput = screen.getByTestId('exclusion-patterns-input');
+    act(() => {
+      fireEvent.change(exclusionInput, { target: { value: 'bun.lock, *.png, src/core/**' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/Save Snapshot Configuration/i));
+    });
+
+    // Open AUDIT.md: findings must be invalidated (BLOCKED) due to exclusion scope modification
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getByText(/STATUS: BLOCKED/i)).toBeDefined();
+    expect(screen.queryByText(/STATUS: READY/i)).toBeNull();
+    expect(screen.queryByText(/AUDIT-FIND-001/i)).toBeNull();
+    expect(screen.getByText(/Scope modification/i)).toBeDefined();
+  });
+
+  // Test 26: Check B: Operator approval when returning to a preset is invalidated
+  it('26. Check B: Returning to preset restores fixture but invalidates operator approval until preflight review', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+
+    // Switch to React preset
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/facebook\/react @ a28189/i));
+    });
+
+    // Switch back to CodeGuardian preset
+    act(() => {
+      fireEvent.click(screen.getByText(/PixelsWorker\/CodeGuardian @ 3c9db3/i));
+    });
+
+    // Navigate to Preflight: plan approval must be FALSE (not automatically granted)
+    act(() => {
+      fireEvent.click(screen.getByText(/\[B\] Preflight/i));
+    });
+
+    // Launch Audit button should be disabled because plan approval is required
+    const launchAuditBtn = screen.getByTestId('launch-audit-btn');
+    expect(launchAuditBtn.hasAttribute('disabled')).toBe(true);
+
+    // Operator must explicitly approve the plan
+    const approveBtn = screen.getByText(/Approve Execution Plan/i);
+    act(() => {
+      fireEvent.click(approveBtn);
+    });
+
+    // Now Launch Audit button should be enabled
+    expect(launchAuditBtn.hasAttribute('disabled')).toBe(false);
+  });
 });

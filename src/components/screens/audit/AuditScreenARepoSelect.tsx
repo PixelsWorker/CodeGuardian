@@ -40,6 +40,20 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
   const [isEditingExclusions, setIsEditingExclusions] = React.useState(false);
   const [exclusionInput, setExclusionInput] = React.useState(snapshot.exclusion_patterns.join(', '));
 
+  React.useEffect(() => {
+    setOwnerInput(snapshot.owner);
+    setRepoInput(snapshot.repo);
+    setBranchInput(snapshot.requested_branch);
+    setShaInput(snapshot.intended_commit_sha);
+    setExclusionInput(snapshot.exclusion_patterns.join(', '));
+  }, [
+    snapshot.owner,
+    snapshot.repo,
+    snapshot.requested_branch,
+    snapshot.intended_commit_sha,
+    snapshot.exclusion_patterns,
+  ]);
+
   // 40-character hexadecimal validation represents syntax checking, not source verification
   const isShaValid = /^[0-9a-f]{40}$/i.test(shaInput.trim());
   const isRepoValid = /^[a-zA-Z0-9_.-]+$/.test(ownerInput.trim()) && /^[a-zA-Z0-9_.-]+$/.test(repoInput.trim());
@@ -98,7 +112,7 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
         verified_audit_commit_sha: isBaselineSha ? sha : null,
       });
       if (setIsShaVerified) setIsShaVerified(isBaselineSha);
-      if (setPlanApproved) setPlanApproved(isBaselineSha);
+      if (setPlanApproved) setPlanApproved(false);
       return;
     } else {
       setSnapshot((prev) => ({
@@ -293,6 +307,7 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
           </div>
           {isEditingExclusions ? (
             <input
+              data-testid="exclusion-patterns-input"
               type="text"
               value={exclusionInput}
               onChange={(e) => setExclusionInput(e.target.value)}

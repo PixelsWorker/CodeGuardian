@@ -911,12 +911,19 @@ export function synchronizeAuditContext(params: AuditContextParams): Synchronize
   const isCodeGuardian = owner === "PixelsWorker" && repo === "CodeGuardian";
   const isReact = owner === "facebook" && repo === "react";
 
-  // Check if CodeGuardian matches verified baseline
+  const defaultExclusions = DEFAULT_REPOSITORY_SNAPSHOT.exclusion_patterns;
+  const isDefaultExclusions =
+    !exclusionPatterns ||
+    (exclusionPatterns.length === defaultExclusions.length &&
+      exclusionPatterns.every((p, idx) => p.trim() === defaultExclusions[idx]));
+
+  // Check if CodeGuardian matches verified baseline (main branch, verified baseline SHA, AND default exclusions)
   const isCodeGuardianBaseline =
     isCodeGuardian &&
     (branch === "main" || !branch) &&
     (intendedSha === DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha || !intendedSha) &&
-    isShaVerified;
+    isShaVerified &&
+    isDefaultExclusions;
 
   if (isCodeGuardianBaseline) {
     const snapshot: RepositorySnapshot = {
@@ -939,7 +946,7 @@ export function synchronizeAuditContext(params: AuditContextParams): Synchronize
   }
 
   if (isCodeGuardian) {
-    // Same repository (CodeGuardian), but DIFFERENT SHA or branch or unverified!
+    // Same repository (CodeGuardian), but DIFFERENT SHA, branch, exclusion scope, or unverified!
     // Must invalidate previous findings and report readiness!
     const effectiveSha = intendedSha || DEFAULT_REPOSITORY_SNAPSHOT.intended_commit_sha;
     const snapshot: RepositorySnapshot = {
@@ -958,7 +965,7 @@ export function synchronizeAuditContext(params: AuditContextParams): Synchronize
       ...c,
       level: "inventoried",
       evidence_references: [],
-      exclusion_or_unknown_reason: "Unverified commit snapshot: pending independent verification.",
+      exclusion_or_unknown_reason: "Unverified commit snapshot or scope drift: pending independent verification.",
     }));
 
     const activities = createActivitiesForTarget("PixelsWorker", "CodeGuardian", undefined, "src/core, ARCHITECTURE.md");
@@ -975,10 +982,10 @@ export function synchronizeAuditContext(params: AuditContextParams): Synchronize
         status: "blocked",
         findings: [],
         coverage: unverifiedCoverage,
-        architecture_summary: "Repository snapshot (PixelsWorker/CodeGuardian @ " + branch + ":" + effectiveSha.slice(0, 10) + "). Unverified commit SHA or branch drift detected; previous audit findings and report readiness invalidated.",
+        architecture_summary: "Repository snapshot (PixelsWorker/CodeGuardian @ " + branch + ":" + effectiveSha.slice(0, 10) + "). Unverified commit SHA or branch drift detected (or scope modification); previous audit findings and report readiness invalidated.",
         limitations: [
-          "Intended commit SHA has not completed independent source verification.",
-          "Previous audit findings and report readiness invalidated due to snapshot drift.",
+          "Intended commit SHA or exclusion scope has not completed independent source verification.",
+          "Previous audit findings and report readiness invalidated due to snapshot or scope drift.",
         ],
         executed_checks: ["git rev-parse HEAD (unverified commit check)"],
         jules_session_ids: [],

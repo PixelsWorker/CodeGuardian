@@ -274,11 +274,20 @@ export default function App() {
     handleCancelRunningAuditActivitiesOnly();
   };
 
-  const isApplyingScenarioRef = React.useRef<boolean>(false);
+  // Fingerprint helper to track applied scenario snapshot without fragile boolean flags
+  const getSnapshotFingerprint = (s: RepositorySnapshot, verified: boolean) =>
+    `${s.owner}/${s.repo}@${s.requested_branch}:${s.intended_commit_sha}:${s.verified_audit_commit_sha}:${verified}:${(s.exclusion_patterns || []).join('|')}`;
+
+  const appliedScenarioFingerprintRef = React.useRef<string | null>(null);
 
   const handleApplyAuditScenario = (scenario: AuditScenarioDefinition) => {
-    isApplyingScenarioRef.current = true;
     const synchronized = getAuditDataForScenario(scenario);
+
+    // Record the exact fingerprint of the scenario snapshot
+    appliedScenarioFingerprintRef.current = getSnapshotFingerprint(
+      synchronized.snapshot,
+      scenario.snapshotState.isShaVerified
+    );
 
     setAuditSnapshot(synchronized.snapshot);
     setCoverageLedger(synchronized.coverage);
@@ -294,11 +303,18 @@ export default function App() {
   };
 
   // Synchronize audit context (snapshot, activities, findings, coverage, and report) on context changes
+  const exclusionPatternsKey = (auditSnapshot.exclusion_patterns || []).join('|');
+
   useEffect(() => {
-    if (isApplyingScenarioRef.current) {
-      isApplyingScenarioRef.current = false;
+    const currentFingerprint = getSnapshotFingerprint(auditSnapshot, isShaVerified);
+
+    // If current snapshot matches the applied scenario, do not overwrite scenario findings
+    if (appliedScenarioFingerprintRef.current === currentFingerprint) {
       return;
     }
+
+    // Any manual change to repository, branch, SHA, exclusion patterns, or verification invalidates the scenario
+    appliedScenarioFingerprintRef.current = null;
 
     const isVerified = isShaVerified && auditSnapshot.verified_audit_commit_sha === auditSnapshot.intended_commit_sha;
     const synchronized = getAuditDataForRepository(
@@ -320,6 +336,7 @@ export default function App() {
     auditSnapshot.requested_branch,
     auditSnapshot.intended_commit_sha,
     auditSnapshot.verified_audit_commit_sha,
+    exclusionPatternsKey,
     isShaVerified,
   ]);
 

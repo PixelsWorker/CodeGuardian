@@ -357,6 +357,7 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
           </button>
 
           <button
+            data-testid="launch-audit-btn"
             onClick={onApproveAndLaunch}
             disabled={!isPreflightPassed || !planApproved}
             className={`px-4 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 transition ${
