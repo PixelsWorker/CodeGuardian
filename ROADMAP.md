@@ -155,13 +155,23 @@ Decision checklist:
 
 **Prerequisite:** G03 and an independently accepted model-provider/A2A security setup. This group may be deferred.
 
+**Accepted first-implementation approach (2026-10-16):** CodeGuardian passes a validated, pinned diff to an isolated PR-Agent process rather than granting PR-Agent direct GitHub access. PR-Agent lives outside `ink/` in `integrations/pr-agent/`, behind a thin CodeGuardian adapter. No GitHub platform token is handed to the PR-Agent process.
+
+**Security correction (explicitly recorded):** Plain-diff mode avoids requiring a GitHub platform token, but **that alone does not guarantee the process has zero access to credentials**. The runner must also explicitly isolate filesystem access (mount only the prepared diff), strip all GitHub/Codex/SSH credential environment variables from the PR-Agent process, and block access to credential stores (`~/.config/gh`, `~/.ssh`, token files). These are separate explicit runner requirements, not implicit consequences of plain-diff mode.
+
 - Add a thin adapter to an official pinned PR-Agent MOSAICO/A2A image rather than forking PR-Agent.
 - Configure the provider separately; do not assume Codex's ChatGPT session authenticates PR-Agent.
 - Normalize PR-Agent output to `ReviewFinding` and merge with Codex findings after independent validation.
-- Do not give PR-Agent direct GitHub publishing authority.
+- Do not give PR-Agent direct GitHub publishing authority at any point.
 - Run A2A/auth, unavailable-provider, timeout, upgrade, compatibility and contract tests.
 
-**Exit:** Optional second engine contributes independently verifiable findings.
+**Requires separate approval before any G04 execution:**
+- Provider API access (PR-Agent's own model provider — separate from Codex).
+- Sending source diffs externally to a provider endpoint.
+- Any configuration granting PR-Agent access beyond the supplied validated diff.
+
+**Exit:** Optional second engine contributes independently verifiable findings, with confirmed runner isolation.
+
 
 ## 10. G05 — Unattended GitHub automation
 

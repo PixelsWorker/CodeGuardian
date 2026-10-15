@@ -14,7 +14,8 @@ The accepted product is a **native CLI-first GitHub PR reviewer** running inside
 - Implementation sequence: G00/G06 browser reference (complete) → G00 native Ink CLI → G01–G03 functional MVP → G04 optional PR-Agent → Post-MVP browser dashboard + WebMCP.
 - Google Jules G06 remains a separate optional integration and does not delay the PR-review MVP.
 - PR-Agent stays outside `ink/`, behind a CodeGuardian adapter. First G04 implementation: pass a validated, pinned diff to an isolated PR-Agent process. No direct GitHub access from PR-Agent.
-- PR-Agent isolation note: plain-diff mode avoids a GitHub platform token but does not guarantee zero credential access. Runner must explicitly isolate filesystem access, environment variables, and GitHub credentials. Provider API access and sending source diffs externally require separate approval.
+- **PR-Agent security correction (2026-10-16):** Plain-diff mode avoids requiring a GitHub platform token, but that alone does not guarantee the process has zero access to credentials. The runner must also explicitly: (1) isolate filesystem access — mount only the prepared diff, no host paths with tokens or keys; (2) strip all GitHub/Codex/SSH credential environment variables from the PR-Agent process; (3) block access to credential stores (`~/.config/gh`, `~/.ssh`, token files). These are separate explicit runner requirements, not implicit consequences of plain-diff mode. Provider API access (PR-Agent's own model provider) and sending source diffs externally require separate approval.
+
 
 **Target repository layout after Ink package creation (not yet created):**
 ```

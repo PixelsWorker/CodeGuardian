@@ -82,11 +82,29 @@ Record input refs, worker roles, deadlines, structured results, failure reasons,
 - Deduplication identity = normalized file/range + category + defect signature; preserve references to contributing workers.
 - Publication always uses `COMMENT`, not `APPROVE` or `REQUEST_CHANGES` in the MVP.
 
-## 9. Integration boundaries for future PR-Agent
+## 9. Integration boundaries for future PR-Agent (G04 accepted design)
 
-`pragent/pr-agent:<pinned-version>-mosaico_agent` can expose A2A 1.0 JSON-RPC with `/.well-known/agent-card.json`, `POST /`, and `/health`. The wrapper normalizes `review/improve/describe/ask` results into the `ReviewFinding` contract. For private repositories provide an allowed diff; public URL fetch is not sufficient. Require explicit bearer authentication on the A2A service, and prevent direct GitHub publication from the worker.
+**Accepted integration pattern (2026-10-16):** PR-Agent lives outside `ink/` in `integrations/pr-agent/`, behind a thin CodeGuardian adapter. For the first G04 implementation, CodeGuardian passes a validated, pinned diff to an isolated PR-Agent process rather than granting PR-Agent direct GitHub access. This is the preferred approach over giving PR-Agent a live GitHub token.
 
-Upgrades follow: bump pinned version/digest -> run smoke and contract tests -> validate review output -> deploy only with release approval -> rollback when needed. No permanent fork is planned.
+**Adapter responsibilities:**
+- The CodeGuardian adapter in `integrations/pr-agent/` prepares a validated, pinned diff — it does not hand GitHub credentials to the PR-Agent process.
+- `pragent/pr-agent:<pinned-version>-mosaico_agent` exposes A2A 1.0 JSON-RPC via `/.well-known/agent-card.json`, `POST /`, and `/health`. The adapter normalizes `review/improve/describe/ask` results into the `ReviewFinding` contract.
+- Require explicit bearer authentication on the A2A service endpoint; do not expose unauthenticated A2A ports.
+- PR-Agent must not be given direct GitHub publishing authority at any point.
+
+**Security correction (explicitly recorded):** Plain-diff mode avoids requiring a GitHub platform token, but **that alone does not guarantee the process has zero access to credentials**. The eventual runner must also explicitly:
+1. Isolate filesystem access — mount only the prepared diff, no host paths containing tokens or keys.
+2. Isolate environment variables — strip or block all GitHub/Codex/SSH credential env vars from the PR-Agent process environment.
+3. Isolate GitHub credentials — do not mount `~/.config/gh`, `~/.ssh`, or any token store into the PR-Agent container/process.
+
+**Requires separate approval before execution:**
+- Provider API access (PR-Agent's own model provider connection — separate from Codex ChatGPT login).
+- Sending source diffs externally to a provider endpoint.
+- Any configuration granting PR-Agent read access beyond the supplied diff.
+
+**Upgrades:** bump pinned version/digest → run smoke and contract tests → validate review output → deploy only with release approval → rollback when needed. No permanent fork is planned.
+
+**Not yet approved:** G04 implementation, branch, worktree, dependencies, provider setup, Docker image pull, A2A service startup, or diff transmission. These require separate group authorization after G03 acceptance.
 
 ## 10. Technology decisions (D-01–D-08 accepted direction; D-09 proposed)
 
