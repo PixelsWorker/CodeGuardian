@@ -180,7 +180,7 @@ export const SCENARIOS: ScenarioDefinition[] = [
     id: "publish_denied",
     name: "9. Publication Denied by Operator",
     tag: "Human Authority",
-    description: "Operator explicitly answers [N] to the publication authorization prompt.",
+    description: "Operator explicitly answers [N] or clicks Cancel at the dry-run publication authorization prompt.",
     initialScreen: "publish",
     expectedOutcome: "Action aborted safely. Terminal prints: 'Operation cancelled by operator. No GitHub write performed.'",
     setupState: {
@@ -195,7 +195,7 @@ export const SCENARIOS: ScenarioDefinition[] = [
         quality: "complete",
       },
       runStatus: "ready",
-      publishOutcome: "denied_permission",
+      publishOutcome: "operator_denied",
     },
   },
   {

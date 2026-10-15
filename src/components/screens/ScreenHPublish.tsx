@@ -17,8 +17,8 @@ interface ScreenHPublishProps {
   noColor: boolean;
   staleSha: boolean;
   setStaleSha: (stale: boolean) => void;
-  outcomeType: 'normal' | 'denied_permission' | 'stale_head' | 'duplicate_warning';
-  setOutcomeType: (type: 'normal' | 'denied_permission' | 'stale_head' | 'duplicate_warning') => void;
+  outcomeType: 'normal' | 'operator_denied' | 'denied_permission' | 'stale_head' | 'duplicate_warning';
+  setOutcomeType: (type: 'normal' | 'operator_denied' | 'denied_permission' | 'stale_head' | 'duplicate_warning') => void;
   onNavigate: (screen: ActiveScreen) => void;
 }
 
@@ -30,7 +30,9 @@ export const ScreenHPublish: React.FC<ScreenHPublishProps> = ({
   setOutcomeType,
   onNavigate,
 }) => {
-  const [confirmationState, setConfirmationState] = useState<'prompt' | 'confirmed' | 'cancelled'>('prompt');
+  const [confirmationState, setConfirmationState] = useState<'prompt' | 'confirmed' | 'cancelled'>(
+    outcomeType === 'operator_denied' ? 'cancelled' : 'prompt'
+  );
 
   const report = SYNTHETIC_CANONICAL_REPORT;
   const currentPrHead = staleSha 
@@ -88,6 +90,20 @@ export const ScreenHPublish: React.FC<ScreenHPublishProps> = ({
             }`}
           >
             Valid Publication Flow
+          </button>
+          <button
+            onClick={() => {
+              setOutcomeType('operator_denied');
+              setStaleSha(false);
+              setConfirmationState('cancelled');
+            }}
+            className={`px-2 py-1 rounded text-[11px] font-mono border transition ${
+              outcomeType === 'operator_denied'
+                ? 'bg-zinc-800 border-amber-500 text-amber-300 font-semibold'
+                : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
+            }`}
+          >
+            Operator Denied [N]
           </button>
           <button
             onClick={() => {

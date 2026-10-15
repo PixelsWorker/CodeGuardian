@@ -149,6 +149,6 @@ export interface ScenarioDefinition {
     workersState: Record<WorkerRole, WorkerState>;
     runStatus: RunStatus;
     staleSha?: boolean;
-    publishOutcome?: "normal" | "denied_permission" | "stale_head" | "duplicate_warning";
+    publishOutcome?: "normal" | "operator_denied" | "denied_permission" | "stale_head" | "duplicate_warning";
   };
 }

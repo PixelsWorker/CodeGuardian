@@ -19,73 +19,13 @@ import { ScreenGReport } from './components/screens/ScreenGReport';
 import { ScreenHPublish } from './components/screens/ScreenHPublish';
 import { ScreenIScenarios } from './components/screens/ScreenIScenarios';
 import { HandoffDocsModal } from './components/modals/HandoffDocsModal';
+import { createFreshWorker } from './utils/workerFactory';
 
 const INITIAL_WORKERS: Record<WorkerRole, WorkerInfo> = {
-  security: {
-    role: "security",
-    displayName: "Security Specialist (CodeGuardianMini-Sec)",
-    description: "Evaluates HMAC keys, token lifecycles, and hardcoded credentials.",
-    state: "complete",
-    progress: 100,
-    elapsedMs: 1840,
-    findingsCount: 2,
-    currentActivity: "Audit complete. 2 candidate findings submitted.",
-    logs: [
-      "[00:00.12] Initializing isolated prompt container...",
-      "[00:00.45] Auditing src/auth/token.ts for weak PRNG or static secrets...",
-      "[00:00.82] Found static secret fallback candidate at line 45",
-      "[00:01.35] Scanning tests/auth.test.ts fixture dummy secrets...",
-      "[00:01.84] Generated 2 candidate finding packages for Manager validation.",
-    ],
-  },
-  logic: {
-    role: "logic",
-    displayName: "Logic Specialist (CodeGuardianMini-Logic)",
-    description: "Performs control-flow and nullability safety checks on AST.",
-    state: "complete",
-    progress: 100,
-    elapsedMs: 1620,
-    findingsCount: 1,
-    currentActivity: "AST traversal complete. 1 candidate finding submitted.",
-    logs: [
-      "[00:00.10] Parsing diff hunks into TypeScript AST...",
-      "[00:00.60] Tracing call graph of resolveUserPermissions()...",
-      "[00:00.85] Potential null dereference detected: parseToken() return unchecked at line 17",
-      "[00:01.62] Emitted 1 high-confidence correctness candidate.",
-    ],
-  },
-  architecture: {
-    role: "architecture",
-    displayName: "Architecture Specialist (CodeGuardianMini-Arch)",
-    description: "Analyzes lifecycle bounds, connection pools, and memory leaks.",
-    state: "complete",
-    progress: 100,
-    elapsedMs: 2100,
-    findingsCount: 2,
-    currentActivity: "Resource bounds pass complete. 2 candidates submitted.",
-    logs: [
-      "[00:00.15] Evaluating memory allocations across session layer...",
-      "[00:01.12] Unbounded global Map found in src/auth/session.ts:89 (no TTL or eviction)",
-      "[00:01.42] Auditing src/db/redis.ts client options...",
-      "[00:01.88] Flagged missing connectTimeout on Redis client instantiation",
-      "[00:02.10] Emitted 2 reliability candidates.",
-    ],
-  },
-  quality: {
-    role: "quality",
-    displayName: "Quality & Testing (CodeGuardianMini-Qual)",
-    description: "Audits test coverage gaps and duplicate defect assertions.",
-    state: "complete",
-    progress: 100,
-    elapsedMs: 1750,
-    findingsCount: 1,
-    currentActivity: "Coverage pass complete. 1 candidate submitted.",
-    logs: [
-      "[00:00.11] Checking test coverage for modified auth routes...",
-      "[00:00.95] Identified duplicate candidate regarding token null guard in src/demo.ts",
-      "[00:01.75] Emitted 1 candidate (Manager will deduplicate).",
-    ],
-  },
+  security: createFreshWorker("security", "complete"),
+  logic: createFreshWorker("logic", "complete"),
+  architecture: createFreshWorker("architecture", "complete"),
+  quality: createFreshWorker("quality", "complete"),
 };
 
 export default function App() {
@@ -101,7 +41,7 @@ export default function App() {
   const [prUrl, setPrUrl] = useState<string>('https://github.com/example/demo/pull/42');
   const [workers, setWorkers] = useState<Record<WorkerRole, WorkerInfo>>(INITIAL_WORKERS);
   const [staleSha, setStaleSha] = useState<boolean>(false);
-  const [publishOutcome, setPublishOutcome] = useState<'normal' | 'denied_permission' | 'stale_head' | 'duplicate_warning'>('normal');
+  const [publishOutcome, setPublishOutcome] = useState<'normal' | 'operator_denied' | 'denied_permission' | 'stale_head' | 'duplicate_warning'>('normal');
 
   // Command prompt input
   const [commandInput, setCommandInput] = useState<string>('');
@@ -166,41 +106,25 @@ export default function App() {
     setCodexAuth(scenario.setupState.codexAuth);
     setPrUrl(scenario.setupState.prUrl);
     setStaleSha(scenario.setupState.staleSha ?? false);
-    if (scenario.setupState.publishOutcome) {
-      setPublishOutcome(scenario.setupState.publishOutcome);
-    }
+    // Explicitly reset publish outcome to 'normal' unless scenario defines an override
+    setPublishOutcome(scenario.setupState.publishOutcome ?? 'normal');
 
-    // Apply worker states
-    setWorkers((prev) => {
-      const next = { ...prev };
-      (Object.keys(next) as WorkerRole[]).forEach((role) => {
-        const state = scenario.setupState.workersState[role];
-        next[role] = {
-          ...next[role],
-          state: state,
-          progress: state === 'complete' ? 100 : state === 'failed' || state === 'timed_out' ? 65 : 0,
-          failureReason: state === 'failed' 
-            ? 'Parser crash: Unexpected AST token in macro expansion'
-            : state === 'timed_out' 
-            ? 'Hard deadline exceeded: 60000ms call-graph budget exhausted' 
-            : undefined,
-        };
-      });
-      return next;
+    // Create fresh decoupled worker telemetry for each role
+    const nextWorkers = {} as Record<WorkerRole, WorkerInfo>;
+    (Object.keys(scenario.setupState.workersState) as WorkerRole[]).forEach((role) => {
+      const state = scenario.setupState.workersState[role];
+      nextWorkers[role] = createFreshWorker(role, state);
     });
+    setWorkers(nextWorkers);
 
     setActiveScreen(scenario.initialScreen);
   };
 
   const handleCancelAllWorkers = () => {
     setWorkers((prev) => {
-      const next = { ...prev };
-      (Object.keys(next) as WorkerRole[]).forEach((role) => {
-        next[role] = {
-          ...next[role],
-          state: 'cancelled',
-          currentActivity: 'Aborted by operator SIGINT / cancel.',
-        };
+      const next = {} as Record<WorkerRole, WorkerInfo>;
+      (Object.keys(prev) as WorkerRole[]).forEach((role) => {
+        next[role] = createFreshWorker(role, 'cancelled');
       });
       return next;
     });
@@ -209,13 +133,7 @@ export default function App() {
   const handleRetryWorkerLane = (role: WorkerRole) => {
     setWorkers((prev) => ({
       ...prev,
-      [role]: {
-        ...prev[role],
-        state: 'complete',
-        progress: 100,
-        currentActivity: 'Retried successfully. Submitted candidate to Manager.',
-        failureReason: undefined,
-      },
+      [role]: createFreshWorker(role, 'complete'),
     }));
   };
 

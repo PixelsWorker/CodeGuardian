@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ActiveScreen, WorkerRole, WorkerState, WorkerInfo } from '../../types/contract';
 import { 
   Shield, 
@@ -39,6 +39,28 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
   const [activeLogRole, setActiveLogRole] = useState<WorkerRole | null>(null);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
 
+  // Timer refs and generation counter for bulletproof simulation lifecycle
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const runGenerationRef = useRef<number>(0);
+
+  const clearScheduledTimers = () => {
+    timersRef.current.forEach((id) => clearTimeout(id));
+    timersRef.current = [];
+  };
+
+  useEffect(() => {
+    return () => {
+      clearScheduledTimers();
+    };
+  }, []);
+
+  const handleCancelAll = () => {
+    clearScheduledTimers();
+    runGenerationRef.current += 1;
+    setIsSimulating(false);
+    onCancelAll();
+  };
+
   // Check overall states
   const workerList = Object.values(workers);
   const allCompleted = workerList.every((w) => ['complete', 'failed', 'timed_out', 'skipped', 'cancelled'].includes(w.state));
@@ -46,9 +68,13 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
   const hasRunning = workerList.some((w) => w.state === 'running');
   const isCancelled = workerList.every((w) => w.state === 'cancelled');
 
-  // Interactive simulated step-by-step progress advancement
+  // Interactive simulated step-by-step progress advancement with generation tracking
   const handleStartDeterministicRun = () => {
+    clearScheduledTimers();
+    runGenerationRef.current += 1;
+    const currentGen = runGenerationRef.current;
     setIsSimulating(true);
+
     // Reset to running
     setWorkers((prev) => {
       const next = { ...prev };
@@ -59,13 +85,17 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
           progress: 10,
           elapsedMs: 250,
           findingsCount: 0,
+          currentActivity: `Auditing PR diff hunks for ${role} patterns...`,
+          logs: [`[00:00.25] Specialist ${role} initiated in simulation run #${currentGen}`],
+          failureReason: undefined,
         };
       });
       return next;
     });
 
     // Step 1: Security & Logic advance
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
+      if (runGenerationRef.current !== currentGen) return;
       setWorkers((prev) => ({
         ...prev,
         security: {
@@ -86,9 +116,11 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
         },
       }));
     }, 600);
+    timersRef.current.push(t1);
 
     // Step 2: Architecture & Quality
-    setTimeout(() => {
+    const t2 = setTimeout(() => {
+      if (runGenerationRef.current !== currentGen) return;
       setWorkers((prev) => ({
         ...prev,
         architecture: {
@@ -109,9 +141,11 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
         },
       }));
     }, 1200);
+    timersRef.current.push(t2);
 
     // Step 3: Completion
-    setTimeout(() => {
+    const t3 = setTimeout(() => {
+      if (runGenerationRef.current !== currentGen) return;
       setWorkers((prev) => ({
         ...prev,
         security: {
@@ -149,6 +183,7 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
       }));
       setIsSimulating(false);
     }, 1900);
+    timersRef.current.push(t3);
   };
 
   const getWorkerIcon = (role: WorkerRole) => {
@@ -228,7 +263,7 @@ export const ScreenEMultiAgent: React.FC<ScreenEMultiAgentProps> = ({
               Re-run Simulation
             </button>
             <button
-              onClick={onCancelAll}
+              onClick={handleCancelAll}
               className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-red-950/60 hover:text-red-300 text-zinc-400 border border-zinc-700 text-[11px] flex items-center gap-1 transition"
             >
               <XOctagon className="w-3 h-3" />

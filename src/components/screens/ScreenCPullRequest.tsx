@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActiveScreen } from '../../types/contract';
+import { validateGitHubPullRequestUrl } from '../../utils/urlValidator';
 import { GitPullRequest, ArrowRight, AlertTriangle, Check, ShieldAlert } from 'lucide-react';
 
 interface ScreenCPullRequestProps {
@@ -17,28 +18,7 @@ export const ScreenCPullRequest: React.FC<ScreenCPullRequestProps> = ({
 }) => {
   const [selectedPreset, setSelectedPreset] = useState<string>("valid");
 
-  // Validate URL logic
-  const parseUrl = (url: string) => {
-    if (!url.trim()) return { valid: false, error: "Empty URL. Please enter a target pull request URL." };
-    if (!url.startsWith("https://") && !url.startsWith("http://")) {
-      return { valid: false, error: "Invalid protocol. Expected HTTPS URL (e.g. https://github.com/owner/repo/pull/42)." };
-    }
-    if (!url.includes("github.com")) {
-      return { valid: false, error: "Non-GitHub host detected. CodeGuardian only supports GitHub pull requests in G00." };
-    }
-    const match = url.match(/github\.com\/([a-zA-Z0-9._-]+)\/([a-zA-Z0-9._-]+)\/pull\/(\d+)/);
-    if (!match) {
-      return { valid: false, error: "Malformed PR URL. Format must match: https://github.com/:owner/:repo/pull/:number" };
-    }
-    return {
-      valid: true,
-      owner: match[1],
-      repo: match[2],
-      number: parseInt(match[3], 10),
-    };
-  };
-
-  const parsed = parseUrl(prUrl);
+  const parsed = validateGitHubPullRequestUrl(prUrl);
 
   const handleApplyPreset = (presetKey: string) => {
     setSelectedPreset(presetKey);
