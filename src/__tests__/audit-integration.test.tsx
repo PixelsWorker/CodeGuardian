@@ -550,4 +550,107 @@ describe('CodeGuardian G06 Full Repository Audit Integration Tests', () => {
     // Restore clipboard
     Object.assign(navigator, { clipboard: originalClipboard });
   });
+
+  // Test 20: Edit repository and SHA invalidates verification; verify and approve plan allows launch
+  it('20. Editing repository identity and SHA invalidates verification and blocks launch until verified and approved', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+
+    // Change repository inputs
+    const ownerInput = screen.getByPlaceholderText(/Owner \(e\.g\. PixelsWorker\)/i);
+    const repoInput = screen.getByPlaceholderText(/Repo \(e\.g\. CodeGuardian\)/i);
+    const shaInput = screen.getByPlaceholderText(/40-char commit SHA/i);
+
+    act(() => {
+      fireEvent.change(ownerInput, { target: { value: 'acme-corp' } });
+      fireEvent.change(repoInput, { target: { value: 'payment-gateway' } });
+      fireEvent.change(shaInput, { target: { value: '1234567890abcdef1234567890abcdef12345678' } });
+    });
+
+    // Click Save Snapshot Configuration
+    act(() => {
+      fireEvent.click(screen.getByText(/Save Snapshot Configuration/i));
+    });
+
+    // Navigate to View B
+    act(() => {
+      fireEvent.click(screen.getByText(/Proceed to Audit Preflight/i));
+    });
+
+    // Verification must be invalid, preflight blocked, launch disabled
+    expect(screen.getByText(/PREFLIGHT BLOCKED/i)).toBeDefined();
+    expect(screen.getByText(/REFUSED \(Stale Branch\)/i)).toBeDefined();
+    const launchBtn = screen.getByText(/Launch Jules Audit Session/i).closest('button');
+    expect(launchBtn?.hasAttribute('disabled')).toBe(true);
+
+    // Mock verify SHA
+    act(() => {
+      fireEvent.click(screen.getByText(/Verify SHA/i));
+    });
+    expect(screen.getByText(/MATCHED \(Pinned\)/i)).toBeDefined();
+
+    // Still cannot launch without plan approval
+    expect(launchBtn?.hasAttribute('disabled')).toBe(true);
+
+    // Re-query launch button and approve plan
+    act(() => {
+      fireEvent.click(screen.getByText(/Approve Execution Plan/i));
+    });
+    expect(screen.getByText(/OPERATOR APPROVED/i)).toBeDefined();
+
+    const activeLaunchBtn = screen.getByText(/Launch Jules Audit Session/i).closest('button');
+    expect(activeLaunchBtn?.hasAttribute('disabled')).toBe(false);
+
+    // Launch should now succeed to View D (Activity)
+    act(() => {
+      fireEvent.click(activeLaunchBtn!);
+    });
+    expect(screen.getByText(/AUDIT VIEW D: JULES AUDIT ACTIVITIES/i)).toBeDefined();
+  });
+
+  // Test 21: Switching to external repository replaces complete audit evidence without leaking CodeGuardian findings
+  it('21. Switching to external repository clears CodeGuardian findings and provides external/unverified evidence', async () => {
+    render(<App />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-repo-audit'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[A\] Repo/i));
+    });
+
+    // Switch to facebook/react preset
+    const reactPresetBtn = screen.getByText(/facebook\/react @ a28189/i);
+    act(() => {
+      fireEvent.click(reactPresetBtn);
+    });
+
+    // View C: Coverage Ledger must not contain CodeGuardian source files
+    act(() => {
+      fireEvent.click(screen.getByText(/\[C\] Coverage/i));
+    });
+    expect(screen.queryByText(/src\/utils\/serverConfig\.ts/i)).toBeNull();
+    expect(screen.queryByText(/src\/App\.tsx/i)).toBeNull();
+    expect(screen.getByText(/packages\/react\/index\.js/i)).toBeDefined();
+
+    // View E: Verification must not contain CodeGuardian findings
+    act(() => {
+      fireEvent.click(screen.getByText(/\[E\] Verification/i));
+    });
+    expect(screen.queryByText(/ServerConfig regional wildcard bypasses DNS host allowlist/i)).toBeNull();
+    expect(screen.queryByText(/Terminal log ring buffer unbound allocation/i)).toBeNull();
+
+    // View F: Report must show facebook/react and no CodeGuardian findings
+    act(() => {
+      fireEvent.click(screen.getByText(/\[F\] AUDIT\.md/i));
+    });
+    expect(screen.getAllByText(/facebook\/react/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ServerConfig regional wildcard bypasses DNS host allowlist/i)).toBeNull();
+  });
 });

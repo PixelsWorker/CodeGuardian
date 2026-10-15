@@ -1,5 +1,6 @@
 import React from 'react';
 import { RepositorySnapshot, AuditScreen } from '../../../types/auditContract';
+import { DEFAULT_REPOSITORY_SNAPSHOT, EXTERNAL_REACT_SNAPSHOT } from '../../../data/auditScenarios';
 import { 
   GitBranch, 
   GitCommit, 
@@ -45,15 +46,35 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
 
   const handleApplyChanges = () => {
     const patterns = exclusionInput.split(',').map((s) => s.trim()).filter(Boolean);
+    const o = ownerInput.trim();
+    const r = repoInput.trim();
+    const isCodeGuardian = o === 'PixelsWorker' && r === 'CodeGuardian';
+    const isReact = o === 'facebook' && r === 'react';
+
     // Editing snapshot invalidates source verification and plan approval
     setSnapshot((prev) => ({
       ...prev,
-      owner: ownerInput.trim(),
-      repo: repoInput.trim(),
+      owner: o,
+      repo: r,
       requested_branch: branchInput.trim(),
       intended_commit_sha: shaInput.trim(),
       verified_audit_commit_sha: null,
       exclusion_patterns: patterns,
+      tracked_files: isCodeGuardian
+        ? DEFAULT_REPOSITORY_SNAPSHOT.tracked_files
+        : isReact
+        ? EXTERNAL_REACT_SNAPSHOT.tracked_files
+        : [],
+      total_files_count: isCodeGuardian
+        ? DEFAULT_REPOSITORY_SNAPSHOT.total_files_count
+        : isReact
+        ? EXTERNAL_REACT_SNAPSHOT.total_files_count
+        : 0,
+      tracked_file_manifest_digest: isCodeGuardian
+        ? DEFAULT_REPOSITORY_SNAPSHOT.tracked_file_manifest_digest
+        : isReact
+        ? EXTERNAL_REACT_SNAPSHOT.tracked_file_manifest_digest
+        : 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
     }));
     if (setIsShaVerified) setIsShaVerified(false);
     if (setPlanApproved) setPlanApproved(false);
@@ -63,13 +84,30 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
     setOwnerInput(owner);
     setRepoInput(repo);
     setShaInput(sha);
-    setSnapshot((prev) => ({
-      ...prev,
-      owner,
-      repo,
-      intended_commit_sha: sha,
-      verified_audit_commit_sha: null,
-    }));
+    if (owner === 'facebook' && repo === 'react') {
+      setSnapshot({
+        ...EXTERNAL_REACT_SNAPSHOT,
+        intended_commit_sha: sha,
+        verified_audit_commit_sha: null,
+      });
+    } else if (owner === 'PixelsWorker' && repo === 'CodeGuardian') {
+      setSnapshot({
+        ...DEFAULT_REPOSITORY_SNAPSHOT,
+        intended_commit_sha: sha,
+        verified_audit_commit_sha: null,
+      });
+    } else {
+      setSnapshot((prev) => ({
+        ...prev,
+        owner,
+        repo,
+        intended_commit_sha: sha,
+        verified_audit_commit_sha: null,
+        tracked_files: [],
+        total_files_count: 0,
+        tracked_file_manifest_digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+      }));
+    }
     if (setIsShaVerified) setIsShaVerified(false);
     if (setPlanApproved) setPlanApproved(false);
   };

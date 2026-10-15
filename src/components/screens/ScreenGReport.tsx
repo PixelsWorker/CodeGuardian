@@ -200,13 +200,18 @@ export const ScreenGReport: React.FC<ScreenGReportProps> = ({
       {/* Markdown View */}
       {formatView === 'markdown' && (
         <div className="relative">
-          <button
-            onClick={() => handleCopy(MOCK_MARKDOWN_REPORT)}
-            className="absolute top-2 right-2 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs flex items-center gap-1 z-10 font-mono"
-          >
-            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-            {copied ? 'Copied!' : 'Copy Markdown'}
-          </button>
+          <div className="absolute top-2 right-2 flex items-center gap-2 z-10 font-mono">
+            {copyFailed && (
+              <span role="alert" className="text-[11px] text-red-400 font-bold">Clipboard copy failed</span>
+            )}
+            <button
+              onClick={() => handleCopy(MOCK_MARKDOWN_REPORT)}
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs flex items-center gap-1 transition"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copied!' : 'Copy Markdown'}
+            </button>
+          </div>
           <pre className="p-3 bg-zinc-950 border border-zinc-800 rounded text-xs font-mono text-zinc-300 overflow-x-auto leading-relaxed max-h-[480px]">
             {MOCK_MARKDOWN_REPORT}
           </pre>
@@ -216,13 +221,18 @@ export const ScreenGReport: React.FC<ScreenGReportProps> = ({
       {/* JSON Schema View */}
       {formatView === 'json' && (
         <div className="relative">
-          <button
-            onClick={() => handleCopy(JSON.stringify(report, null, 2))}
-            className="absolute top-2 right-2 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs flex items-center gap-1 z-10 font-mono"
-          >
-            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-            {copied ? 'Copied!' : 'Copy JSON'}
-          </button>
+          <div className="absolute top-2 right-2 flex items-center gap-2 z-10 font-mono">
+            {copyFailed && (
+              <span role="alert" className="text-[11px] text-red-400 font-bold">Clipboard copy failed</span>
+            )}
+            <button
+              onClick={() => handleCopy(JSON.stringify(report, null, 2))}
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs flex items-center gap-1 transition"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copied!' : 'Copy JSON'}
+            </button>
+          </div>
           <pre className="p-3 bg-zinc-950 border border-zinc-800 rounded text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed max-h-[480px]">
             {JSON.stringify(report, null, 2)}
           </pre>

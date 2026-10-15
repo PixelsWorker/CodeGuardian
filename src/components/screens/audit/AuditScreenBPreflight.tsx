@@ -17,7 +17,7 @@ import {
 interface AuditScreenBPreflightProps {
   noColor: boolean;
   snapshot: RepositorySnapshot;
-  setSnapshot?: React.Dispatch<React.SetStateAction<RepositorySnapshot>>;
+  setSnapshot: React.Dispatch<React.SetStateAction<RepositorySnapshot>>;
   julesAuth: 'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited';
   setJulesAuth: (val: 'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited') => void;
   isShaVerified: boolean;
@@ -66,22 +66,16 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
     const nextVerified = !isShaVerified;
     setIsShaVerified(nextVerified);
     if (!nextVerified) {
-      if (setSnapshot) {
-        setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: null }));
-      }
+      setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: null }));
       setPlanApproved(false);
     } else {
-      if (setSnapshot) {
-        setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: prev.intended_commit_sha }));
-      }
+      setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: prev.intended_commit_sha }));
     }
   };
 
   const handleVerifySnapshot = () => {
     setIsShaVerified(true);
-    if (setSnapshot) {
-      setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: prev.intended_commit_sha }));
-    }
+    setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: prev.intended_commit_sha }));
   };
 
   return (
@@ -177,7 +171,7 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
                   onClick={handleVerifySnapshot}
                   className="text-[10px] text-emerald-400 hover:underline font-bold"
                 >
-                  Verify SHA
+                  Verify SHA (Mock Verification)
                 </button>
               )}
               <button

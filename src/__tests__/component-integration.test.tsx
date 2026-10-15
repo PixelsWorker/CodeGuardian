@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from '../App';
+import { ScreenGReport } from '../components/screens/ScreenGReport';
 
 describe('CodeGuardian G00 React Component Integration Tests', () => {
   beforeEach(() => {
@@ -400,5 +401,89 @@ describe('CodeGuardian G00 React Component Integration Tests', () => {
     });
 
     expect(screen.getAllByText(/\[COMPLETE\]/i).length).toBe(4);
+  });
+
+  // Test 13: Launching CLI audit while PR specialist workers are running cancels active workers without wiping completed lanes
+  it('13. Launching codeguardian audit while PR specialists are running cancels active workers without wiping completed lanes', async () => {
+    render(<App />);
+
+    // Start simulation via review CLI command
+    const input = screen.getByPlaceholderText(/Type CLI command/i);
+    const enterBtn = screen.getByText(/Enter ↵/i);
+
+    act(() => {
+      fireEvent.change(input, { target: { value: 'codeguardian review' } });
+      fireEvent.click(enterBtn);
+    });
+
+    // Verify all 4 workers started running
+    expect(screen.getAllByText(/\[RUNNING\]/i).length).toBe(4);
+
+    // Enter codeguardian audit command
+    act(() => {
+      fireEvent.change(input, { target: { value: 'codeguardian audit' } });
+      fireEvent.click(enterBtn);
+    });
+
+    // Should navigate to audit preflight or activity
+    expect(screen.getAllByText(/AUDIT VIEW/i).length).toBeGreaterThan(0);
+
+    // Now return to PR Review
+    act(() => {
+      fireEvent.click(screen.getByTestId('toggle-pr-review'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByText(/\[5\] Workers/i));
+    });
+
+    // Check that NO workers are left in [RUNNING] state; active workers were cleanly cancelled
+    expect(screen.queryByText(/\[RUNNING\]/i)).toBeNull();
+    const cancelledBadges = screen.getAllByText(/\[CANCELLED\]/i);
+    expect(cancelledBadges.length).toBe(4);
+  });
+
+  // Test 14: Display PR clipboard failure when clipboard API rejects
+  it('14. ScreenGReport displays accessible copy failure message when Clipboard API rejects', async () => {
+    const originalClipboard = navigator.clipboard;
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockRejectedValue(new Error('Clipboard copy rejected')),
+      },
+    });
+
+    render(<ScreenGReport noColor={false} onNavigate={vi.fn()} />);
+
+    // Switch to Markdown tab
+    act(() => {
+      fireEvent.click(screen.getByText(/Markdown/i));
+    });
+
+    // Click Copy Markdown
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Copy Markdown/i));
+    });
+
+    // Must display accessible failure message
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeDefined();
+    expect(alert.textContent).toMatch(/Clipboard copy failed/i);
+    expect(screen.queryByText(/Copied!/i)).toBeNull();
+
+    // Switch to JSON tab
+    act(() => {
+      fireEvent.click(screen.getByText(/Contract JSON/i));
+    });
+
+    // Click Copy JSON
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Copy JSON/i));
+    });
+
+    const jsonAlert = screen.getByRole('alert');
+    expect(jsonAlert).toBeDefined();
+    expect(jsonAlert.textContent).toMatch(/Clipboard copy failed/i);
+    expect(screen.queryByText(/Copied!/i)).toBeNull();
+
+    Object.assign(navigator, { clipboard: originalClipboard });
   });
 });

@@ -46,7 +46,9 @@ import {
   DEFAULT_JULES_ACTIVITIES, 
   DEFAULT_COVERAGE_LEDGER, 
   DEFAULT_AUDIT_FINDINGS, 
-  DEFAULT_AUDIT_REPORT 
+  DEFAULT_AUDIT_REPORT,
+  EXTERNAL_REACT_SNAPSHOT,
+  EXTERNAL_REACT_COVERAGE
 } from './data/auditScenarios';
 
 export const canLaunchAudit = (
@@ -251,6 +253,10 @@ export default function App() {
   };
 
   const handleLaunchAudit = () => {
+    if (activeWorkflow === 'pr_review' && activeScreen === 'multi_agent') {
+      handleCancelRunningWorkersOnly();
+    }
+    setAutoStartToken(null);
     setActiveWorkflow('repo_audit');
     if (canLaunchAudit(julesAuth, isShaVerified, auditSnapshot, planApproved)) {
       setAuditAutoStartToken((prev) => (prev ? prev + 1 : 1));
@@ -266,6 +272,31 @@ export default function App() {
   };
 
   const handleApplyAuditScenario = (scenario: AuditScenarioDefinition) => {
+    const isCodeGuardian = scenario.snapshotState.owner === 'PixelsWorker' && scenario.snapshotState.repo === 'CodeGuardian';
+    const isReact = scenario.snapshotState.owner === 'facebook' && scenario.snapshotState.repo === 'react';
+
+    const selectedCoverage = isCodeGuardian 
+      ? DEFAULT_COVERAGE_LEDGER 
+      : isReact 
+      ? EXTERNAL_REACT_COVERAGE 
+      : [];
+    const selectedFindings = isCodeGuardian ? DEFAULT_AUDIT_FINDINGS : [];
+    const selectedManifestDigest = isCodeGuardian 
+      ? DEFAULT_REPOSITORY_SNAPSHOT.tracked_file_manifest_digest
+      : isReact
+      ? EXTERNAL_REACT_SNAPSHOT.tracked_file_manifest_digest
+      : 'sha256:0000000000000000000000000000000000000000000000000000000000000000';
+    const selectedFiles = isCodeGuardian
+      ? DEFAULT_REPOSITORY_SNAPSHOT.tracked_files
+      : isReact
+      ? EXTERNAL_REACT_SNAPSHOT.tracked_files
+      : [];
+    const selectedFileCount = isCodeGuardian
+      ? DEFAULT_REPOSITORY_SNAPSHOT.total_files_count
+      : isReact
+      ? EXTERNAL_REACT_SNAPSHOT.total_files_count
+      : 0;
+
     const newSnapshot: RepositorySnapshot = {
       ...auditSnapshot,
       owner: scenario.snapshotState.owner,
@@ -273,8 +304,13 @@ export default function App() {
       requested_branch: scenario.snapshotState.branch,
       intended_commit_sha: scenario.snapshotState.intendedSha,
       verified_audit_commit_sha: scenario.snapshotState.isShaVerified ? scenario.snapshotState.intendedSha : null,
+      tracked_files: selectedFiles,
+      total_files_count: selectedFileCount,
+      tracked_file_manifest_digest: selectedManifestDigest,
     };
     setAuditSnapshot(newSnapshot);
+    setCoverageLedger(selectedCoverage);
+    setAuditFindings(selectedFindings);
     setIsShaVerified(scenario.snapshotState.isShaVerified);
     setJulesAuth(scenario.snapshotState.julesAuth);
     setPlanApproved(scenario.snapshotState.planApproved);
@@ -283,22 +319,62 @@ export default function App() {
     // Apply fresh activity states and logs without stale telemetry
     setAuditActivities(createFreshAuditActivities(scenario.snapshotState.activitiesState));
 
-    // Synchronize report status, snapshot, and limitations
-    setAuditReport((prev) => ({
-      ...prev,
+    // Synchronize report status, snapshot, coverage, findings, limitations, executed checks, and digest
+    const selectedExecutedChecks = isCodeGuardian
+      ? DEFAULT_AUDIT_REPORT.executed_checks
+      : isReact
+      ? ['git rev-parse HEAD (external repository snapshot: unverified)', 'Pending independent fact-checking audit']
+      : ['Repository identity unverified or invalid'];
+    const selectedReportDigest = isCodeGuardian
+      ? DEFAULT_AUDIT_REPORT.report_digest
+      : isReact
+      ? 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+      : 'sha256:0000000000000000000000000000000000000000000000000000000000000000';
+
+    setAuditReport({
+      ...DEFAULT_AUDIT_REPORT,
       repository: newSnapshot,
       status: scenario.snapshotState.status,
+      findings: selectedFindings,
+      coverage: selectedCoverage,
+      executed_checks: selectedExecutedChecks,
+      report_digest: selectedReportDigest,
       limitations: scenario.snapshotState.isTimeout
         ? [
             ...DEFAULT_AUDIT_REPORT.limitations,
             'Dependency activity timed out; supply chain coverage remains partial.',
           ]
         : DEFAULT_AUDIT_REPORT.limitations,
-    }));
+    });
 
     setActiveWorkflow('repo_audit');
     setAuditScreen(scenario.initialScreen);
   };
+
+  // Synchronize audit evidence when snapshot repository identity changes outside scenarios (e.g. View A manual edits)
+  useEffect(() => {
+    const isCodeGuardian = auditSnapshot.owner === 'PixelsWorker' && auditSnapshot.repo === 'CodeGuardian';
+    const isReact = auditSnapshot.owner === 'facebook' && auditSnapshot.repo === 'react';
+
+    if (!isCodeGuardian) {
+      const selectedCoverage = isReact ? EXTERNAL_REACT_COVERAGE : [];
+      const selectedFindings: RepositoryAuditFinding[] = [];
+      setCoverageLedger(selectedCoverage);
+      setAuditFindings(selectedFindings);
+      setAuditReport((prev) => ({
+        ...prev,
+        repository: auditSnapshot,
+        findings: selectedFindings,
+        coverage: selectedCoverage,
+        executed_checks: isReact
+          ? ['git rev-parse HEAD (external repository snapshot: unverified)']
+          : ['Repository identity unverified or invalid'],
+        report_digest: isReact
+          ? 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+          : 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+      }));
+    }
+  }, [auditSnapshot.owner, auditSnapshot.repo]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -559,6 +635,7 @@ export default function App() {
               <AuditScreenBPreflight
                 noColor={noColor}
                 snapshot={auditSnapshot}
+                setSnapshot={setAuditSnapshot}
                 julesAuth={julesAuth}
                 setJulesAuth={setJulesAuth}
                 isShaVerified={isShaVerified}
