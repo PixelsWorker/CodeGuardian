@@ -19,7 +19,8 @@ interface AuditScreenDActivityProps {
   setActivities: React.Dispatch<React.SetStateAction<JulesActivity[]>>;
   onNavigate: (screen: AuditScreen) => void;
   onCancelAudit: () => void;
-  autoStartToken?: number | null;
+  onRunAudit?: () => void;
+  autoStartToken: number | null;
 }
 
 export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
@@ -28,11 +29,13 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
   setActivities,
   onNavigate,
   onCancelAudit,
+  onRunAudit,
   autoStartToken,
 }) => {
   const [selectedActivityId, setSelectedActivityId] = useState<string>('act_arch');
   const [activeStep, setActiveStep] = useState<number>(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const activeTimersRef = useRef<NodeJS.Timeout[]>([]);
+  const runGenerationRef = useRef<number>(0);
 
   const selectedActivity = activities.find((a) => a.id === selectedActivityId) || activities[0];
   const isAnyRunning = activities.some((a) => a.state === 'running');
@@ -41,15 +44,16 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
 
   const totalCandidateFindings = activities.reduce((sum, a) => sum + a.candidateFindingsCount, 0);
 
-  const clearSimulationTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+  const clearSimulationTimers = () => {
+    activeTimersRef.current.forEach(clearTimeout);
+    activeTimersRef.current = [];
   };
 
   const handleStartSimulation = () => {
-    clearSimulationTimer();
+    clearSimulationTimers();
+    runGenerationRef.current += 1;
+    const currentGeneration = runGenerationRef.current;
+
     // Reset all activities to running with low progress
     setActivities((prev) =>
       prev.map((a) => ({
@@ -62,7 +66,8 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
     setActiveStep(1);
 
     // Schedule progressive updates
-    timerRef.current = setTimeout(() => {
+    const t1 = setTimeout(() => {
+      if (runGenerationRef.current !== currentGeneration) return;
       setActivities((prev) =>
         prev.map((a, i) => ({
           ...a,
@@ -73,7 +78,8 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
       );
       setActiveStep(2);
 
-      timerRef.current = setTimeout(() => {
+      const t2 = setTimeout(() => {
+        if (runGenerationRef.current !== currentGeneration) return;
         setActivities((prev) =>
           prev.map((a, i) => ({
             ...a,
@@ -84,7 +90,8 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
         );
         setActiveStep(3);
 
-        timerRef.current = setTimeout(() => {
+        const t3 = setTimeout(() => {
+          if (runGenerationRef.current !== currentGeneration) return;
           setActivities((prev) =>
             prev.map((a) => ({
               ...a,
@@ -95,12 +102,16 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
           );
           setActiveStep(4);
         }, 800);
+        activeTimersRef.current.push(t3);
       }, 700);
+      activeTimersRef.current.push(t2);
     }, 600);
+    activeTimersRef.current.push(t1);
   };
 
   const handleCancel = () => {
-    clearSimulationTimer();
+    runGenerationRef.current += 1;
+    clearSimulationTimers();
     onCancelAudit();
   };
 
@@ -109,7 +120,8 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
       handleStartSimulation();
     }
     return () => {
-      clearSimulationTimer();
+      runGenerationRef.current += 1;
+      clearSimulationTimers();
     };
   }, [autoStartToken]);
 
@@ -172,7 +184,13 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
       <div className="p-2.5 rounded bg-zinc-900/70 border border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
           <button
-            onClick={handleStartSimulation}
+            onClick={() => {
+              if (onRunAudit) {
+                onRunAudit();
+              } else {
+                handleStartSimulation();
+              }
+            }}
             disabled={isAnyRunning}
             className={`px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1.5 transition ${
               isAnyRunning
@@ -198,7 +216,13 @@ export const AuditScreenDActivity: React.FC<AuditScreenDActivityProps> = ({
 
           {isCancelled && (
             <button
-              onClick={handleStartSimulation}
+              onClick={() => {
+                if (onRunAudit) {
+                  onRunAudit();
+                } else {
+                  handleStartSimulation();
+                }
+              }}
               className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-600 text-xs flex items-center gap-1.5 transition font-mono"
             >
               <RotateCcw className="w-3.5 h-3.5" />

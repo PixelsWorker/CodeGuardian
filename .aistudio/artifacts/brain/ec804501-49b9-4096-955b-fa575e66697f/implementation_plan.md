@@ -1,92 +1,143 @@
-# CodeGuardian G00 — Final Prototype Corrections Implementation Plan
+# CodeGuardian Unified Prototype — Correction & Hardening Plan
 
-Address the three CodeRabbit review findings: worker navigation lifecycle management (cancelling only active `running` workers on navigation, preserving completed/failed/skipped states, invalidating run-generation tokens, and preventing StrictMode unmount race conditions), Vite development server host hardening (removing `allowedHosts: true`, defaulting to `127.0.0.1` locally, and restricting preview environments to explicit trusted hosts), and comprehensive React component interaction tests.
-
-> [!IMPORTANT]
-> The mock-only G00 terminal prototype boundary is preserved. No external networks, backend daemons, or native Ink ports are introduced.
-
-- **Confirmed Decision 1 (Selective Worker Cancellation on Leave)**: When leaving Screen E while a simulation is in progress, cancel *only* workers currently in the `running` state. Workers that are already `complete`, `failed`, `timed_out`, or `skipped` remain untouched.
-- **Confirmed Decision 2 (Timer & Token Invalidation)**: Leaving Screen E flushes all active timers in `timersRef` and increments `runGenerationRef`. Any scheduled callbacks from the previous run are safely discarded.
-- **Confirmed Decision 3 (Vite Security Hardening)**: Eliminate `allowedHosts: true`. In `vite.config.ts`, bind to `127.0.0.1:3000` for local developer environments, bind to `0.0.0.0:3000` only in containerized/preview environments (`K_SERVICE`, `AIS_APPLET_ID`, `PORT`), and replace wildcard host acceptance with an explicit trusted allowlist (`['localhost', '127.0.0.1', '.run.app']`).
-- **Confirmed Decision 4 (React Component Regression Tests)**: Complement the existing unit tests with automated interaction tests mounting the actual React screen components to verify start ➔ leave ➔ return ➔ rerun cycles.
+This implementation plan resolves the CodeRabbit review findings for the unified G00 (PR Review) and G06 (Full Repository Audit) synthetic browser prototype. All modifications adhere strictly to the mock-only boundary: no external API calls, no real Jules or Codex cloud daemons, and no GitHub writes.
 
 ---
 
-## 1. Overview & Core Concept
+## 1. Overview of Proposed Changes
 
-- **What It Does**: Fixes state leakage when operators navigate between screens mid-simulation, guarantees that returning to the workers screen presents a clean state ready for immediate re-execution, and hardens the Vite development server against DNS rebinding and untrusted host header injection.
-- **Target Audience**: Reviewers evaluating the UX flow across arbitrary screen transitions and keyboard jumps before freezing the specification for native Ink development.
-- **Key Value**: Guarantees zero zombie worker processes, zero stale timers, and secure local development server defaults.
-
----
-
-## 2. User Experience & Visual Design
-
-- **Key User Flows**:
-  1. *Mid-Simulation Navigation*:
-     - User starts a simulation in Screen E (Workers 1 & 2 complete, Worker 3 running, Worker 4 running).
-     - User presses `[1]` (Welcome) or `[7]` (Report) mid-run.
-     - Workers 3 & 4 transition to `[CANCELLED]`.
-     - Workers 1 & 2 remain `[COMPLETE]`.
-     - No orphan timer fires in the background.
-     - Upon navigating back to Screen E (`[5]`), the screen shows the preserved completed workers and cancelled workers, with a clean "Re-run Simulation" button that initiates a fresh, successful run.
-  2. *Scenario Switching*:
-     - Switching scenarios while a simulation is executing immediately halts the old run generation and cleanly populates the new scenario's target fixture without cross-contamination.
-  3. *Secure Dev Server*:
-     - Dev server runs on `127.0.0.1:3000` on local machines.
-     - Rejects untrusted HTTP `Host` headers.
-
----
-
-## 3. Key Product Decisions & Trade-Offs
-
-- **Decision 1: Navigation Lifecycle Coordinator in `App.tsx` & `ScreenEMultiAgent.tsx`**
-  - *Chosen Approach*: `ScreenEMultiAgent` exposes `isSimulating` and unmount cleanup, but `App.tsx` (the owner of `workers` state) executes `handleCancelRunningWorkersOnly()` upon screen transition away from `multi_agent` whenever `running` workers exist.
-  - *Why*: Centralizing the state transition in `App.tsx` prevents React 18/19 StrictMode double-invocation glitches (where components briefly mount, unmount, and remount during development), while guaranteeing that real user navigation cancels active workers cleanly.
-- **Decision 2: Explicit Trusted Hosts Allowlist in `vite.config.ts`**
-  - *Chosen Approach*: Replace `allowedHosts: true` with an explicit list:
-    ```ts
-    allowedHosts: ['localhost', '127.0.0.1', '.run.app']
-    ```
-    And bind to `127.0.0.1` locally, or `0.0.0.0` when running in Cloud Run container environments.
-  - *Why*: Eliminates security warnings and prevents arbitrary host header processing while preserving seamless preview accessibility.
-
----
-
-## 4. Technical Architecture & Data Strategy
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        CodeGuardian Navigation                         │
-│                                                                        │
-│   Screen E (Active Simulation) ──► User presses [1] Welcome           │
-│         │                                                              │
-│         ├─► timersRef.current.forEach(clearTimeout)                    │
-│         ├─► runGenerationRef.current++                                 │
-│         └─► onLeaveWhileRunning()                                      │
-│                   │                                                    │
-│                   ▼                                                    │
-│   App.tsx (State Store):                                               │
-│         next[role] = worker.state === 'running'                        │
-│           ? createFreshWorker(role, 'cancelled')                       │
-│           : worker // PRESERVED (completed, failed, skipped)           │
-│                                                                        │
-│   Return to Screen E:                                                  │
-│         • No worker remains stuck in 'running'                         │
-│         • Operator clicks [Re-run] ──► Fresh run completes cleanly     │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 5. Regression Test Matrix
-
-| # | Regression Test Case | Expected Outcome |
+| Priority | Area | Key Objective |
 |---|---|---|
-| 1 | Start ➔ Leave Screen ➔ Return | Active running workers cancelled; completed workers preserved |
-| 2 | Start ➔ Cancel ➔ Wait 3s | Workers remain cancelled; no resurrection |
-| 3 | Start ➔ Leave ➔ Return ➔ Rerun | New run generation executes and completes |
-| 4 | Completed workers ➔ Leave Screen | Completed workers remain complete upon return |
-| 5 | Switch scenarios mid-simulation | All timers flushed; new scenario state clean |
-| 6 | Vite config host validation | No wildcard `allowedHosts: true`; explicit trusted hosts only |
-| 7–16 | Existing Acceptance Tests (1–10) | All 10 existing acceptance matrix tests pass without regression |
+| **Priority 1** | **Central Audit Gate** | Implement an authoritative gate in `App.tsx` verifying Jules auth, snapshot verification, SHA equality, and operator plan approval before starting any audit simulation. Direct unauthorized attempts to View B. |
+| **Priority 2** | **Snapshot & Approval Invalidation** | Demote 40-char regex checking to syntax validation; reset SHA verification and revoke plan approval whenever repository, branch, SHA, or exclusions mutate; adjust restricted execution wording. |
+| **Priority 3** | **Lifecycle & Scenarios** | Coordinate navigation through parent handlers; cancel only active `running` activities on navigation; flush timers and invalidate generation tokens; cleanly rebuild scenario telemetry. |
+| **Priority 4** | **UX Corrections** | Guard keyboard shortcuts against editable focus and modifier keys; replace all underscores in coverage states; handle clipboard writes asynchronously; verify persistent DEMO ONLY labeling. |
+| **Testing** | **Automated Test Matrix** | Preserve all 53 existing tests; add test suites covering blocked launches, invalidations, run bypasses, cross-workflow transitions, and async clipboard resilience. |
+
+---
+
+## 2. Proposed Changed-File List
+
+1. `src/App.tsx`
+   - Implement `canLaunchAudit` central authorization gate.
+   - Route `codeguardian audit` CLI command, View B Launch button, and View D Run button through `handleLaunchAudit`.
+   - Enforce invalidation: resetting `isShaVerified` and `planApproved` when snapshot parameters change or authentication fails.
+   - Coordinate cross-screen activity cancellation (cancelling only `running` activities, clearing timers, incrementing run tokens).
+   - Guard keyboard shortcuts (`INPUT`, `TEXTAREA`, `SELECT`, editable elements, and `ctrl/alt/meta` modifier keys).
+
+2. `src/components/screens/audit/AuditScreenARepoSelect.tsx`
+   - Separate 40-character hex syntax check from snapshot source verification (`verified_audit_commit_sha: null` until independently verified).
+   - Invalidate verification and approved status when editing owner, repo, branch, SHA, or exclusions.
+
+3. `src/components/screens/audit/AuditScreenBPreflight.tsx`
+   - Tie preflight readiness directly to the central authorization predicate.
+   - Revoke plan approval immediately when Jules auth fails or SHA drift is simulated.
+   - Update wording from "READ ONLY" guarantee to "RESTRICTED (PROPOSED)" cloud sandbox arrangement.
+
+4. `src/components/screens/audit/AuditScreenCCoverage.tsx`
+   - Clean up coverage category labels: replace all underscores (`context_analyzed` ➔ `Context Analyzed`, `independently_verified` ➔ `Independently Verified`).
+
+5. `src/components/screens/audit/AuditScreenDActivity.tsx`
+   - Wire the "Run Jules Analysis" / "Re-run" button to parent authorization check rather than unconstrained self-start.
+   - Invalidate background timers and callbacks on unmount or cancellation.
+
+6. `src/components/screens/audit/AuditScreenFReport.tsx`
+   - Implement asynchronous clipboard write with safe failure fallback.
+   - Synchronize report snapshot, status, findings, and limitations with active scenario.
+
+7. `src/data/auditScenarios.ts`
+   - Reconstruct fresh activity telemetry for each scenario to prevent state leakage from previous runs.
+   - Verify scenario expected-status descriptions align with UI outputs.
+
+8. `src/__tests__/audit-integration.test.tsx`
+   - Maintain all 12 existing audit tests.
+   - Add integration tests for: central gate rejection, approved launch, SHA change invalidation, auth failure revocation, direct activity run redirection, and async clipboard errors.
+
+---
+
+## 3. Exact Patch Plan
+
+### Priority 1: Central Audit Authorization Gate (`App.tsx`)
+```ts
+export const canLaunchAudit = (
+  auth: 'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited',
+  isVerified: boolean,
+  snapshot: RepositorySnapshot,
+  planApproved: boolean
+): boolean => {
+  return (
+    auth === 'authenticated' &&
+    isVerified &&
+    Boolean(snapshot.verified_audit_commit_sha) &&
+    snapshot.verified_audit_commit_sha === snapshot.intended_commit_sha &&
+    planApproved
+  );
+};
+```
+- In `handleLaunchAudit`:
+  - If `canLaunchAudit(...) === true`:
+    - Set `activeWorkflow('repo_audit')`
+    - Set `auditScreen('audit_activity')`
+    - Trigger `setAuditAutoStartToken(t => (t ? t + 1 : 1))`
+  - If `canLaunchAudit(...) === false`:
+    - Set `activeWorkflow('repo_audit')`
+    - Set `auditScreen('audit_preflight')`
+    - Do NOT increment `auditAutoStartToken`
+
+### Priority 2: Invalidation & Wording (`AuditScreenARepoSelect.tsx` & `AuditScreenBPreflight.tsx`)
+- On repository input changes or preset selection:
+  ```ts
+  setSnapshot(prev => ({
+    ...prev,
+    owner: ownerInput.trim(),
+    repo: repoInput.trim(),
+    requested_branch: branchInput.trim(),
+    intended_commit_sha: shaInput.trim(),
+    verified_audit_commit_sha: null, // Reset verification
+  }));
+  setIsShaVerified(false);
+  setPlanApproved(false);
+  ```
+- In `AuditScreenBPreflight.tsx`:
+  - Toggling auth to non-authenticated or clicking "Simulate Drift" triggers `setPlanApproved(false)`.
+  - Wording updated: "Proposed Execution Isolation: RESTRICTED (PROPOSED)" with explanatory note on proposed ephemeral container isolation.
+
+### Priority 3: Lifecycle, Telemetry & Scenario Transitions
+- `handleCancelRunningAuditActivitiesOnly()`:
+  - Iterates over `auditActivities`; transitions only items with `state === 'running'` to `state === 'cancelled'`.
+  - Clears simulation timers and updates run generation.
+- `handleApplyAuditScenario`:
+  - Resets `auditAutoStartToken(null)`.
+  - Generates fresh activity fixtures with zeroed timers and initial telemetry logs matching the scenario specification.
+
+### Priority 4: UX Adjustments
+- Keyboard shortcut filter:
+  ```ts
+  const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName) || (e.target as HTMLElement)?.isContentEditable;
+  const hasModifier = e.ctrlKey || e.altKey || e.metaKey;
+  if (isInput || hasModifier) return;
+  ```
+- Underscore replacement:
+  ```ts
+  const formatCoverageState = (state: string) => state.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  ```
+- Clipboard handling:
+  ```ts
+  navigator.clipboard?.writeText(markdown)
+    .then(() => setCopied(true))
+    .catch(() => setCopyFailed(true));
+  ```
+
+---
+
+## 4. Integration Test Verification Plan
+
+1. **Gate Enforcement Test**: Executing `codeguardian audit` via terminal or clicking Launch while unapproved or unauthenticated must transition the view to `audit_preflight` with the simulation inactive.
+2. **Approved Flow Test**: Once credentials are valid, SHA is verified, and plan is approved, Launch transitions to `audit_activity` and starts execution.
+3. **Parameter Invalidation Test**: Changing repo identity or intended commit SHA resets verified SHA to `null` and revokes plan approval.
+4. **Drift & Auth Revocation Test**: Simulating SHA drift or toggling Jules auth immediately marks the plan unapproved.
+5. **Activity Run Bypass Test**: Clicking Run or Re-run on View D when unapproved redirects to View B instead of starting.
+6. **Cross-Screen Worker/Activity Preservation Test**: Navigating away from View D while running cancels running activities without affecting completed ones.
+7. **Keyboard Shortcut Safety Test**: Typing hotkey letters ('a', 'h', '1') into inputs or with Alt/Ctrl held does not trigger navigation.
+8. **Clipboard Resilience Test**: Simulating rejected clipboard promise fails gracefully without uncaught exceptions.
+9. **Full Regression Test**: All 53 existing tests across `component-integration.test.tsx`, `audit-integration.test.tsx`, and `acceptance.test.ts` pass cleanly.

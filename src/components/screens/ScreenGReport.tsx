@@ -28,12 +28,23 @@ export const ScreenGReport: React.FC<ScreenGReportProps> = ({
   const [formatView, setFormatView] = useState<'terminal' | 'markdown' | 'json'>('terminal');
   const [copied, setCopied] = useState<boolean>(false);
 
+  const [copyFailed, setCopyFailed] = useState<boolean>(false);
   const report = SYNTHETIC_CANONICAL_REPORT;
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard?.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async (text: string) => {
+    setCopyFailed(false);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable');
+      }
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 3000);
+    }
   };
 
   return (

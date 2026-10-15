@@ -17,6 +17,7 @@ import {
 interface AuditScreenBPreflightProps {
   noColor: boolean;
   snapshot: RepositorySnapshot;
+  setSnapshot?: React.Dispatch<React.SetStateAction<RepositorySnapshot>>;
   julesAuth: 'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited';
   setJulesAuth: (val: 'authenticated' | 'unauthenticated' | 'expired' | 'rate_limited') => void;
   isShaVerified: boolean;
@@ -30,6 +31,7 @@ interface AuditScreenBPreflightProps {
 export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
   noColor,
   snapshot,
+  setSnapshot,
   julesAuth,
   setJulesAuth,
   isShaVerified,
@@ -41,11 +43,45 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
 }) => {
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
 
-  const isPreflightPassed = julesAuth === 'authenticated' && isShaVerified;
+  const isPreflightPassed =
+    julesAuth === 'authenticated' &&
+    isShaVerified &&
+    Boolean(snapshot.verified_audit_commit_sha) &&
+    snapshot.verified_audit_commit_sha === snapshot.intended_commit_sha;
 
   const handleRejectPlan = () => {
     setPlanApproved(false);
     setRejectionReason('Operator rejected proposed Jules execution plan: token quote and scope exceeded project budget.');
+  };
+
+  const handleToggleAuth = () => {
+    const nextAuth = julesAuth === 'authenticated' ? 'unauthenticated' : 'authenticated';
+    setJulesAuth(nextAuth);
+    if (nextAuth !== 'authenticated') {
+      setPlanApproved(false);
+    }
+  };
+
+  const handleToggleDrift = () => {
+    const nextVerified = !isShaVerified;
+    setIsShaVerified(nextVerified);
+    if (!nextVerified) {
+      if (setSnapshot) {
+        setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: null }));
+      }
+      setPlanApproved(false);
+    } else {
+      if (setSnapshot) {
+        setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: prev.intended_commit_sha }));
+      }
+    }
+  };
+
+  const handleVerifySnapshot = () => {
+    setIsShaVerified(true);
+    if (setSnapshot) {
+      setSnapshot((prev) => ({ ...prev, verified_audit_commit_sha: prev.intended_commit_sha }));
+    }
   };
 
   return (
@@ -74,16 +110,17 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
       <div className={`p-3 rounded border text-xs space-y-1 ${
         noColor
           ? 'border-zinc-700 bg-zinc-900 text-zinc-300'
-          : 'border-red-900/60 bg-red-950/20 text-red-200'
+          : 'border-amber-900/60 bg-amber-950/20 text-amber-200'
       }`}>
-        <div className="flex items-center gap-2 font-bold text-red-300">
-          <ShieldAlert className="w-4 h-4 text-red-400" />
+        <div className="flex items-center gap-2 font-bold text-amber-300">
+          <ShieldAlert className="w-4 h-4 text-amber-400" />
           <span>SECURITY TRUST BOUNDARY (ARCHITECTURE D-09)</span>
         </div>
         <p className="text-[11px] opacity-90 leading-relaxed">
           An audit-only natural language prompt is <strong>NOT</strong> a security sandbox boundary. 
-          Google Jules runs in an isolated ephemeral container with <code className="text-red-300 font-mono">AUTO_CREATE_PR = false</code>, 
-          disposable read-only repository mirror, and no GitHub write permissions.
+          Google Jules operates under a <strong>proposed restricted cloud execution design</strong> (disposable 
+          read-only container, <code className="text-amber-300 font-mono">AUTO_CREATE_PR = false</code>, no GitHub write permissions), 
+          not a proven hardware guarantee. Independent Manager verification is mandatory.
         </p>
       </div>
 
@@ -98,7 +135,8 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
             </span>
             <div className="flex items-center gap-1 text-[10px]">
               <button
-                onClick={() => setJulesAuth(julesAuth === 'authenticated' ? 'unauthenticated' : 'authenticated')}
+                type="button"
+                onClick={handleToggleAuth}
                 className="text-cyan-400 hover:underline"
               >
                 Toggle Auth
@@ -132,12 +170,24 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
               <FileCheck2 className="w-3.5 h-3.5 text-cyan-400" />
               REMOTE SNAPSHOT IDENTITY CHECK
             </span>
-            <button
-              onClick={() => setIsShaVerified(!isShaVerified)}
-              className="text-[10px] text-cyan-400 hover:underline"
-            >
-              Simulate Drift
-            </button>
+            <div className="flex items-center gap-2">
+              {(!isShaVerified || !snapshot.verified_audit_commit_sha || snapshot.verified_audit_commit_sha !== snapshot.intended_commit_sha) && (
+                <button
+                  type="button"
+                  onClick={handleVerifySnapshot}
+                  className="text-[10px] text-emerald-400 hover:underline font-bold"
+                >
+                  Verify SHA
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleToggleDrift}
+                className="text-[10px] text-cyan-400 hover:underline"
+              >
+                Simulate Drift
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1.5 font-mono text-[11px]">
@@ -148,12 +198,12 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-zinc-400">Remote Branch Head:</span>
               <span className={isShaVerified ? 'text-zinc-300' : 'text-amber-400'}>
-                {isShaVerified ? snapshot.intended_commit_sha.slice(0, 12) + '...' : '5d88ab210e44... (DRIFT DETECTED)'}
+                {isShaVerified && snapshot.verified_audit_commit_sha ? snapshot.intended_commit_sha.slice(0, 12) + '...' : '5d88ab210e44... (DRIFT DETECTED)'}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-zinc-400">SHA Verification:</span>
-              {isShaVerified ? (
+              {isShaVerified && snapshot.verified_audit_commit_sha === snapshot.intended_commit_sha ? (
                 <span className="text-emerald-400 font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" /> MATCHED (Pinned)
                 </span>
@@ -196,10 +246,10 @@ export const AuditScreenBPreflight: React.FC<AuditScreenBPreflightProps> = ({
 
           <div className="p-2 rounded bg-black/40 border border-zinc-800/80">
             <div className="text-zinc-500 flex items-center gap-1 mb-1">
-              <ShieldAlert className="w-3 h-3" /> Write Authority
+              <ShieldAlert className="w-3 h-3" /> Execution Isolation
             </div>
-            <div className="text-emerald-400 font-semibold">READ ONLY</div>
-            <div className="text-[10px] text-zinc-500">PR creation disabled</div>
+            <div className="text-amber-400 font-semibold">RESTRICTED (PROPOSED)</div>
+            <div className="text-[10px] text-zinc-500">Proposed read-only container; PR creation disabled</div>
           </div>
         </div>
       </div>

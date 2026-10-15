@@ -233,7 +233,7 @@ export const AuditScreenCCoverage: React.FC<AuditScreenCCoverageProps> = ({
           <div className="flex items-center gap-2">
             <span>COVERAGE LEDGER ({filteredItems.length} MATCHING)</span>
             {selectedLevel !== 'all' && (
-              <span className="text-cyan-400 font-mono text-[11px]">Filter: {selectedLevel}</span>
+              <span className="text-cyan-400 font-mono text-[11px]">Filter: {selectedLevel.replace(/_/g, ' ')}</span>
             )}
           </div>
           <span className="text-[10px] text-zinc-500 font-mono">Click row to view citations</span>
@@ -261,7 +261,7 @@ export const AuditScreenCCoverage: React.FC<AuditScreenCCoverageProps> = ({
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-[10px] text-zinc-500 hidden md:inline">{item.module}</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] uppercase ${getBadgeStyle(item.level)}`}>
-                      {item.level.replace('_', ' ')}
+                      {item.level.replace(/_/g, ' ')}
                     </span>
                   </div>
                 </div>

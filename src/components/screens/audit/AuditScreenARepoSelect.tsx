@@ -17,6 +17,8 @@ interface AuditScreenARepoSelectProps {
   noColor: boolean;
   snapshot: RepositorySnapshot;
   setSnapshot: React.Dispatch<React.SetStateAction<RepositorySnapshot>>;
+  setIsShaVerified?: (verified: boolean) => void;
+  setPlanApproved?: (approved: boolean) => void;
   onNavigate: (screen: AuditScreen) => void;
   onStartAudit: () => void;
 }
@@ -25,6 +27,8 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
   noColor,
   snapshot,
   setSnapshot,
+  setIsShaVerified,
+  setPlanApproved,
   onNavigate,
   onStartAudit,
 }) => {
@@ -35,20 +39,24 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
   const [isEditingExclusions, setIsEditingExclusions] = React.useState(false);
   const [exclusionInput, setExclusionInput] = React.useState(snapshot.exclusion_patterns.join(', '));
 
+  // 40-character hexadecimal validation represents syntax checking, not source verification
   const isShaValid = /^[0-9a-f]{40}$/i.test(shaInput.trim());
   const isRepoValid = /^[a-zA-Z0-9_.-]+$/.test(ownerInput.trim()) && /^[a-zA-Z0-9_.-]+$/.test(repoInput.trim());
 
   const handleApplyChanges = () => {
     const patterns = exclusionInput.split(',').map((s) => s.trim()).filter(Boolean);
+    // Editing snapshot invalidates source verification and plan approval
     setSnapshot((prev) => ({
       ...prev,
       owner: ownerInput.trim(),
       repo: repoInput.trim(),
       requested_branch: branchInput.trim(),
       intended_commit_sha: shaInput.trim(),
-      verified_audit_commit_sha: isShaValid ? shaInput.trim() : null,
+      verified_audit_commit_sha: null,
       exclusion_patterns: patterns,
     }));
+    if (setIsShaVerified) setIsShaVerified(false);
+    if (setPlanApproved) setPlanApproved(false);
   };
 
   const handleQuickSelectPreset = (owner: string, repo: string, sha: string) => {
@@ -60,8 +68,10 @@ export const AuditScreenARepoSelect: React.FC<AuditScreenARepoSelectProps> = ({
       owner,
       repo,
       intended_commit_sha: sha,
-      verified_audit_commit_sha: sha,
+      verified_audit_commit_sha: null,
     }));
+    if (setIsShaVerified) setIsShaVerified(false);
+    if (setPlanApproved) setPlanApproved(false);
   };
 
   return (

@@ -25,8 +25,8 @@ export const AuditScreenFReport: React.FC<AuditScreenFReportProps> = ({
   report,
   onNavigate,
 }) => {
-  const [activeTab, setActiveTab] = useState<'preview' | 'markdown' | 'json'>('preview');
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [copyFailed, setCopyFailed] = useState<boolean>(false);
 
   const verifiedFindings = report.findings.filter((f) => f.verification === 'verified');
   const rejectedFindings = report.findings.filter((f) => f.verification === 'rejected');
@@ -102,11 +102,21 @@ ${report.executed_checks.map((chk) => `- \`${chk}\``).join('\n')}
 `;
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const text = activeTab === 'json' ? JSON.stringify(report, null, 2) : generateMarkdownReport();
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    setCopyFailed(false);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API not available');
+      }
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      setIsCopied(false);
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 3000);
+    }
   };
 
   return (
@@ -197,13 +207,18 @@ ${report.executed_checks.map((chk) => `- \`${chk}\``).join('\n')}
           </button>
         </div>
 
-        <button
-          onClick={handleCopy}
-          className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs flex items-center gap-1.5 transition font-mono"
-        >
-          {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-          <span>{isCopied ? 'Copied to Clipboard' : 'Copy Artifact'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {copyFailed && (
+            <span className="text-[11px] text-red-400 font-mono">Clipboard copy failed</span>
+          )}
+          <button
+            onClick={handleCopy}
+            className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs flex items-center gap-1.5 transition font-mono"
+          >
+            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{isCopied ? 'Copied to Clipboard' : 'Copy Artifact'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Content Area */}

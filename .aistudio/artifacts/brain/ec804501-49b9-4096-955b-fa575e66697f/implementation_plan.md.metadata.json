@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for final prototype corrections: worker navigation lifecycle (cancelling only running workers when leaving Screen E, preserving completed/failed workers, clearing timers, preventing React StrictMode glitches), Vite dev server host restriction (removing allowedHosts: true, binding to 127.0.0.1 locally, and using explicit trusted-host allowlist for preview), and full React interaction test suite.",
-  "updatedAt": "2026-10-15T07:58:54.129342381Z",
+  "summary": "Detailed patch plan and test specification addressing CodeRabbit findings for CodeGuardian G00/G06 unified prototype: central audit authorization gate, snapshot and approval invalidation, navigation and lifecycle cleanup, and UX corrections.",
+  "updatedAt": "2026-10-15T13:01:06.543881852Z",
   "requestFeedback": true,
   "userFacing": true
 }

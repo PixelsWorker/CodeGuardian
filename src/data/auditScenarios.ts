@@ -496,7 +496,7 @@ export const AUDIT_SCENARIOS: AuditScenarioDefinition[] = [
     tag: 'AUTH_BLOCKED',
     description: 'Google Jules API key is missing or session expired. Preflight fails closed before creating a remote cloud session.',
     initialScreen: 'audit_preflight',
-    expectedOutcome: 'Audit Preflight reports [AUTH_REQUIRED]. Operator guided to configure authorized credentials.',
+    expectedOutcome: 'Audit Preflight reports [AUTH_ERROR] Missing GCP Credentials. Preflight is blocked before cloud execution.',
     snapshotState: {
       owner: 'PixelsWorker',
       repo: 'CodeGuardian',
