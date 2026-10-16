@@ -3,7 +3,7 @@
 ## Authority and project boundaries
 
 Repository: https://github.com/PixelsWorker/CodeGuardian.
-**Active Windows checkout:** `E:\Projects\CodeGuardian\` (repository root, relocated 2026-10-16 from inner `CodeGuardian\CodeGuardian\` subdirectory). Read the parent workspace `../AGENTS.md` and the full-stack project rules before modifying files.
+**Active Windows checkout:** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root). Read the parent workspace `../AGENTS.md` and the full-stack project rules before modifying files.
 
 Rockson approves consequential scope, dependencies, architecture and Git actions. ChatGPT researches and plans; the Development Manager reviews setup/groups; Codex implements specifically approved work; GeminiCLI/Antigravity handles separately approved narrow corrections. Do not infer authorization to create branches, install packages, modify application code, publish comments, merge or deploy from planning documents.
 
