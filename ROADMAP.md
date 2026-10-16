@@ -83,13 +83,13 @@ Decision checklist:
 | Layer | Candidate | Rule |
 |---|---|---|
 | Runtime | Node.js 24 LTS | Confirm host version and exact pin |
-| Language | TypeScript ESM (6.x candidate) | Verify compiler and dependency compatibility |
+| Language | TypeScript ESM (6.x/7.x candidate) | Verify compiler and dependency compatibility |
 | Terminal UI | Ink 8.0.0 and React >=19.3 | Prototype redraw/resize/input behavior; freeze tested versions |
 | Commands | Commander 15.x | Agree command vocabulary |
 | Validation | Zod 4.x | Match accepted `API-CONTRACT.md` |
 | Development runner | tsx 4.x | Pin compatible release |
 | Tests | Vitest 5.0.4 + compatible Vite peer | Select patched versions, run local tests only |
-| Package management | pnpm, exact pinned version + lockfile | Install only after explicit package approval |
+| Package management | npm 11.17.0, exact lockfile | Preferred over pnpm for host compatibility |
 | Data | Local JSON mock fixtures | No real secrets, tokens, authentication, or network access |
 
 **Existing design track — Google AI Studio (visual reference only):** A nine-screen React/Vite browser mock with synthetic scenarios and test source now exists on remote `main`. This is a design reference, **not** accepted native CLI G00, and no tests were run by this governance review. Any further AI Studio sync/deployment still needs the applicable approval; Codex's native terminal implementation remains a separate accepted scope.
@@ -98,7 +98,7 @@ Decision checklist:
 - Welcome/help, command discovery, invalid commands and terminal controls.
 - Simulated GitHub and Codex auth status, missing access, expired sessions and suggested actions.
 - PR URL entry/validation and synthetic owner/repo/number, base/head SHA, file/diff/risk overview.
-- Four mock specialist lanes (Security, Logic, Architecture, Quality), including queued/running/completed/skipped/failed/timed-out/cancelled states.
+- Four mock specialist lanes (Security, Logic/Correctness, Architecture, Quality/Testing/Performance), including queued/running/completed/skipped/failed/timed-out/cancelled states.
 - Validation and synthesis, including accepted/rejected/duplicate findings, invalid changed lines, uncertain or partial worker coverage.
 - Findings by P0/P1/P2/P3, Markdown and JSON report views, simulation warnings and `tests.executed=false` for analysis fixtures.
 - Dry-run publication preview, proposed `COMMENT` action, explicit simulated yes/no confirmation, changed-head refusal, permission denial and duplicate protection.

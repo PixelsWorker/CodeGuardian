@@ -20,14 +20,19 @@ The accepted product is a **native CLI-first GitHub PR reviewer** running inside
 **Target repository layout after Ink package creation (not yet created):**
 ```
 E:\Projects\CodeGuardian\
-├── .git\
-├── src\                   Browser UX reference — FROZEN at e8e5844
-├── ink\                   Native terminal application (target)
-│   ├── package.json
-│   └── src\
-├── integrations\
-│   └── pr-agent\          Future G04 adapter
-└── [governance docs]
+├── evidence\                  Reference & governance evidence
+├── worktree\
+│   └── PixelsWorker\CodeGuardian\
+│       └── feat-g00-ink-cli-demo\  Dedicated feature worktree
+│           └── ink\                Native terminal application (target)
+│               ├── package.json
+│               └── src\
+└── CodeGuardian\              Git repository root
+    ├── .git\
+    ├── src\                   Browser UX reference — FROZEN at e8e5844
+    ├── integrations\
+    │   └── pr-agent\          Future G04 adapter
+    └── [governance docs]
 ```
 
 **Existing G00 browser prototype walkthrough:** operator walkthrough of the nine-screen browser UX has been accepted as the design reference. Native CLI implementation and explicit G00 Ink acceptance are NOT VERIFIED. The browser reference guides UX; the native terminal walkthrough is the required G00 deliverable.
@@ -38,12 +43,12 @@ E:\Projects\CodeGuardian\
 
 | Ref | Verified SHA | Evidence |
 |---|---|---|
-| `main` local HEAD | `e8e58443c9e13129bc2ee9459751c9944eef3da9` | Browser reference + snapshot fingerprinting; clean working tree; zero divergence from `origin/main` |
-| `main` pre-patch remote | `3c9db33177e7ee8e2c6310ac05af21839f0cac08` | Browser mock, package manifest, test source, planning docs |
-| `dev` pre-patch | `a39a37525ba5a5645dec8e382be0f47c735d1d0e` | Documentation baseline |
+| `main` local HEAD | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Checkout path corrected to nested repository; zero divergence from `origin/main` |
+| `origin/main` remote | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Verified synchronized on remote GitHub |
+| `feat/g00-ink-cli-demo` | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Local dedicated worktree for G00 Ink CLI |
 
-**Active Windows checkout:** `E:\Projects\CodeGuardian\` (relocated 2026-10-16; previously at `E:\Projects\CodeGuardian\CodeGuardian\`).
-Git worktree: single worktree only, no linked worktrees. `git fsck` clean. Remote: `git@github.com:PixelsWorker/CodeGuardian.git`.
+**Active Windows checkout:** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root).
+Git worktree: primary repository plus dedicated feature worktree at `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`. `git fsck` clean. Remote: `git@github.com:PixelsWorker/CodeGuardian.git`.
 
 Reconciliation of independent Git histories is DONE (historical merge `e3e6b281e517a2d884309d527650ba9329e76d8e`); do not repeat it.
 
@@ -55,7 +60,7 @@ Reconciliation of independent Git histories is DONE (historical merge `e3e6b281e
 - `TECH-RESEARCH.md`: current official Jules API evidence plus known untested runtime details.
 - `SETUP.md` and `REPO-INITIALIZATION.md`: current remote observations and Git history.
 
-**Pending decisions:** architecture D-01–D-08 and G00 scope/stack acceptance (Ink 8.0, Node 24 LTS, TypeScript, pnpm); approved local execution approach (Windows Terminal); exact dependency versions and G00 feature branch/worktree; license/protection rules. G02 Codex auth, G04 provider setup, G05 webhooks and optional G06 Jules pilot are later gates.
+**Pending decisions:** architecture D-01–D-08 and G00 scope/stack acceptance (Ink 8.0, Node 24 LTS, TypeScript, npm 11.17.0); approved local execution approach (Windows Terminal); exact dependency versions and G00 feature branch/worktree; license/protection rules. G02 Codex auth, G04 provider setup, G05 webhooks and optional G06 Jules pilot are later gates.
 
 ## Next requested action / stop
 

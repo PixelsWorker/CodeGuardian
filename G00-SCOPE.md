@@ -45,18 +45,18 @@ Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rocks
 
 ## Dependencies and estimate
 
-- Dependencies: accepted project architecture, accepted mock schema, confirmed Windows dev environment (Node 24 LTS, pnpm, TypeScript, Ink 8.0), initialized Git repository and approved branch plan, G00 scope approval.
+- Dependencies: accepted project architecture, accepted mock schema, confirmed Windows dev environment (Node 24 LTS, npm 11.17.0, TypeScript, Ink 8.0), initialized Git repository and approved branch plan, G00 scope approval.
 - Estimate: 2-3 working days after prerequisites are met; revisit if terminal UI expectations change.
 - Contract: `API-CONTRACT.md` v1 draft, only mock fixtures at G00.
 - Protected files allowed to be changed: NONE yet. G00 execution TODO must name exact permitted protected paths if edits become necessary.
-- Branch/PR: NOT CREATED.
-- **Ink package location:** `ink/` at repository root (`E:\Projects\CodeGuardian\ink\`). Separate `package.json`. CLI binary: `codeguardian`.
+- Branch/PR: `feat/g00-ink-cli-demo` in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`. Target PR against `main`.
+- **Ink package location:** `ink/` inside the feature worktree (`E:\Projects\CodeGuardian\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\ink\`). Separate `package.json`. CLI binary: `codeguardian`.
 
 ## Proposed acceptance demonstration
 
 1. Start from help and simulated auth-preflight.
 2. Supply demo PR URL and show metadata/diff overview.
-3. Start all four simulated CodeGuardianMini specialist lanes.
+3. Start all four simulated CodeGuardianMini specialist lanes (Security, Logic/Correctness, Architecture, Quality/Testing/Performance).
 4. Show streaming-style progress and one partial failure.
 5. Present consolidated findings, JSON export preview, and evidence caveats.
 6. Open dry-run publish preview; deny, then accept simulated confirmation. Show **NO EXTERNAL WRITE**.
