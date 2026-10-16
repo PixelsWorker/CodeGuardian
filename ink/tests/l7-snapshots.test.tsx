@@ -32,6 +32,8 @@ function cleanSnapshotFrame(raw: string | undefined): string {
 describe('L7 — Deterministic Terminal Snapshots', () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
+    vi.resetModules();
   });
   it('Snapshot: Screen 1 — Welcome', () => {
     const { lastFrame } = render(
@@ -138,7 +140,8 @@ describe('L7 — Deterministic Terminal Snapshots', () => {
     );
     const frame = cleanSnapshotFrame(lastFrame());
     expect(frame).toContain('FULL CONSENSUS READY');
-    expect(frame).toContain('Accepted Findings: 4');
+    expect(frame).toContain('Total Candidate Findings: 4');
+    expect(frame).toContain('Verified Diff Findings: 3');
     expect(frame).toMatchSnapshot();
   });
 

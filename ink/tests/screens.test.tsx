@@ -124,7 +124,8 @@ describe('G00 Nine-Screen Terminal Components', () => {
       />
     );
     expect(lastFrame()).toContain('Manager Validation, Synthesis & Deduplication');
-    expect(lastFrame()).toContain('Accepted Findings: 4');
+    expect(lastFrame()).toContain('Total Candidate Findings: 4');
+    expect(lastFrame()).toContain('Verified Diff Findings: 3');
   });
 
   it('renders Screen 7: ReportScreen with findings', () => {

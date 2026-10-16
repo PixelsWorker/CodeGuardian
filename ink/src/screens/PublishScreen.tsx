@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React from 'react';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 import { ReviewReport } from '../types/contracts.js';
+import { PublishOutcome } from '../core/state-machine.js';
 
 interface PublishScreenProps {
   report: ReviewReport;
-  outcome: "normal" | "denied" | "stale_sha";
+  outcome: PublishOutcome;
   decision?: "pending" | "confirmed" | "denied";
   onConfirmPublish: () => void;
   onDenyPublish: () => void;
   onToggleStaleSha?: () => void;
+  onTogglePermissionDenied?: () => void;
+  onToggleDuplicate?: () => void;
   onBack: () => void;
   onRestart: () => void;
 }
@@ -20,17 +24,21 @@ export function PublishScreen({
   onConfirmPublish,
   onDenyPublish,
   onToggleStaleSha,
+  onTogglePermissionDenied,
+  onToggleDuplicate,
   onBack,
   onRestart,
 }: PublishScreenProps) {
   const confirmed = decision === "confirmed";
   const denied = decision === "denied" || outcome === "denied";
   const isStale = outcome === "stale_sha";
+  const isPermissionDenied = outcome === "permission_denied";
+  const isDuplicate = outcome === "duplicate";
 
   const verifiedInline = report.findings.filter(f => f.verification === "verified_diff");
   const uncertainSummary = report.findings.filter(f => f.verification !== "verified_diff");
 
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (input === 'r' || input === 'R') {
       onRestart();
       return;
@@ -48,7 +56,21 @@ export function PublishScreen({
       return;
     }
 
-    if (isStale) {
+    if (input === 'p' || input === 'P') {
+      if (!confirmed && !denied) {
+        onTogglePermissionDenied?.();
+      }
+      return;
+    }
+
+    if (input === 'd' || input === 'D') {
+      if (!confirmed && !denied) {
+        onToggleDuplicate?.();
+      }
+      return;
+    }
+
+    if (isStale || isPermissionDenied) {
       return;
     }
 
@@ -84,15 +106,30 @@ export function PublishScreen({
         )}
       </Box>
 
+      {isDuplicate && !confirmed && !denied && (
+        <Box borderStyle="single" borderColor="yellow" padding={1} flexDirection="column" marginBottom={1}>
+          <Text bold color="yellow">⚠️  WARNING: DUPLICATE PUBLICATION DETECTED</Text>
+          <Text color="white">A CodeGuardian review comment was already published for commit SHA {report.pr.head_sha}. Submitting again will log an idempotent skip.</Text>
+        </Box>
+      )}
+
       {isStale ? (
         <Box borderStyle="double" borderColor="red" padding={1} flexDirection="column" marginBottom={1}>
           <Text bold color="red">✗ PUBLICATION BLOCKED: STALE HEAD SHA</Text>
           <Text color="white">Remote PR head SHA has changed since analysis started. Publication refused to prevent posting stale comments.</Text>
         </Box>
+      ) : isPermissionDenied ? (
+        <Box borderStyle="double" borderColor="red" padding={1} flexDirection="column" marginBottom={1}>
+          <Text bold color="red">✗ PUBLICATION BLOCKED: PERMISSION DENIED (HTTP 403)</Text>
+          <Text color="white">GitHub token lacks write access or 'pull_requests: write' scope. Review comment submission aborted.</Text>
+        </Box>
       ) : confirmed ? (
         <Box borderStyle="double" borderColor="green" padding={1} flexDirection="column" marginBottom={1}>
           <Text bold color="green">✓ SIMULATED PUBLICATION CONFIRMED</Text>
           <Text color="white">Dry-run receipt logged. Verification nonce validated. NO EXTERNAL WRITE PERFORMED.</Text>
+          {isDuplicate && (
+            <Text color="yellow">Notice: Review already posted for this commit SHA. Idempotent skip logged.</Text>
+          )}
         </Box>
       ) : denied ? (
         <Box borderStyle="double" borderColor="red" padding={1} flexDirection="column" marginBottom={1}>
@@ -110,8 +147,10 @@ export function PublishScreen({
           <Text color="white">Decision locked. Press <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
         ) : isStale ? (
           <Text color="white">Press <Text bold color="yellow">[S]</Text> to Toggle Stale SHA (Demo) | <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
+        ) : isPermissionDenied ? (
+          <Text color="white">Press <Text bold color="yellow">[P]</Text> to Toggle Permission Denied (Demo) | <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
         ) : (
-          <Text color="white">Press <Text bold color="green">[Y]</Text> to Authorize | <Text bold color="red">[N]</Text> to Deny | <Text bold color="yellow">[S]</Text> Toggle Stale SHA | <Text bold color="cyan">[R]</Text> Restart | <Text color="gray">[Esc] Back</Text></Text>
+          <Text color="white">Press <Text bold color="green">[Y]</Text> to Authorize | <Text bold color="red">[N]</Text> to Deny | <Text bold color="yellow">[S]</Text> Stale SHA | <Text bold color="yellow">[P]</Text> Permission Denied | <Text bold color="yellow">[D]</Text> Duplicate | <Text color="gray">[Esc] Back</Text></Text>
         )}
       </Box>
     </Box>

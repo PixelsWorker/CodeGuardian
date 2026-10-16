@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 
 interface WelcomeScreenProps {
   onStart: () => void;
@@ -7,7 +8,7 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onStart, onAuthCheck }: WelcomeScreenProps) {
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (key.return) {
       onStart();
     } else if (input === 'a' || input === 'A') {

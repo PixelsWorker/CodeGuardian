@@ -5,7 +5,7 @@ import { Command } from 'commander';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { App } from './App.js';
-import { SYNTHETIC_REPORT } from './fixtures/fixtures.js';
+import { SYNTHETIC_REPORT, SYNTHETIC_PARTIAL_REPORT, getReportForRunId } from './fixtures/fixtures.js';
 import { formatReportMarkdown, formatReportJson } from './core/report-formatter.js';
 
 export function createCliProgram(options: {
@@ -64,16 +64,17 @@ export function createCliProgram(options: {
     .argument('<run_id>', 'Run ID of the review session')
     .option('-f, --format <format>', 'Export format (markdown or json)', 'markdown')
     .action((runId, cmdOpts) => {
-      if (runId !== SYNTHETIC_REPORT.run_id && runId !== 'run-demo-42' && runId !== 'demo') {
-        console.error(`Error: Run ID '${runId}' not found. Available demo run ID: '${SYNTHETIC_REPORT.run_id}'.`);
+      const report = getReportForRunId(runId);
+      if (!report) {
+        console.error(`Error: Run ID '${runId}' not found. Available demo run IDs: '${SYNTHETIC_REPORT.run_id}', '${SYNTHETIC_PARTIAL_REPORT.run_id}'.`);
         process.exitCode = 1;
         return;
       }
       const fmt = (cmdOpts.format || 'markdown').toLowerCase();
       if (fmt === 'json') {
-        console.log(formatReportJson(SYNTHETIC_REPORT));
+        console.log(formatReportJson(report));
       } else if (fmt === 'markdown' || fmt === 'md') {
-        console.log(formatReportMarkdown(SYNTHETIC_REPORT));
+        console.log(formatReportMarkdown(report));
       } else {
         console.error(`Error: Unsupported format '${cmdOpts.format}'. Supported formats: markdown, json.`);
         process.exitCode = 1;
@@ -92,12 +93,13 @@ export function createCliProgram(options: {
         process.exitCode = 1;
         return;
       }
-      if (runId !== SYNTHETIC_REPORT.run_id && runId !== 'run-demo-42' && runId !== 'demo') {
-        console.error(`Error: Run ID '${runId}' not found. Available demo run ID: '${SYNTHETIC_REPORT.run_id}'.`);
+      const report = getReportForRunId(runId);
+      if (!report) {
+        console.error(`Error: Run ID '${runId}' not found. Available demo run IDs: '${SYNTHETIC_REPORT.run_id}', '${SYNTHETIC_PARTIAL_REPORT.run_id}'.`);
         process.exitCode = 1;
         return;
       }
-      renderElement(<App initialScreen="publish" isDemo={true} />);
+      renderElement(<App initialScreen="publish" initialReport={report} isDemo={true} />);
     });
 
   return program;

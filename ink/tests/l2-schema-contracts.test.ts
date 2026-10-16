@@ -7,6 +7,7 @@ import {
   CategorySchema,
   WorkerRoleSchema,
   WorkerStateSchema,
+  FinalWorkerStateSchema,
   RunStatusSchema,
 } from '../src/types/contracts.js';
 import {
@@ -209,6 +210,33 @@ describe('L2 — Schema and Domain Unit Testing', () => {
       const missingPolicy = { ...SYNTHETIC_REPORT };
       delete (missingPolicy as any).policy_revision;
       expect(ReviewReportSchema.safeParse(missingPolicy).success).toBe(false);
+    });
+
+    it('strictly enforces FinalWorkerState in final reports, rejecting queued, running, timed_out, and cancelled', () => {
+      const unfinishedStates = ['queued', 'running', 'timed_out', 'cancelled'];
+      for (const invalidState of unfinishedStates) {
+        const invalidReport = {
+          ...SYNTHETIC_REPORT,
+          worker_states: [
+            { worker_id: 'worker-sec', state: invalidState as any },
+          ],
+        };
+        const result = ReviewReportSchema.safeParse(invalidReport);
+        expect(result.success).toBe(false);
+      }
+
+      const validFinalStates = ['complete', 'partial', 'failed', 'skipped'];
+      for (const validState of validFinalStates) {
+        expect(FinalWorkerStateSchema.safeParse(validState).success).toBe(true);
+        const validReport = {
+          ...SYNTHETIC_REPORT,
+          worker_states: [
+            { worker_id: 'worker-sec', state: validState as any },
+          ],
+        };
+        const result = ReviewReportSchema.safeParse(validReport);
+        expect(result.success).toBe(true);
+      }
     });
   });
 });

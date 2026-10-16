@@ -15,13 +15,15 @@ import {
   WorkerRole,
   WorkerStateSchema,
   WorkerState,
+  FinalWorkerStateSchema,
+  FinalWorkerState,
   WorkerInfo,
   RunStatusSchema,
   RunStatus,
   ActiveScreen,
   AuthState,
 } from '../src/types/contracts.js';
-import { CliState, CliAction, createInitialState, cliReducer } from '../src/core/state-machine.js';
+import { CliState, CliAction, PublishOutcome, createInitialState, cliReducer } from '../src/core/state-machine.js';
 
 describe('L5 — Static Type and Contract Testing', () => {
   describe('Zod Schema Type Inferences & Contract Equivalence', () => {
@@ -134,6 +136,19 @@ describe('L5 — Static Type and Contract Testing', () => {
         | 'awaiting_approval'
         | 'publishing'
         | 'published'
+      >();
+    });
+
+    it('verifies FinalWorkerState matches API-CONTRACT four allowed completion states', () => {
+      expectTypeOf<FinalWorkerState>().toEqualTypeOf<z.infer<typeof FinalWorkerStateSchema>>();
+      expectTypeOf<FinalWorkerState>().toEqualTypeOf<'complete' | 'partial' | 'failed' | 'skipped'>();
+      expectTypeOf<ReviewReport['worker_states'][number]['state']>().toEqualTypeOf<FinalWorkerState>();
+      expectTypeOf<FinalWorkerState>().not.toEqualTypeOf<WorkerState>();
+    });
+
+    it('verifies PublishOutcome covers all publication simulation states', () => {
+      expectTypeOf<PublishOutcome>().toEqualTypeOf<
+        'normal' | 'denied' | 'stale_sha' | 'permission_denied' | 'duplicate'
       >();
     });
   });

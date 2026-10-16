@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 import { AuthState } from '../types/contracts.js';
 
 interface AuthScreenProps {
@@ -13,7 +14,7 @@ interface AuthScreenProps {
 export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onBack }: AuthScreenProps) {
   const isAuthValid = githubAuth === "authenticated" && codexAuth === "authenticated";
 
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (input === 't' || input === 'T') {
       onCycleAuth?.();
       return;
@@ -65,7 +66,7 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onB
 
       <Box flexDirection="column" borderStyle="single" borderColor="cyan" padding={1} marginBottom={1}>
         <Text bold color="cyan">Authentication Remediation Instructions:</Text>
-        <Text color="white">• If GitHub fails: Run <Text color="yellow">gh auth login -w -s repo:read</Text></Text>
+        <Text color="white">• If GitHub fails: Run <Text color="yellow">gh auth login -w</Text> (or <Text color="yellow">gh auth login -s repo</Text> for private repositories)</Text>
         <Text color="white">• If Codex fails: Run <Text color="yellow">codex login --device-auth</Text></Text>
         <Text color="gray">Note: In G00 DEMO mode, simulated credentials allow walkthrough testing.</Text>
       </Box>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 import { PullRequestIdentity } from '../types/contracts.js';
 import { MOCK_DIFF_FILES } from '../fixtures/fixtures.js';
 import { DiffHunkView } from '../components/DiffHunkView.js';
@@ -13,7 +14,7 @@ interface InspectScreenProps {
 export function InspectScreen({ pr, onStartAnalysis, onBack }: InspectScreenProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
 
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (key.return) {
       onStartAnalysis();
     } else if (key.escape) {

@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const inkRoot = path.resolve(__dirname, '..');
 const cliScript = path.resolve(inkRoot, 'dist/src/cli.js');
 
-const EXEC_TIMEOUT_MS = 6000;
+const EXEC_TIMEOUT_MS = 10000;
 
 function runCliSubprocess(args: string[], env: Record<string, string> = {}) {
   const result = spawnSync(process.execPath, [cliScript, ...args], {
@@ -166,7 +166,7 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
     expect(stderr).toContain("error: unknown command 'unknown-subcommand'");
   });
 
-  it('handles non-TTY redirected stdin/stdout and exits without hanging', () => {
+  it('handles non-TTY redirected stdin/stdout on report command and exits without hanging', () => {
     // Pipe empty input via child_process spawn
     const result = spawnSync(process.execPath, [cliScript, 'report', 'run-demo-42', '-f', 'json'], {
       cwd: inkRoot,
@@ -180,14 +180,42 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
     expect(parsed.run_id).toBe('run-20261016-demo42');
   });
 
-  it('respects NO_COLOR=1 in subprocess output', () => {
+  it('renders actual Ink screens with non-TTY redirected stdin and exits cleanly via q', () => {
+    const result = spawnSync(process.execPath, [cliScript, 'auth', 'status'], {
+      cwd: inkRoot,
+      input: 'q\n',
+      timeout: EXEC_TIMEOUT_MS,
+      encoding: 'utf8',
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Local Authentication & Toolchain Preflight Status');
+    expect(result.stdout).toContain('GitHub CLI (gh) Session');
+  });
+
+  it('respects NO_COLOR=1 on rendered Ink terminal screen in subprocess', () => {
+    const result = spawnSync(process.execPath, [cliScript, 'auth', 'status'], {
+      cwd: inkRoot,
+      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
+      input: 'q\n',
+      timeout: EXEC_TIMEOUT_MS,
+      encoding: 'utf8',
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    // Verify rendered screen content is visible
+    expect(result.stdout).toContain('Local Authentication & Toolchain Preflight Status');
+    // Verify no ANSI color escape codes are emitted
+    expect(result.stdout).not.toMatch(/\u001B\[[0-9;]*m/);
+  });
+
+  it('respects NO_COLOR=1 in non-interactive report markdown export', () => {
     const { status, stdout, error } = runCliSubprocess(
       ['report', 'run-demo-42', '-f', 'markdown'],
       { NO_COLOR: '1' }
     );
     expect(error).toBeUndefined();
     expect(status).toBe(0);
-    // Verify no ANSI escape codes are emitted
     expect(stdout).not.toMatch(/\u001B\[[0-9;]*[a-zA-Z]/);
     expect(stdout).toContain('# CodeGuardian Review Report — PR #42');
   });

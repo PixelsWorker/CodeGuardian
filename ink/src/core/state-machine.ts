@@ -1,6 +1,7 @@
 import {
   ActiveScreen,
   AuthState,
+  FinalWorkerState,
   PullRequestIdentity,
   ReviewFinding,
   ReviewReport,
@@ -12,8 +13,16 @@ import {
   MOCK_DIFF_FILES,
   SYNTHETIC_FINDINGS,
   CANONICAL_SPECIALISTS,
-  SYNTHETIC_REPORT
+  SYNTHETIC_REPORT,
+  SYNTHETIC_PARTIAL_REPORT
 } from '../fixtures/fixtures.js';
+
+export type PublishOutcome =
+  | "normal"
+  | "denied"
+  | "stale_sha"
+  | "permission_denied"
+  | "duplicate";
 
 export interface CliState {
   screen: ActiveScreen;
@@ -27,7 +36,7 @@ export interface CliState {
   specialists: WorkerInfo[];
   findings: ReviewFinding[];
   report: ReviewReport;
-  publishOutcome: "normal" | "denied" | "stale_sha";
+  publishOutcome: PublishOutcome;
   publishDecision: "pending" | "confirmed" | "denied";
   exportFormat: "markdown" | "json";
   logs: string[];
@@ -43,6 +52,9 @@ export type CliAction =
   | { type: "START_SPECIALISTS" }
   | { type: "SPECIALIST_PROGRESS"; role: string; progress: number; activity?: string }
   | { type: "SIMULATE_FAILURE"; role: string; reason: string }
+  | { type: "SPECIALIST_TIMEOUT"; role: string; reason?: string }
+  | { type: "SPECIALIST_SKIP"; role: string; reason?: string }
+  | { type: "STEP_ALL_PROGRESS" }
   | { type: "CANCEL_RUN" }
   | { type: "RETRY_RUN" }
   | { type: "FINISH_SPECIALISTS" }
@@ -51,6 +63,8 @@ export type CliAction =
   | { type: "APPROVE_PUBLISH" }
   | { type: "DENY_PUBLISH" }
   | { type: "TRIGGER_STALE_SHA" }
+  | { type: "TRIGGER_PERMISSION_DENIED" }
+  | { type: "TRIGGER_DUPLICATE" }
   | { type: "CYCLE_AUTH_STATE" }
   | { type: "SET_ERROR"; message: string; status?: RunStatus }
   | { type: "RESET" };
@@ -79,8 +93,24 @@ export function createInitialState(isDemo: boolean = true): CliState {
 
 export function cliReducer(state: CliState, action: CliAction): CliState {
   switch (action.type) {
-    case "NAVIGATE":
-      return { ...state, screen: action.screen, errorMessage: null };
+    case "NAVIGATE": {
+      let nextStatus = state.runStatus;
+      if (action.screen === "consensus") {
+        if (state.runStatus === "ready" || state.runStatus === "partial") {
+          nextStatus = "validating";
+        }
+      } else if (action.screen === "specialist") {
+        if (state.runStatus === "validating" || state.runStatus === "ready" || state.runStatus === "partial") {
+          nextStatus = "running";
+        }
+      } else if (action.screen === "report") {
+        if (state.runStatus === "validating") {
+          const hasFailed = state.specialists.some(s => s.state === "failed" || s.state === "timed_out");
+          nextStatus = hasFailed ? "partial" : "ready";
+        }
+      }
+      return { ...state, screen: action.screen, runStatus: nextStatus, errorMessage: null };
+    }
 
     case "SET_PR_URL":
       return { ...state, prUrl: action.url, urlError: null };
@@ -105,16 +135,64 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
           urlError: "Invalid GitHub PR URL. Expected format: https://github.com/:owner/:repo/pull/:number",
         };
       }
-      const isCustomPr = !(match[1] === "example" && match[2] === "demo" && match[3] === "42");
+
+      const owner = match[1];
+      const repo = match[2];
+      const prNumber = parseInt(match[3], 10);
+      const lowerUrl = trimmed.toLowerCase();
+
+      // Offline PR failure demonstrations
+      if (
+        lowerUrl.includes("unauthorized") ||
+        lowerUrl.includes("forbidden") ||
+        owner === "private-org" ||
+        owner === "unauthorized-org"
+      ) {
+        return {
+          ...state,
+          screen: "error",
+          runStatus: "blocked",
+          errorMessage: `Unauthorized Repository: GitHub credentials lack read access to '${owner}/${repo}'. HTTP 403 Forbidden.`,
+        };
+      }
+
+      if (lowerUrl.includes("closed") || lowerUrl.includes("deleted") || prNumber === 404) {
+        return {
+          ...state,
+          screen: "error",
+          runStatus: "failed",
+          errorMessage: `Pull Request Not Found: PR #${prNumber} on '${owner}/${repo}' is closed or was deleted on remote. HTTP 404 Not Found.`,
+        };
+      }
+
+      if (lowerUrl.includes("draft") || prNumber === 99) {
+        return {
+          ...state,
+          screen: "error",
+          runStatus: "blocked",
+          errorMessage: `Draft Pull Request: PR #${prNumber} is currently in Draft state. CodeGuardian requires pull requests to be marked ready for review.`,
+        };
+      }
+
+      if (lowerUrl.includes("rate-limit") || lowerUrl.includes("ratelimit") || prNumber === 429) {
+        return {
+          ...state,
+          screen: "error",
+          runStatus: "blocked",
+          errorMessage: `API Rate Limit Exceeded: GitHub REST/GraphQL rate limit reached for client. Resets in 42 minutes. HTTP 429 Too Many Requests.`,
+        };
+      }
+
+      const isCustomPr = !(owner === "example" && repo === "demo" && prNumber === 42);
       const newPrIdentity = {
         ...state.prIdentity,
-        owner: match[1],
-        repo: match[2],
-        number: parseInt(match[3], 10),
+        owner,
+        repo,
+        number: prNumber,
         url: trimmed,
-        title: isCustomPr ? `[DEMO] PR #${match[3]}: ${match[1]}/${match[2]}` : SYNTHETIC_PR_IDENTITY.title,
-        author: isCustomPr ? `${match[1]}-contributor` : SYNTHETIC_PR_IDENTITY.author,
-        head_branch: isCustomPr ? `feature/pr-${match[3]}` : SYNTHETIC_PR_IDENTITY.head_branch,
+        title: isCustomPr ? `[DEMO] PR #${prNumber}: ${owner}/${repo}` : SYNTHETIC_PR_IDENTITY.title,
+        author: isCustomPr ? `${owner}-contributor` : SYNTHETIC_PR_IDENTITY.author,
+        head_branch: isCustomPr ? `feature/pr-${prNumber}` : SYNTHETIC_PR_IDENTITY.head_branch,
       };
       return {
         ...state,
@@ -183,8 +261,8 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         ...state,
         specialists: state.specialists.map(s => {
           if (s.role === action.role) {
-            // Keep a failed specialist in the failed state; ignore late progress updates
-            if (s.state === "failed") {
+            // Keep a failed/timed_out specialist in terminal state; ignore late progress updates
+            if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped") {
               return s;
             }
             return {
@@ -217,6 +295,63 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         }),
       };
 
+    case "SPECIALIST_TIMEOUT":
+      if (state.screen !== "specialist" || state.runStatus !== "running") {
+        return state;
+      }
+      return {
+        ...state,
+        specialists: state.specialists.map(s => {
+          if (s.role === action.role) {
+            return {
+              ...s,
+              state: "timed_out",
+              failureReason: action.reason || "Specialist exceeded 60s execution budget",
+              currentActivity: `TIMED OUT: ${action.reason || "Specialist exceeded 60s execution budget"}`,
+            };
+          }
+          return s;
+        }),
+      };
+
+    case "SPECIALIST_SKIP":
+      if (state.screen !== "specialist" || state.runStatus !== "running") {
+        return state;
+      }
+      return {
+        ...state,
+        specialists: state.specialists.map(s => {
+          if (s.role === action.role) {
+            return {
+              ...s,
+              state: "skipped",
+              currentActivity: `SKIPPED: ${action.reason || "No relevant diff files present for this lane"}`,
+            };
+          }
+          return s;
+        }),
+      };
+
+    case "STEP_ALL_PROGRESS":
+      if (state.screen !== "specialist" || state.runStatus !== "running") {
+        return state;
+      }
+      return {
+        ...state,
+        specialists: state.specialists.map(s => {
+          if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped" || s.state === "complete") {
+            return s;
+          }
+          const nextProgress = Math.min(100, s.progress + 30);
+          return {
+            ...s,
+            progress: nextProgress,
+            state: nextProgress >= 100 ? "complete" : "running",
+            currentActivity: nextProgress >= 100 ? "Analysis complete." : s.currentActivity,
+          };
+        }),
+      };
+
     case "CANCEL_RUN":
       return {
         ...state,
@@ -237,26 +372,36 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       };
 
     case "FINISH_SPECIALISTS":
-      if (state.screen !== "specialist" || state.runStatus !== "running") {
+      if (state.screen !== "specialist") {
         return state;
       }
       return {
         ...state,
         screen: "consensus",
         runStatus: "validating",
-        specialists: state.specialists.map(s => ({
-          ...s,
-          progress: 100,
-          state: s.state === "failed" ? "failed" : "complete",
-        })),
+        specialists: state.specialists.map(s => {
+          if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped") {
+            return s;
+          }
+          return {
+            ...s,
+            progress: 100,
+            state: "complete",
+          };
+        }),
       };
 
     case "VALIDATE_FINDINGS": {
-      // Finalize findings only while the run is actively validating on the consensus screen
-      if (state.runStatus !== "validating" || state.screen !== "consensus") {
+      // Allow validating findings when actively validating, ready, or partial
+      if (
+        state.screen !== "consensus" ||
+        (state.runStatus !== "validating" && state.runStatus !== "ready" && state.runStatus !== "partial")
+      ) {
         return state;
       }
-      const failedSpecialists = state.specialists.filter(s => s.state === "failed");
+      const failedSpecialists = state.specialists.filter(
+        s => s.state === "failed" || s.state === "timed_out"
+      );
       const isPartial = failedSpecialists.length > 0;
       const status: RunStatus = isPartial ? "partial" : "ready";
       const roleToId: Record<string, string> = {
@@ -265,10 +410,20 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         architecture: "worker-arc",
         quality: "worker-qty",
       };
-      const updatedWorkerStates = state.specialists.map(s => ({
-        worker_id: roleToId[s.role] || `worker-${s.role}`,
-        state: s.state,
-      }));
+      const updatedWorkerStates: Array<{ worker_id: string; state: FinalWorkerState }> = state.specialists.map(s => {
+        let finalState: FinalWorkerState = "complete";
+        if (s.state === "failed" || s.state === "timed_out") {
+          finalState = "failed";
+        } else if (s.state === "skipped") {
+          finalState = "skipped";
+        } else if (s.state === "partial") {
+          finalState = "partial";
+        }
+        return {
+          worker_id: roleToId[s.role] || `worker-${s.role}`,
+          state: finalState,
+        };
+      });
       const additionalWarnings = isPartial
         ? [
             `Incomplete worker coverage: ${failedSpecialists.length} specialist lane(s) failed (${failedSpecialists.map(s => s.displayName).join(', ')})`,
@@ -277,7 +432,17 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         : [];
       const updatedSummary = isPartial
         ? `PARTIAL REVIEW: Incomplete specialist coverage (${failedSpecialists.map(s => s.displayName).join(', ')} failed). Automated publishing gated on operator review.`
-        : SYNTHETIC_REPORT.summary;
+        : (state.prIdentity.number === 42 && state.prIdentity.owner === "example"
+            ? SYNTHETIC_REPORT.summary
+            : `Completed review of PR #${state.prIdentity.number} (${state.prIdentity.owner}/${state.prIdentity.repo}) across 4 canonical specialists.`);
+
+      const isCustomPr = !(state.prIdentity.owner === "example" && state.prIdentity.repo === "demo" && state.prIdentity.number === 42);
+      let calculatedRunId: string;
+      if (isCustomPr) {
+        calculatedRunId = `run-20261016-${state.prIdentity.owner}-${state.prIdentity.repo}-${state.prIdentity.number}${isPartial ? '-partial' : ''}`;
+      } else {
+        calculatedRunId = isPartial ? "run-20261016-g00-partial" : SYNTHETIC_REPORT.run_id;
+      }
 
       return {
         ...state,
@@ -285,7 +450,9 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         runStatus: status,
         report: {
           ...state.report,
+          run_id: calculatedRunId,
           status,
+          pr: state.prIdentity,
           worker_states: updatedWorkerStates,
           warnings: [...SYNTHETIC_REPORT.warnings, ...additionalWarnings],
           summary: updatedSummary,
@@ -300,11 +467,12 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       };
 
     case "APPROVE_PUBLISH":
-      // Require an eligible review status (ready or partial), publish screen, and non-stale SHA before confirming
+      // Block confirmation if SHA is stale or permissions are denied
       if (
         state.screen !== "publish" ||
         (state.runStatus !== "ready" && state.runStatus !== "partial") ||
         state.publishOutcome === "stale_sha" ||
+        state.publishOutcome === "permission_denied" ||
         state.publishDecision !== "pending"
       ) {
         return state;
@@ -312,13 +480,11 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       return {
         ...state,
         screen: "publish",
-        publishOutcome: "normal",
         publishDecision: "confirmed",
         runStatus: "published",
       };
 
     case "DENY_PUBLISH":
-      // Require an eligible review status (ready or partial), publish screen, and non-stale SHA before denying
       if (
         state.screen !== "publish" ||
         (state.runStatus !== "ready" && state.runStatus !== "partial") ||
@@ -336,14 +502,32 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       };
 
     case "TRIGGER_STALE_SHA": {
-      // Allow toggling stale SHA only on publish screen while decision is pending
       if (state.screen !== "publish" || state.publishDecision !== "pending") {
         return state;
       }
-      const isStale = state.publishOutcome === "stale_sha";
       return {
         ...state,
-        publishOutcome: isStale ? "normal" : "stale_sha",
+        publishOutcome: state.publishOutcome === "stale_sha" ? "normal" : "stale_sha",
+      };
+    }
+
+    case "TRIGGER_PERMISSION_DENIED": {
+      if (state.screen !== "publish" || state.publishDecision !== "pending") {
+        return state;
+      }
+      return {
+        ...state,
+        publishOutcome: state.publishOutcome === "permission_denied" ? "normal" : "permission_denied",
+      };
+    }
+
+    case "TRIGGER_DUPLICATE": {
+      if (state.screen !== "publish" || state.publishDecision !== "pending") {
+        return state;
+      }
+      return {
+        ...state,
+        publishOutcome: state.publishOutcome === "duplicate" ? "normal" : "duplicate",
       };
     }
 

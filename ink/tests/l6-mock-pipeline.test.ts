@@ -346,4 +346,145 @@ describe('L6 — Complete Mock Pipeline Integration', () => {
     expect(parsedJson.run_id).toBe(SYNTHETIC_REPORT.run_id);
     expect(parsedJson.tests.executed).toBe(false);
   });
+
+  it('Scenario 11: Seamless Backward Navigation Restores Lifecycle Without Trapping Operator', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: 'START_SPECIALISTS' });
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    expect(state.screen).toBe('report');
+    expect(state.runStatus).toBe('ready');
+
+    // Backward from Report -> Consensus
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'consensus' });
+    expect(state.screen).toBe('consensus');
+    expect(state.runStatus).toBe('validating');
+
+    // Forward from Consensus -> Report
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    expect(state.screen).toBe('report');
+    expect(state.runStatus).toBe('ready');
+
+    // Backward from Report -> Consensus -> Specialists
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'consensus' });
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'specialist' });
+    expect(state.screen).toBe('specialist');
+    expect(state.runStatus).toBe('running');
+
+    // Forward from Specialists -> Consensus
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    expect(state.screen).toBe('consensus');
+    expect(state.runStatus).toBe('validating');
+
+    // Forward from Consensus -> Report
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    expect(state.screen).toBe('report');
+    expect(state.runStatus).toBe('ready');
+
+    // Forward to Publish
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'publish' });
+    expect(state.screen).toBe('publish');
+
+    // Backward from Publish -> Report
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'report' });
+    expect(state.screen).toBe('report');
+    expect(state.runStatus).toBe('ready');
+  });
+
+  it('Scenario 12: Offline PR Failure Journeys (Unauthorized, Closed, Draft, Rate Limit)', () => {
+    // 1. Unauthorized repo
+    let state1 = createInitialState(true);
+    state1 = cliReducer(state1, { type: 'SET_PR_URL', url: 'https://github.com/private-org/secret-repo/pull/1' });
+    state1 = cliReducer(state1, { type: 'SUBMIT_PR_URL' });
+    expect(state1.screen).toBe('error');
+    expect(state1.runStatus).toBe('blocked');
+    expect(state1.errorMessage).toContain('Unauthorized Repository');
+    expect(state1.errorMessage).toContain('HTTP 403 Forbidden');
+
+    // 2. Closed / Deleted PR
+    let state2 = createInitialState(true);
+    state2 = cliReducer(state2, { type: 'SET_PR_URL', url: 'https://github.com/example/demo/pull/404' });
+    state2 = cliReducer(state2, { type: 'SUBMIT_PR_URL' });
+    expect(state2.screen).toBe('error');
+    expect(state2.runStatus).toBe('failed');
+    expect(state2.errorMessage).toContain('Pull Request Not Found');
+    expect(state2.errorMessage).toContain('HTTP 404 Not Found');
+
+    // 3. Draft PR
+    let state3 = createInitialState(true);
+    state3 = cliReducer(state3, { type: 'SET_PR_URL', url: 'https://github.com/example/demo/pull/99' });
+    state3 = cliReducer(state3, { type: 'SUBMIT_PR_URL' });
+    expect(state3.screen).toBe('error');
+    expect(state3.runStatus).toBe('blocked');
+    expect(state3.errorMessage).toContain('Draft Pull Request');
+
+    // 4. Rate limit
+    let state4 = createInitialState(true);
+    state4 = cliReducer(state4, { type: 'SET_PR_URL', url: 'https://github.com/example/demo/pull/429' });
+    state4 = cliReducer(state4, { type: 'SUBMIT_PR_URL' });
+    expect(state4.screen).toBe('error');
+    expect(state4.runStatus).toBe('blocked');
+    expect(state4.errorMessage).toContain('API Rate Limit Exceeded');
+    expect(state4.errorMessage).toContain('HTTP 429 Too Many Requests');
+  });
+
+  it('Scenario 13: Permission Denied Blocks Publication', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: 'START_SPECIALISTS' });
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'publish' });
+
+    state = cliReducer(state, { type: 'TRIGGER_PERMISSION_DENIED' });
+    expect(state.publishOutcome).toBe('permission_denied');
+
+    // Approval must be refused
+    state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
+    expect(state.publishDecision).toBe('pending');
+    expect(state.runStatus).not.toBe('published');
+  });
+
+  it('Scenario 14: Duplicate Publication Allows Confirm with Idempotent Note', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: 'START_SPECIALISTS' });
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'publish' });
+
+    state = cliReducer(state, { type: 'TRIGGER_DUPLICATE' });
+    expect(state.publishOutcome).toBe('duplicate');
+
+    // Approving while duplicate warning is active is allowed and confirms publication
+    state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
+    expect(state.publishDecision).toBe('confirmed');
+    expect(state.runStatus).toBe('published');
+  });
+
+  it('Scenario 15: Specialist Stepping, Timeout, and Skip Lifecycle', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: 'START_SPECIALISTS' });
+    expect(state.specialists.every(s => s.progress === 10)).toBe(true);
+
+    // Step progress
+    state = cliReducer(state, { type: 'STEP_ALL_PROGRESS' });
+    expect(state.specialists.every(s => s.progress === 40)).toBe(true);
+
+    // Timeout on architecture
+    state = cliReducer(state, { type: 'SPECIALIST_TIMEOUT', role: 'architecture' });
+    const archWorker = state.specialists.find(s => s.role === 'architecture');
+    expect(archWorker?.state).toBe('timed_out');
+
+    // Skip on quality
+    state = cliReducer(state, { type: 'SPECIALIST_SKIP', role: 'quality' });
+    const qualityWorker = state.specialists.find(s => s.role === 'quality');
+    expect(qualityWorker?.state).toBe('skipped');
+
+    // Complete specialists
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    expect(state.screen).toBe('consensus');
+    const finalArch = state.specialists.find(s => s.role === 'architecture');
+    expect(finalArch?.state).toBe('timed_out');
+    const finalQuality = state.specialists.find(s => s.role === 'quality');
+    expect(finalQuality?.state).toBe('skipped');
+  });
 });

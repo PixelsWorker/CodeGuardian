@@ -1,7 +1,8 @@
 import React, { useReducer } from 'react';
-import { Box, useApp, useInput } from 'ink';
+import { Box, useApp } from 'ink';
+import { useSafeInput } from './hooks/useSafeInput.js';
 import { cliReducer, createInitialState } from './core/state-machine.js';
-import { ActiveScreen } from './types/contracts.js';
+import { ActiveScreen, ReviewReport } from './types/contracts.js';
 import { Header } from './components/Header.js';
 import { Footer } from './components/Footer.js';
 import { WelcomeScreen } from './screens/WelcomeScreen.js';
@@ -17,17 +18,30 @@ import { ErrorScreen } from './screens/ErrorScreen.js';
 interface AppProps {
   initialScreen?: ActiveScreen;
   initialPrUrl?: string;
+  initialReport?: ReviewReport;
   isDemo?: boolean;
 }
 
-export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: AppProps) {
+export function App({ initialScreen = "welcome", initialPrUrl, initialReport, isDemo = true }: AppProps) {
   const { exit } = useApp();
   const [state, dispatch] = useReducer(cliReducer, createInitialState(isDemo), init => {
     let s = { ...init, screen: initialScreen };
+    if (initialReport) {
+      s.report = initialReport;
+      s.prIdentity = initialReport.pr;
+      s.prUrl = initialReport.pr.url;
+      s.runStatus = initialReport.status === "partial" ? "partial" : "ready";
+    }
     if (initialScreen === "publish" || initialScreen === "report") {
-      s.runStatus = "ready";
+      s.runStatus = s.report.status === "partial" ? "partial" : "ready";
     } else if (initialScreen === "specialist") {
       s.runStatus = "running";
+      s.specialists = s.specialists.map(sp => ({
+        ...sp,
+        state: "running",
+        progress: 10,
+        currentActivity: "Analyzing diff hunks against policy...",
+      }));
     } else if (initialScreen === "inspection") {
       s.runStatus = "inspecting";
     } else if (initialScreen === "consensus") {
@@ -46,7 +60,7 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
     exit();
   };
 
-  useInput((input) => {
+  useSafeInput((input) => {
     // Global 'q' / 'Q' exit anywhere EXCEPT during PR URL typing
     if ((input === 'q' || input === 'Q') && state.screen !== 'pr_input') {
       exit();
@@ -114,6 +128,9 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
             specialists={state.specialists}
             onComplete={() => dispatch({ type: "FINISH_SPECIALISTS" })}
             onFailLane={(role, reason) => dispatch({ type: "SIMULATE_FAILURE", role, reason })}
+            onTimeoutLane={(role, reason) => dispatch({ type: "SPECIALIST_TIMEOUT", role, reason })}
+            onSkipLane={(role, reason) => dispatch({ type: "SPECIALIST_SKIP", role, reason })}
+            onStepProgress={() => dispatch({ type: "STEP_ALL_PROGRESS" })}
             onCancel={() => dispatch({ type: "CANCEL_RUN" })}
           />
         )}
@@ -143,6 +160,8 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
             onConfirmPublish={() => dispatch({ type: "APPROVE_PUBLISH" })}
             onDenyPublish={() => dispatch({ type: "DENY_PUBLISH" })}
             onToggleStaleSha={() => dispatch({ type: "TRIGGER_STALE_SHA" })}
+            onTogglePermissionDenied={() => dispatch({ type: "TRIGGER_PERMISSION_DENIED" })}
+            onToggleDuplicate={() => dispatch({ type: "TRIGGER_DUPLICATE" })}
             onBack={() => dispatch({ type: "NAVIGATE", screen: "report" })}
             onRestart={() => dispatch({ type: "RESET" })}
           />

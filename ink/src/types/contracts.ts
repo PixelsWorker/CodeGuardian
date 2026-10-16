@@ -83,6 +83,14 @@ export const WorkerStateSchema = z.enum([
 ]);
 export type WorkerState = z.infer<typeof WorkerStateSchema>;
 
+export const FinalWorkerStateSchema = z.enum([
+  "complete",
+  "partial",
+  "failed",
+  "skipped"
+]);
+export type FinalWorkerState = z.infer<typeof FinalWorkerStateSchema>;
+
 export interface WorkerInfo {
   role: WorkerRole;
   displayName: string;
@@ -110,7 +118,7 @@ export const ReviewReportSchema = z.object({
   worker_states: z.array(
     z.object({
       worker_id: z.string(),
-      state: WorkerStateSchema,
+      state: FinalWorkerStateSchema,
     })
   ),
   warnings: z.array(z.string()),

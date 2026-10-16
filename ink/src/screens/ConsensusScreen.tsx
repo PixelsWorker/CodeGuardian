@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 import { ReviewFinding, WorkerInfo } from '../types/contracts.js';
 
 interface ConsensusScreenProps {
@@ -10,7 +11,7 @@ interface ConsensusScreenProps {
 }
 
 export function ConsensusScreen({ specialists, findings, onProceed, onBack }: ConsensusScreenProps) {
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (key.return) {
       onProceed();
     } else if (key.escape) {
@@ -18,7 +19,10 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
     }
   });
 
-  const hasFailedLanes = specialists.some(s => s.state === "failed");
+  const hasFailedLanes = specialists.some(s => s.state === "failed" || s.state === "timed_out");
+  const verifiedFindings = findings.filter(f => f.verification === "verified_diff");
+  const needsContextFindings = findings.filter(f => f.verification === "needs_context");
+  const rejectedFindings = findings.filter(f => f.verification === "rejected");
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -42,17 +46,37 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
 
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color="white">Validation Pipeline Verification Checks:</Text>
-        <Text color="green">✓ All 4 candidate findings verified against changed line boundaries</Text>
+        {needsContextFindings.length > 0 ? (
+          <Text color="yellow">
+            ℹ️ Verification triage: {verifiedFindings.length} verified against PR changed lines, {needsContextFindings.length} require broader context (summary-only)
+          </Text>
+        ) : (
+          <Text color="green">
+            ✓ All {verifiedFindings.length} candidate findings verified against changed line boundaries
+          </Text>
+        )}
+        {rejectedFindings.length > 0 && (
+          <Text color="red">
+            ✗ {rejectedFindings.length} finding(s) rejected as outside PR changed-line boundaries
+          </Text>
+        )}
         <Text color="green">✓ Deduplicated overlap between Architecture and Quality on session memory leak</Text>
         <Text color="green">✓ PII / Credentials scrubbed from evidence quotes</Text>
         {hasFailedLanes && (
-          <Text color="yellow">⚠️ Incomplete coverage warning: Quality specialist crashed (partial results accepted)</Text>
+          <Text color="yellow">⚠️ Incomplete coverage warning: Specialist failure detected (partial results accepted)</Text>
         )}
       </Box>
 
       <Box borderStyle="single" borderColor="cyan" flexDirection="column" padding={1} marginBottom={1}>
         <Text bold color="cyan">Consensus Summary Statistics:</Text>
-        <Text color="white">• Accepted Findings: {findings.length}</Text>
+        <Text color="white">• Total Candidate Findings: {findings.length}</Text>
+        <Text color="green">• Verified Diff Findings: {verifiedFindings.length} (eligible for inline review)</Text>
+        {needsContextFindings.length > 0 && (
+          <Text color="yellow">• Uncertain / Needs Context: {needsContextFindings.length} (summary-only, omitted from inline)</Text>
+        )}
+        {rejectedFindings.length > 0 && (
+          <Text color="red">• Rejected Findings: {rejectedFindings.length} (outside diff boundary)</Text>
+        )}
         <Text color="white">• P1 Critical Flaws: {findings.filter(f => f.severity === 'P1').length}</Text>
         <Text color="white">• P2 Reliability/Perf Flaws: {findings.filter(f => f.severity === 'P2').length}</Text>
       </Box>

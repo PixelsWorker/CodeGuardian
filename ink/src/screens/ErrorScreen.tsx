@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 
 interface ErrorScreenProps {
   errorMessage: string | null;
@@ -8,7 +9,7 @@ interface ErrorScreenProps {
 }
 
 export function ErrorScreen({ errorMessage, onRetry, onExit }: ErrorScreenProps) {
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (input === 'r' || input === 'R') {
       onRetry();
     } else if (input === 'q' || input === 'Q' || key.escape) {

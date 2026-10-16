@@ -214,3 +214,80 @@ export const SYNTHETIC_REPORT: ReviewReport = {
   policy_revision: "codeguardian-v1.0-strict",
   report_digest: "sha256-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 };
+
+export const SYNTHETIC_PARTIAL_REPORT: ReviewReport = {
+  schema_version: "1.0.0",
+  run_id: "run-20261016-g00-partial",
+  pr: SYNTHETIC_PR_IDENTITY,
+  status: "partial",
+  findings: SYNTHETIC_FINDINGS.filter(f => !f.source_workers.includes("quality")),
+  summary: "PARTIAL REVIEW: Incomplete specialist coverage (Quality, Testing & Performance failed). Automated publishing gated on operator review.",
+  tests: {
+    executed: false,
+    details: [
+      "No actual unit tests executed by specialist lanes (static analysis mode)",
+      "Findings verified against syntactic diff placement"
+    ],
+  },
+  worker_states: [
+    { worker_id: "worker-sec", state: "complete" },
+    { worker_id: "worker-log", state: "complete" },
+    { worker_id: "worker-arc", state: "complete" },
+    { worker_id: "worker-qty", state: "failed" },
+  ],
+  warnings: [
+    "Tests were not executed directly by specialist workers (tests.executed=false)",
+    "Findings based on AST diff heuristic simulation [DEMO ONLY]",
+    "Incomplete worker coverage: 1 specialist lane(s) failed (Quality, Testing & Performance)",
+    "Findings from failed specialists may be omitted or unverified"
+  ],
+  generated_at: "2026-10-16T11:25:00Z",
+  policy_revision: "codeguardian-v1.0-strict",
+  report_digest: "sha256-a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
+};
+
+export function getReportForRunId(runId: string): ReviewReport | null {
+  if (
+    runId === SYNTHETIC_REPORT.run_id ||
+    runId === "run-20261016-g00-demo" ||
+    runId === "run-demo-42" ||
+    runId === "demo" ||
+    runId === "42"
+  ) {
+    return SYNTHETIC_REPORT;
+  }
+  if (
+    runId === SYNTHETIC_PARTIAL_REPORT.run_id ||
+    runId === "partial" ||
+    runId === "run-partial"
+  ) {
+    return SYNTHETIC_PARTIAL_REPORT;
+  }
+  const customMatch = runId.match(/^run-\d{8}-([a-zA-Z0-9_-]+)-([a-zA-Z0-9_-]+)-(\d+)(-partial)?$/);
+  if (customMatch) {
+    const [, owner, repo, numStr, partialFlag] = customMatch;
+    const isPartial = Boolean(partialFlag);
+    const prNumber = parseInt(numStr, 10);
+    const prIdentity = {
+      ...SYNTHETIC_PR_IDENTITY,
+      owner,
+      repo,
+      number: prNumber,
+      url: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
+      title: `[DEMO] PR #${prNumber}: ${owner}/${repo}`,
+      author: `${owner}-contributor`,
+      head_branch: `feature/pr-${prNumber}`,
+    };
+    const base = isPartial ? SYNTHETIC_PARTIAL_REPORT : SYNTHETIC_REPORT;
+    return {
+      ...base,
+      run_id: runId,
+      pr: prIdentity,
+      summary: isPartial
+        ? `PARTIAL REVIEW: Incomplete specialist coverage for ${owner}/${repo}#${prNumber}. Quality specialist failed.`
+        : `Completed review of PR #${prNumber} (${owner}/${repo}) across 4 canonical specialists.`,
+      report_digest: `sha256-custom-${owner}-${repo}-${prNumber}-${isPartial ? 'partial' : 'full'}`,
+    };
+  }
+  return null;
+}

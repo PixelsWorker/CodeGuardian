@@ -104,7 +104,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 2 — Authen
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
  │ Authentication Remediation Instructions:                                                       │
- │ • If GitHub fails: Run gh auth login -w -s repo:read                                           │
+ │ • If GitHub fails: Run gh auth login -w (or gh auth login -s repo for private repositories)    │
  │ • If Codex fails: Run codex login --device-auth                                                │
  │ Note: In G00 DEMO mode, simulated credentials allow walkthrough testing.                       │
  │                                                                                                │
@@ -132,7 +132,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 2 — Authen
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
  │ Authentication Remediation Instructions:                                                       │
- │ • If GitHub fails: Run gh auth login -w -s repo:read                                           │
+ │ • If GitHub fails: Run gh auth login -w (or gh auth login -s repo for private repositories)    │
  │ • If Codex fails: Run codex login --device-auth                                                │
  │ Note: In G00 DEMO mode, simulated credentials allow walkthrough testing.                       │
  │                                                                                                │
@@ -154,6 +154,17 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 3 — PR Inp
  │                                                                                                │
  │ Validation ErrorInvalid GitHub PR URL. Expected format:                                        │
  │                 https://github.com/:owner/:repo/pull/:number                                   │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Demo Scenario Presets (Press [!]..[%] or [Ctrl+1..5] to load):                                 │
+ │ • [!] / [Ctrl+1] Normal PR: https://github.com/example/demo/pull/42                            │
+ │ • [@] / [Ctrl+2] Unauthorized (403): https://github.com/private-org/secret-repo/pull/1         │
+ │ • [#] / [Ctrl+3] Closed/Deleted (404): https://github.com/example/demo/pull/404                │
+ │ • [$] / [Ctrl+4] Draft PR (Blocked): https://github.com/example/demo/pull/99                   │
+ │ • [%] / [Ctrl+5] Rate Limit (429): https://github.com/example/demo/pull/429                    │
  │                                                                                                │
  └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -241,7 +252,10 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 5 — Specia
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
  │ Interactive Scenario Controls:                                                                 │
- │ • Press [F] to simulate Partial Failure in Quality specialist lane                             │
+ │ • Press [Space] to step/advance streaming worker progress                                      │
+ │ • Press [F] to simulate Partial Failure (Quality lane)                                         │
+ │ • Press [T] to simulate Worker Timeout (Architecture lane)                                     │
+ │ • Press [K] to simulate Worker Skip (Quality lane)                                             │
  │ • Press [Esc] to test User Cancellation                                                        │
  │                                                                                                │
  └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -262,14 +276,17 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 6 — Manage
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
  Validation Pipeline Verification Checks:
- ✓ All 4 candidate findings verified against changed line boundaries
+ ℹ️ Verification triage: 3 verified against PR changed lines, 1 require broader context
+ (summary-only)
  ✓ Deduplicated overlap between Architecture and Quality on session memory leak
  ✓ PII / Credentials scrubbed from evidence quotes
 
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
  │ Consensus Summary Statistics:                                                                  │
- │ • Accepted Findings: 4                                                                         │
+ │ • Total Candidate Findings: 4                                                                  │
+ │ • Verified Diff Findings: 3 (eligible for inline review)                                       │
+ │ • Uncertain / Needs Context: 1 (summary-only, omitted from inline)                             │
  │ • P1 Critical Flaws: 2                                                                         │
  │ • P2 Reliability/Perf Flaws: 2                                                                 │
  │                                                                                                │

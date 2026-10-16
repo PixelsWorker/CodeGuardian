@@ -145,6 +145,28 @@ describe('L3 — CLI Parser and Safety Tests', () => {
     expect(stderrOutput.some(msg => msg.includes("Unsupported format 'yaml'"))).toBe(true);
   });
 
+  it('exports partial review report with failed specialist coverage for run-20261016-g00-partial', () => {
+    const program = createCliProgram({ exitOverride: true });
+    program.parse(['node', 'cli.js', 'report', 'run-20261016-g00-partial', '-f', 'json']);
+    expect(process.exitCode).toBeUndefined();
+    const jsonStr = stdoutOutput.join('\n');
+    const parsed = JSON.parse(jsonStr);
+    expect(parsed.status).toBe('partial');
+    expect(parsed.run_id).toBe('run-20261016-g00-partial');
+    expect(parsed.worker_states.some((w: any) => w.worker_id === 'worker-qty' && w.state === 'failed')).toBe(true);
+  });
+
+  it('exports deterministic custom-PR review report for custom run ID', () => {
+    const program = createCliProgram({ exitOverride: true });
+    program.parse(['node', 'cli.js', 'report', 'run-20261016-acme-frontend-101', '-f', 'json']);
+    expect(process.exitCode).toBeUndefined();
+    const jsonStr = stdoutOutput.join('\n');
+    const parsed = JSON.parse(jsonStr);
+    expect(parsed.pr.owner).toBe('acme');
+    expect(parsed.pr.repo).toBe('frontend');
+    expect(parsed.pr.number).toBe(101);
+  });
+
   it('rejects unknown run ID in report command with exit code 1', () => {
     const program = createCliProgram({ exitOverride: true });
     program.parse(['node', 'cli.js', 'report', 'run-non-existent-999']);

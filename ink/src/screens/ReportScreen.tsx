@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
 import { ReviewReport, ReviewFinding } from '../types/contracts.js';
 import { formatReportMarkdown, formatReportJson } from '../core/report-formatter.js';
 
@@ -13,7 +14,7 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
   const [format, setFormat] = useState<"summary" | "markdown" | "json">("summary");
   const [selectedIdx, setSelectedIdx] = useState(0);
 
-  useInput((input, key) => {
+  useSafeInput((input, key) => {
     if (key.return) {
       onProceedToPublish();
     } else if (key.escape) {
@@ -82,7 +83,7 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
         <Box borderStyle="single" borderColor="gray" padding={1} marginBottom={1} flexDirection="column">
           <Text color="cyan">{formatReportMarkdown(report).substring(0, 800)}...</Text>
           <Box marginTop={1}>
-            <Text color="gray">[Truncated preview for terminal display. Full export available via CLI]</Text>
+            <Text color="gray">[Truncated terminal preview. Full export: codeguardian report {report.run_id} --format markdown]</Text>
           </Box>
         </Box>
       )}
@@ -91,7 +92,7 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
         <Box borderStyle="single" borderColor="gray" padding={1} marginBottom={1} flexDirection="column">
           <Text color="green">{formatReportJson(report).substring(0, 800)}...</Text>
           <Box marginTop={1}>
-            <Text color="gray">[Truncated preview for terminal display. Full export available via CLI]</Text>
+            <Text color="gray">[Truncated terminal preview. Full export: codeguardian report {report.run_id} --format json]</Text>
           </Box>
         </Box>
       )}
