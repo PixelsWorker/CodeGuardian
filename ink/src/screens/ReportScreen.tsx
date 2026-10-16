@@ -1,0 +1,110 @@
+import React, { useState } from 'react';
+import { Box, Text, useInput } from 'ink';
+import { ReviewReport, ReviewFinding } from '../types/contracts.js';
+import { formatReportMarkdown, formatReportJson } from '../core/report-formatter.js';
+
+interface ReportScreenProps {
+  report: ReviewReport;
+  onProceedToPublish: () => void;
+  onBack: () => void;
+}
+
+export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScreenProps) {
+  const [format, setFormat] = useState<"summary" | "markdown" | "json">("summary");
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  useInput((input, key) => {
+    if (key.return) {
+      onProceedToPublish();
+    } else if (key.escape) {
+      onBack();
+    } else if (input === 'm' || input === 'M') {
+      setFormat(prev => (prev === "markdown" ? "summary" : "markdown"));
+    } else if (input === 'j' || input === 'J') {
+      setFormat(prev => (prev === "json" ? "summary" : "json"));
+    } else if (key.downArrow) {
+      setSelectedIdx(prev => (prev < report.findings.length - 1 ? prev + 1 : prev));
+    } else if (key.upArrow) {
+      setSelectedIdx(prev => (prev > 0 ? prev - 1 : prev));
+    }
+  });
+
+  return (
+    <Box flexDirection="column" padding={1}>
+      <Box justifyContent="space-between" marginBottom={1}>
+        <Text bold color="white">Consolidated Review Report (Run: {report.run_id}):</Text>
+        <Box>
+          <Text color="gray">Format: </Text>
+          <Text bold color="cyan">[{format.toUpperCase()}]</Text>
+        </Box>
+      </Box>
+
+      {format === "summary" && (
+        <Box flexDirection="column">
+          <Box borderStyle="single" borderColor="cyan" padding={1} marginBottom={1}>
+            <Text color="white">{report.summary}</Text>
+          </Box>
+
+          <Box marginBottom={1}>
+            <Text bold color="white">
+              Verified Findings ({report.findings.length} total — use [↑/↓] to inspect):
+            </Text>
+          </Box>
+
+          <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1} marginBottom={1}>
+            {report.findings.map((f, idx) => {
+              const isSelected = idx === selectedIdx;
+              const sevColor = f.severity === 'P0' ? 'red' : f.severity === 'P1' ? 'yellow' : 'cyan';
+
+              return (
+                <Box key={f.id} flexDirection="column" marginY={0}>
+                  <Box>
+                    <Text color={isSelected ? "cyan" : "gray"}>{isSelected ? "▶ " : "  "}</Text>
+                    <Text bold color={sevColor}>[{f.severity}] </Text>
+                    <Text bold={isSelected} color={isSelected ? "white" : "gray"}>{f.title}</Text>
+                  </Box>
+                  {isSelected && (
+                    <Box flexDirection="column" paddingLeft={4} marginY={1}>
+                      <Text color="gray">Path: <Text color="white">{f.path}:{f.line}</Text> | Specialists: {f.source_workers.join(', ')}</Text>
+                      <Text color="gray">Evidence: <Text color="yellow">{f.evidence}</Text></Text>
+                      <Text color="gray">Impact: <Text color="red">{f.impact}</Text></Text>
+                      <Text color="gray">Recommendation: <Text color="green">{f.recommendation}</Text></Text>
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
+
+      {format === "markdown" && (
+        <Box borderStyle="single" borderColor="gray" padding={1} marginBottom={1} flexDirection="column">
+          <Text color="cyan">{formatReportMarkdown(report).substring(0, 800)}...</Text>
+          <Box marginTop={1}>
+            <Text color="gray">[Truncated preview for terminal display. Full export available via CLI]</Text>
+          </Box>
+        </Box>
+      )}
+
+      {format === "json" && (
+        <Box borderStyle="single" borderColor="gray" padding={1} marginBottom={1} flexDirection="column">
+          <Text color="green">{formatReportJson(report).substring(0, 800)}...</Text>
+          <Box marginTop={1}>
+            <Text color="gray">[Truncated preview for terminal display. Full export available via CLI]</Text>
+          </Box>
+        </Box>
+      )}
+
+      <Box flexDirection="column" marginBottom={1}>
+        <Text color="gray">Controls: Press <Text bold color="cyan">[M]</Text> for Markdown toggle | <Text bold color="cyan">[J]</Text> for JSON toggle</Text>
+      </Box>
+
+      <Box>
+        <Text color="green" bold>Press [Enter] to Open Dry-Run Publication Gate</Text>
+        <Text color="gray">  |  </Text>
+        <Text color="white">Press [Esc] to Return</Text>
+      </Box>
+    </Box>
+  );
+}

@@ -1,9 +1,9 @@
 # G00 - Complete CLI UX Demo (Accepted Scope)
 
-**Group:** G00 - Complete CLI UX Demo  
-**Phase:** Full product terminal UI/UX, all MVP CLI interactions, with **safe mocks only**  
-**Status:** DIRECTION ACCEPTED — nine-screen browser prototype walkthrough accepted as UX design reference and FROZEN at `e8e5844`. Native Ink CLI package (`ink/`) is the G00 deliverable; it is not yet implemented. G00 Ink implementation requires separate branch/worktree/dependency authorization.  
-**Suggested branch:** `feat/g00-ink-cli-demo` (separate authorization required; not verified as an existing remote branch)
+**Group:** G00 - Complete CLI UX Demo
+**Phase:** Full product terminal UI/UX, all MVP CLI interactions, with **safe mocks only**
+**Status:** IMPLEMENTED LOCALLY â€” native Ink CLI package (`ink/`) implemented in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`; browser prototype frozen at `e8e5844`; unit/screen tests passing (21/21), strict TypeScript build passing, and CodeRabbit clean. Pending draft PR publication, full eight-layer acceptance testing, and formal operator UI/UX review.
+**Active branch:** `feat/g00-ink-cli-demo` in dedicated feature worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`; target draft PR against `main`.
 
 ## Goal
 
@@ -19,7 +19,7 @@ Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rocks
 - Auth preflight screens for Codex and GitHub: signed-in, signed-out, device-code instructions (simulated), permission unavailable, session expired.
 - PR submission by URL: valid example, invalid host/URL, unauthorized repo, deleted/closed PR, draft PR, rate limit (simulated).
 - PR inspection preview: owner/repo/number, title, head/base SHA, files, changed lines, risk summary, non-sensitive mock fixture.
-- Specialist selection/progress: Security, Logic, Architecture, Quality; queued, running, streaming progress, skipped, timed out, cancelled, failed, completed (simulated only).
+- Specialist selection/progress: Security, Logic & Correctness, Architecture, Quality, Testing & Performance; queued, running, streaming progress, skipped, timed out, cancelled, failed, completed (simulated only).
 - Manager validation: accepted, duplicate, unsupported, invalid line, partial worker results; clear severity indicators.
 - Report summary and detail views: Markdown and JSON previews, findings sorted by severity, warnings, test status (not run), persistent demo run IDs and accessible navigation.
 - Publication preview: explicit confirmation layout and dry-run, stale-head protection illustration, denied permission, duplicate publication warning; NEVER make a real GitHub write.
@@ -48,7 +48,7 @@ Demonstrate the COMPLETE proposed CodeGuardian terminal user experience to Rocks
 - Dependencies: accepted project architecture, accepted mock schema, confirmed Windows dev environment (Node 24 LTS, npm 11.17.0, TypeScript, Ink 8.0), initialized Git repository and approved branch plan, G00 scope approval.
 - Estimate: 2-3 working days after prerequisites are met; revisit if terminal UI expectations change.
 - Contract: `API-CONTRACT.md` v1 draft, only mock fixtures at G00.
-- Protected files allowed to be changed: NONE yet. G00 execution TODO must name exact permitted protected paths if edits become necessary.
+- Protected files allowed to be changed: `G00-SCOPE.md`, `HANDOFF.md`, `ROADMAP.md` (authorized governance status and path reconciliation only).
 - Branch/PR: `feat/g00-ink-cli-demo` in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`. Target PR against `main`.
 - **Ink package location:** `ink/` inside the feature worktree (`E:\Projects\CodeGuardian\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\ink\`). Separate `package.json`. CLI binary: `codeguardian`.
 

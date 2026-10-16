@@ -1,7 +1,7 @@
 # CodeGuardian - Development Manager Handoff
 
 **Prepared:** 2026-10-15 / **Updated:** 2026-10-16 (governance patch)
-**Status:** UPDATED — repository relocated and governance patch applied; browser prototype frozen; Ink CLI direction accepted. This handoff records the decisions, not authorization to start G00 implementation.
+**Status:** UPDATED — native Ink CLI implemented locally on `feat/g00-ink-cli-demo`; browser prototype frozen at `e8e5844`; unit and screen tests passing (21/21); preparing authorized draft PR for full acceptance review.
 **Product/group:** CodeGuardian / PRE-G00 architecture and setup review.
 
 ## Goal and separate workflows
@@ -17,7 +17,7 @@ The accepted product is a **native CLI-first GitHub PR reviewer** running inside
 - **PR-Agent security correction (2026-10-16):** Plain-diff mode avoids requiring a GitHub platform token, but that alone does not guarantee the process has zero access to credentials. The runner must also explicitly: (1) isolate filesystem access — mount only the prepared diff, no host paths with tokens or keys; (2) strip all GitHub/Codex/SSH credential environment variables from the PR-Agent process; (3) block access to credential stores (`~/.config/gh`, `~/.ssh`, token files). These are separate explicit runner requirements, not implicit consequences of plain-diff mode. Provider API access (PR-Agent's own model provider) and sending source diffs externally require separate approval.
 
 
-**Target repository layout after Ink package creation (not yet created):**
+**Target repository layout after Ink package creation (now created in feature worktree):**
 ```
 E:\Projects\CodeGuardian\
 ├── evidence\                  Reference & governance evidence
@@ -43,9 +43,10 @@ E:\Projects\CodeGuardian\
 
 | Ref | Verified SHA | Evidence |
 |---|---|---|
-| `main` local HEAD | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Checkout path corrected to nested repository; zero divergence from `origin/main` |
-| `origin/main` remote | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Verified synchronized on remote GitHub |
-| `feat/g00-ink-cli-demo` | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Local dedicated worktree for G00 Ink CLI |
+| `origin/main` remote | `881ec9b3e3793e15f84df5a10ffdf7a5fab43647` | Historical remote GitHub baseline prior to local governance update |
+| `main` local HEAD | `ee9a91f6de946480ff20116fa31943eee88c6a0a` | Local canonical commit reconciling G00 planning with npm & worktree |
+| `feat/g00-ink-cli-demo` base | `d15473fe265a3388770c586735ac16cfc137405b` | Feature branch base commit (includes 6dd8458 scaffold, d15473f TODO-CODEX.md) |
+| `feat/g00-ink-cli-demo` working | (local implementation) | Complete 25-file native Ink CLI implementation, tests, and governance corrections |
 
 **Active Windows checkout:** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root).
 Git worktree: primary repository plus dedicated feature worktree at `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`. `git fsck` clean. Remote: `git@github.com:PixelsWorker/CodeGuardian.git`.
@@ -60,7 +61,7 @@ Reconciliation of independent Git histories is DONE (historical merge `e3e6b281e
 - `TECH-RESEARCH.md`: current official Jules API evidence plus known untested runtime details.
 - `SETUP.md` and `REPO-INITIALIZATION.md`: current remote observations and Git history.
 
-**Pending decisions:** architecture D-01–D-08 and G00 scope/stack acceptance (Ink 8.0, Node 24 LTS, TypeScript, npm 11.17.0); approved local execution approach (Windows Terminal); exact dependency versions and G00 feature branch/worktree; license/protection rules. G02 Codex auth, G04 provider setup, G05 webhooks and optional G06 Jules pilot are later gates.
+**Pending decisions:** architecture D-01–D-08 and full G00 acceptance test execution; approval of draft PR and terminal UI/UX demonstration. G01 real PR retrieval, G02 Codex auth, G04 provider setup, G05 webhooks and optional G06 Jules pilot are later gates.
 
 ## Next requested action / stop
 

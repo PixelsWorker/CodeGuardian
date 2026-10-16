@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "codeguardian": "./dist/cli.js"
+    "codeguardian": "./dist/src/cli.js"
   },
   "scripts": {
     "dev": "tsx src/cli.tsx",
