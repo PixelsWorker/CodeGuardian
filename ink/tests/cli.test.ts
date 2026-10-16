@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   createInitialState,
-  cliReducer
+  cliReducer,
+  CliState,
 } from '../src/core/state-machine.js';
 import { formatReportMarkdown, formatReportJson } from '../src/core/report-formatter.js';
 import { SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
@@ -64,6 +65,20 @@ describe('G00 CLI State Machine & Contracts', () => {
     state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
     expect(state.screen).toBe('report');
     expect(state.runStatus).toBe('partial');
+    expect(state.report.status).toBe('partial');
+    expect(state.report.worker_states.find(w => w.worker_id === 'worker-qty')?.state).toBe('failed');
+    expect(state.report.warnings.some(w => w.includes('Incomplete worker coverage'))).toBe(true);
+    expect(state.report.summary).toContain('PARTIAL REVIEW');
+  });
+
+  it('updates metadata honestly for non-default PR URLs without Alex auth token title', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: 'SET_PR_URL', url: 'https://github.com/facebook/react/pull/9999' });
+    state = cliReducer(state, { type: 'SUBMIT_PR_URL' });
+    expect(state.prIdentity.title).toBe('[DEMO] PR #9999: facebook/react');
+    expect(state.prIdentity.author).toBe('facebook-contributor');
+    expect(state.prIdentity.head_branch).toBe('feature/pr-9999');
+    expect(state.report.pr.title).toBe('[DEMO] PR #9999: facebook/react');
   });
 
   it('handles cancellation and transitions to error screen with safe cleanup', () => {
@@ -75,31 +90,97 @@ describe('G00 CLI State Machine & Contracts', () => {
     expect(state.errorMessage).toContain('cancelled by user');
   });
 
-  it('handles publication approval and denial without external writes', () => {
-    let state = createInitialState(true);
+  it('handles publication approval, locks decision, and blocks reversal', () => {
+    // Attempting to approve from unreviewed initial state must be rejected
+    const initialState = createInitialState(true);
+    expect(cliReducer(initialState, { type: 'APPROVE_PUBLISH' })).toEqual(initialState);
+
+    let state: CliState = { ...createInitialState(true), screen: 'publish', runStatus: 'ready' };
+    expect(state.publishDecision).toBe('pending');
     state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
     expect(state.screen).toBe('publish');
     expect(state.publishOutcome).toBe('normal');
+    expect(state.publishDecision).toBe('confirmed');
     expect(state.runStatus).toBe('published');
 
+    // Attempting to deny after confirmation must be ignored (locked)
     state = cliReducer(state, { type: 'DENY_PUBLISH' });
-    expect(state.publishOutcome).toBe('denied');
+    expect(state.publishDecision).toBe('confirmed');
+    expect(state.runStatus).toBe('published');
+
+    // Navigating away and returning preserves the confirmed decision
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'report' });
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'publish' });
+    expect(state.publishDecision).toBe('confirmed');
+  });
+
+  it('handles stale SHA simulation and blocks publication approval', () => {
+    let state: CliState = { ...createInitialState(true), screen: 'publish', runStatus: 'ready' };
+    state = cliReducer(state, { type: 'TRIGGER_STALE_SHA' });
+    expect(state.publishOutcome).toBe('stale_sha');
+
+    // Approving while stale must be blocked
+    state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
+    expect(state.publishDecision).toBe('pending');
     expect(state.runStatus).toBe('ready');
+
+    // Toggling stale SHA restores normal outcome
+    state = cliReducer(state, { type: 'TRIGGER_STALE_SHA' });
+    expect(state.publishOutcome).toBe('normal');
+
+    // Confirm decision and verify TRIGGER_STALE_SHA is rejected once decision is locked
+    state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
+    expect(state.publishDecision).toBe('confirmed');
+    expect(state.publishOutcome).toBe('normal');
+    state = cliReducer(state, { type: 'TRIGGER_STALE_SHA' });
+    expect(state.publishDecision).toBe('confirmed');
+    expect(state.publishOutcome).toBe('normal');
+  });
+
+  it('supports custom runStatus (such as blocked) in SET_ERROR action', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, {
+      type: 'SET_ERROR',
+      message: 'Preflight authentication blocked',
+      status: 'blocked'
+    });
+    expect(state.screen).toBe('error');
+    expect(state.runStatus).toBe('blocked');
+    expect(state.errorMessage).toContain('Preflight authentication blocked');
+  });
+
+  it('cycles auth states through all 4 supported variations', () => {
+    let state = createInitialState(true);
+    expect(state.githubAuth).toBe('authenticated');
+
+    state = cliReducer(state, { type: 'CYCLE_AUTH_STATE' });
+    expect(state.githubAuth).toBe('not_authenticated');
+
+    state = cliReducer(state, { type: 'CYCLE_AUTH_STATE' });
+    expect(state.githubAuth).toBe('insufficient_permissions');
+
+    state = cliReducer(state, { type: 'CYCLE_AUTH_STATE' });
+    expect(state.githubAuth).toBe('session_expired');
+
+    state = cliReducer(state, { type: 'CYCLE_AUTH_STATE' });
+    expect(state.githubAuth).toBe('authenticated');
   });
 
   it('resets state completely on RESET action', () => {
-    let state = createInitialState(true);
+    let state: CliState = { ...createInitialState(true), screen: 'publish', runStatus: 'ready' };
     state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
     expect(state.runStatus).toBe('published');
+    expect(state.publishDecision).toBe('confirmed');
     state = cliReducer(state, { type: 'RESET' });
     expect(state.runStatus).toBe('queued');
     expect(state.screen).toBe('welcome');
     expect(state.publishOutcome).toBe('normal');
+    expect(state.publishDecision).toBe('pending');
   });
 
   it('formats Markdown and JSON reports correctly', () => {
     const md = formatReportMarkdown(SYNTHETIC_REPORT);
-    expect(md).toContain('# CodeGuardian Review Report â€” PR #42');
+    expect(md).toContain('# CodeGuardian Review Report — PR #42');
     expect(md).toContain('Executive Summary');
     expect(md).toContain('Null input is dereferenced in token resolver');
 

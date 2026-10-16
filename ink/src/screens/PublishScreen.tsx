@@ -5,8 +5,10 @@ import { ReviewReport } from '../types/contracts.js';
 interface PublishScreenProps {
   report: ReviewReport;
   outcome: "normal" | "denied" | "stale_sha";
+  decision?: "pending" | "confirmed" | "denied";
   onConfirmPublish: () => void;
   onDenyPublish: () => void;
+  onToggleStaleSha?: () => void;
   onBack: () => void;
   onRestart: () => void;
 }
@@ -14,27 +16,22 @@ interface PublishScreenProps {
 export function PublishScreen({
   report,
   outcome,
+  decision = "pending",
   onConfirmPublish,
   onDenyPublish,
+  onToggleStaleSha,
   onBack,
   onRestart,
 }: PublishScreenProps) {
-  const [confirmed, setConfirmed] = useState(false);
-  const [denied, setDenied] = useState(outcome === "denied");
+  const confirmed = decision === "confirmed";
+  const denied = decision === "denied" || outcome === "denied";
+  const isStale = outcome === "stale_sha";
+
+  const verifiedInline = report.findings.filter(f => f.verification === "verified_diff");
+  const uncertainSummary = report.findings.filter(f => f.verification !== "verified_diff");
 
   useInput((input, key) => {
-    if (outcome === "stale_sha") {
-      if (input === 'r' || input === 'R') {
-        onRestart();
-      } else if (key.escape) {
-        onBack();
-      }
-      return;
-    }
-
     if (input === 'r' || input === 'R') {
-      setConfirmed(false);
-      setDenied(false);
       onRestart();
       return;
     }
@@ -44,18 +41,25 @@ export function PublishScreen({
       return;
     }
 
-    // Ignore further authorization/denial inputs once a decision is already made
+    if (input === 's' || input === 'S') {
+      if (!confirmed && !denied) {
+        onToggleStaleSha?.();
+      }
+      return;
+    }
+
+    if (isStale) {
+      return;
+    }
+
+    // Ignore further authorization/denial inputs once a decision is already made in the reducer
     if (confirmed || denied) {
       return;
     }
 
     if (input === 'y' || input === 'Y') {
-      setConfirmed(true);
-      setDenied(false);
       onConfirmPublish();
     } else if (input === 'n' || input === 'N') {
-      setDenied(true);
-      setConfirmed(false);
       onDenyPublish();
     }
   });
@@ -74,10 +78,13 @@ export function PublishScreen({
         <Text color="gray">• Target Head SHA: <Text color="white">{report.pr.head_sha}</Text></Text>
         <Text color="gray">• Cryptographic Report Digest: <Text color="cyan">{report.report_digest.substring(0, 32)}...</Text></Text>
         <Text color="gray">• Review Action: <Text bold color="white">COMMENT</Text> (Never APPROVE or REQUEST_CHANGES)</Text>
-        <Text color="gray">• Inline Comments: <Text color="white">{report.findings.length} findings placed on diff hunks</Text></Text>
+        <Text color="gray">• Inline Comments: <Text color="white">{verifiedInline.length} findings placed on verified diff hunks</Text></Text>
+        {uncertainSummary.length > 0 && (
+          <Text color="yellow">• Summary-only Findings: <Text color="yellow">{uncertainSummary.length} unverified findings (needs context, omitted from inline)</Text></Text>
+        )}
       </Box>
 
-      {outcome === "stale_sha" ? (
+      {isStale ? (
         <Box borderStyle="double" borderColor="red" padding={1} flexDirection="column" marginBottom={1}>
           <Text bold color="red">✗ PUBLICATION BLOCKED: STALE HEAD SHA</Text>
           <Text color="white">Remote PR head SHA has changed since analysis started. Publication refused to prevent posting stale comments.</Text>
@@ -99,10 +106,12 @@ export function PublishScreen({
       )}
 
       <Box>
-        {outcome === "stale_sha" ? (
-          <Text color="white">Press <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
+        {confirmed || denied ? (
+          <Text color="white">Decision locked. Press <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
+        ) : isStale ? (
+          <Text color="white">Press <Text bold color="yellow">[S]</Text> to Toggle Stale SHA (Demo) | <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
         ) : (
-          <Text color="white">Press <Text bold color="green">[Y]</Text> to Authorize | <Text bold color="red">[N]</Text> to Deny | <Text bold color="cyan">[R]</Text> to Restart Demo | <Text color="gray">[Esc] Back</Text></Text>
+          <Text color="white">Press <Text bold color="green">[Y]</Text> to Authorize | <Text bold color="red">[N]</Text> to Deny | <Text bold color="yellow">[S]</Text> Toggle Stale SHA | <Text bold color="cyan">[R]</Text> Restart | <Text color="gray">[Esc] Back</Text></Text>
         )}
       </Box>
     </Box>

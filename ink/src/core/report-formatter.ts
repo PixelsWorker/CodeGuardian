@@ -2,7 +2,7 @@ import { ReviewReport, ReviewFinding } from '../types/contracts.js';
 
 export function formatReportMarkdown(report: ReviewReport): string {
   const lines: string[] = [];
-  lines.push(`# CodeGuardian Review Report â€” PR #${report.pr.number}`);
+  lines.push(`# CodeGuardian Review Report — PR #${report.pr.number}`);
   lines.push(`**Repository:** ${report.pr.owner}/${report.pr.repo}`);
   lines.push(`**Run ID:** \`${report.run_id}\` | **Status:** ${report.status.toUpperCase()} | **Generated:** ${report.generated_at}`);
   lines.push(`**Target Head SHA:** \`${report.pr.head_sha}\``);
@@ -33,7 +33,7 @@ export function formatReportMarkdown(report: ReviewReport): string {
 
   lines.push('## Policy Warnings & Caveats');
   for (const w of report.warnings) {
-    lines.push(`- âš ï¸ ${w}`);
+    lines.push(`- ⚠️  ${w}`);
   }
   lines.push('');
   lines.push('---');

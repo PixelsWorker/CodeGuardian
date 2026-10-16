@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import React from 'react';
-import { render } from 'ink-testing-library';
+import { render, cleanup } from 'ink-testing-library';
 import { App } from '../src/App.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
@@ -19,6 +19,9 @@ import {
 } from '../src/fixtures/fixtures.js';
 
 describe('G00 Nine-Screen Terminal Components', () => {
+  afterEach(() => {
+    cleanup();
+  });
   it('renders Screen 1: WelcomeScreen', () => {
     const { lastFrame } = render(
       <WelcomeScreen onStart={() => {}} onAuthCheck={() => {}} />
@@ -38,6 +41,20 @@ describe('G00 Nine-Screen Terminal Components', () => {
     );
     expect(lastFrame()).toContain('GitHub CLI (gh) Session');
     expect(lastFrame()).toContain('AUTHENTICATED');
+  });
+
+  it('renders Screen 2: AuthScreen with blocked preflight warning when unauthenticated', () => {
+    const { lastFrame } = render(
+      <AuthScreen
+        githubAuth="not_authenticated"
+        codexAuth="authenticated"
+        onContinue={() => {}}
+        onBack={() => {}}
+      />
+    );
+    expect(lastFrame()).toContain('NOT AUTHENTICATED');
+    expect(lastFrame()).toContain('Preflight incomplete');
+    expect(lastFrame()).toContain('Verify Preflight (Blocked)');
   });
 
   it('renders Screen 3: PrEntryScreen with validation', () => {
@@ -135,6 +152,8 @@ describe('G00 Nine-Screen Terminal Components', () => {
     );
     expect(lastFrame()).toContain('Dry-Run Publication Preview & Safeguards');
     expect(lastFrame()).toContain('NO EXTERNAL API CALL OR NETWORK WRITE OCCURS');
+    expect(lastFrame()).toContain('findings placed on verified diff hunks');
+    expect(lastFrame()).toContain('Summary-only Findings');
   });
 
   it('renders Screen 8: PublishScreen with blocked stale head SHA', () => {

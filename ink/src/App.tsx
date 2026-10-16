@@ -1,5 +1,5 @@
 import React, { useReducer } from 'react';
-import { Box, useApp } from 'ink';
+import { Box, useApp, useInput } from 'ink';
 import { cliReducer, createInitialState } from './core/state-machine.js';
 import { ActiveScreen } from './types/contracts.js';
 import { Header } from './components/Header.js';
@@ -24,6 +24,15 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
   const { exit } = useApp();
   const [state, dispatch] = useReducer(cliReducer, createInitialState(isDemo), init => {
     let s = { ...init, screen: initialScreen };
+    if (initialScreen === "publish" || initialScreen === "report") {
+      s.runStatus = "ready";
+    } else if (initialScreen === "specialist") {
+      s.runStatus = "running";
+    } else if (initialScreen === "inspection") {
+      s.runStatus = "inspecting";
+    } else if (initialScreen === "consensus") {
+      s.runStatus = "validating";
+    }
     if (initialPrUrl) {
       s = cliReducer({ ...s, prUrl: initialPrUrl }, { type: "SUBMIT_PR_URL" });
       if (s.urlError) {
@@ -36,6 +45,13 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
   const handleExit = () => {
     exit();
   };
+
+  useInput((input) => {
+    // Global 'q' / 'Q' exit anywhere EXCEPT during PR URL typing
+    if ((input === 'q' || input === 'Q') && state.screen !== 'pr_input') {
+      exit();
+    }
+  });
 
   return (
     <Box flexDirection="column" minHeight={20}>
@@ -58,7 +74,19 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
           <AuthScreen
             githubAuth={state.githubAuth}
             codexAuth={state.codexAuth}
-            onContinue={() => dispatch({ type: "NAVIGATE", screen: "pr_input" })}
+            onContinue={() => {
+              const isAuthValid = state.githubAuth === "authenticated" && state.codexAuth === "authenticated";
+              if (!isAuthValid) {
+                dispatch({
+                  type: "SET_ERROR",
+                  status: "blocked",
+                  message: `Preflight authentication blocked: GitHub session is '${state.githubAuth}' and Codex session is '${state.codexAuth}'. Both services must be authenticated before inspecting PRs. Press [T] on the auth screen to cycle credentials.`,
+                });
+              } else {
+                dispatch({ type: "NAVIGATE", screen: "pr_input" });
+              }
+            }}
+            onCycleAuth={() => dispatch({ type: "CYCLE_AUTH_STATE" })}
             onBack={() => dispatch({ type: "NAVIGATE", screen: "welcome" })}
           />
         )}
@@ -111,8 +139,10 @@ export function App({ initialScreen = "welcome", initialPrUrl, isDemo = true }: 
           <PublishScreen
             report={state.report}
             outcome={state.publishOutcome}
+            decision={state.publishDecision}
             onConfirmPublish={() => dispatch({ type: "APPROVE_PUBLISH" })}
             onDenyPublish={() => dispatch({ type: "DENY_PUBLISH" })}
+            onToggleStaleSha={() => dispatch({ type: "TRIGGER_STALE_SHA" })}
             onBack={() => dispatch({ type: "NAVIGATE", screen: "report" })}
             onRestart={() => dispatch({ type: "RESET" })}
           />

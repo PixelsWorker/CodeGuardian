@@ -1,6 +1,6 @@
-# CodeGuardian â€” Full Development Roadmap
+# CodeGuardian — Full Development Roadmap
 
-**Status:** PLANNING BASELINE â€” updated 2026-10-16 with accepted product direction decisions
+**Status:** PLANNING BASELINE — updated 2026-10-16 with accepted product direction decisions
 **Updated:** 2026-10-16
 **Product:** CLI-first, multi-agent GitHub pull-request review platform
 **Repository:** https://github.com/PixelsWorker/CodeGuardian
@@ -12,7 +12,7 @@
 
 ## 1. Product vision and operating boundaries
 
-A developer supplies a GitHub PR URL. CodeGuardian reads the approved PR context, runs bounded specialist reviews, validates and consolidates evidence-backed findings, shows a report and dry-run publication preview, and â€” only after separate explicit authorization â€” asks an isolated publisher to post a `COMMENT` review.
+A developer supplies a GitHub PR URL. CodeGuardian reads the approved PR context, runs bounded specialist reviews, validates and consolidates evidence-backed findings, shows a report and dry-run publication preview, and — only after separate explicit authorization — asks an isolated publisher to post a `COMMENT` review.
 
 - **CLI:** Input, status, interactive review progress, findings, reports, and explicit operator confirmation.
 - **CodeGuardian Manager:** Deterministic orchestration, policy and state control, worker selection, validation, retries, deadlines, and audit metadata.
@@ -22,7 +22,7 @@ A developer supplies a GitHub PR URL. CodeGuardian reads the approved PR context
 - **Publisher:** Separate, one-time approval-gated GitHub writing component, implemented no earlier than G03.
 - **PR-Agent worker:** Optional external, version-pinned A2A integration in G04; not a dependency for the Codex-first MVP. Isolated behind a CodeGuardian adapter; no direct GitHub access.
 
-Real deployment, unsupervised publication, automated PR merges, direct model-controlled infrastructure commands, arbitrary-hostile PR execution, and a web dashboard are excluded from G00â€“G03.
+Real deployment, unsupervised publication, automated PR merges, direct model-controlled infrastructure commands, arbitrary-hostile PR execution, and a web dashboard are excluded from G00–G03.
 
 ## 2. Verified Git starting point
 
@@ -41,26 +41,26 @@ At this update's live remote checkpoint the repository contains browser prototyp
 
 ## 3. Group roadmap and effort forecast
 
-The day estimates for G00â€“G05 follow `PROJECT-BRIEF.md`. They are working-day forecasts after prerequisites, not guaranteed delivery dates. PRE-G00 is an additional planning allowance.
+The day estimates for G00–G05 follow `PROJECT-BRIEF.md`. They are working-day forecasts after prerequisites, not guaranteed delivery dates. PRE-G00 is an additional planning allowance.
 
 | Stage | Group outcome / acceptance | Estimate | Cumulative group time | Gate |
 |---|---|---:|---:|---|
-| PRE-G00 | Architecture, G00 design/scope, runtime and safe execution environment accepted | 0.5â€“2 days (planning allowance) | Before kickoff | Explicit architecture/setup/G00 approval |
-| **G00** | Entire interactive CLI experience works with clearly marked mock data | **2â€“3 days** | 2â€“3 days | Human acceptance of full terminal UX |
-| **G01** | Real GitHub authentication preflight and read-only PR inspection | **3â€“5 days** | 5â€“8 days | Auth, identity, diff, edge cases, integration tests |
-| **G02** | Real Codex specialist workers yield validated consolidated findings | **5â€“8 days** | 10â€“16 days | Real bounded runs, trustworthy reports, partial/failure handling |
-| **G03** | Separate publisher posts one verified, human-approved `COMMENT` review | **3â€“5 days** | **13â€“21 days** | Permission, stale-SHA, replay and duplicate safeguards |
-| **G04** | Optional PR-Agent A2A adapter contributes normalized findings | **3â€“5 days** | 16â€“26 days if included | Provider configuration and integration contract tests |
-| **G05** | Signed GitHub events trigger safe, deduplicated automated reviews | **5â€“8 days** | 21â€“34 days with G04 | Independent security/identity/webhook approval |
+| PRE-G00 | Architecture, G00 design/scope, runtime and safe execution environment accepted | 0.5–2 days (planning allowance) | Before kickoff | Explicit architecture/setup/G00 approval |
+| **G00** | Entire interactive CLI experience works with clearly marked mock data | **2–3 days** | 2–3 days | Human acceptance of full terminal UX |
+| **G01** | Real GitHub authentication preflight and read-only PR inspection | **3–5 days** | 5–8 days | Auth, identity, diff, edge cases, integration tests |
+| **G02** | Real Codex specialist workers yield validated consolidated findings | **5–8 days** | 10–16 days | Real bounded runs, trustworthy reports, partial/failure handling |
+| **G03** | Separate publisher posts one verified, human-approved `COMMENT` review | **3–5 days** | **13–21 days** | Permission, stale-SHA, replay and duplicate safeguards |
+| **G04** | Optional PR-Agent A2A adapter contributes normalized findings | **3–5 days** | 16–26 days if included | Provider configuration and integration contract tests |
+| **G05** | Signed GitHub events trigger safe, deduplicated automated reviews | **5–8 days** | 21–34 days with G04 | Independent security/identity/webhook approval |
 | **G06 (PROPOSED, OPTIONAL)** | Jules repository audit, verified coverage and `AUDIT.md` | **TBD after pilot** | Not included in G00-G05 estimates | Separate source access, pilot, security and human acceptance |
 
-**Primary MVP:** G00â€“G03 = approximately 13â€“21 working days of implementation (around 3â€“5 work weeks), excluding PRE-G00, approval waits, sandbox repairs, and surprises.
-**Extended delivery:** G00â€“G05 = approximately 21â€“34 working days (around 4â€“7 work weeks) when G04 is included. G04 is optional, not a blocker for an independently approved G05.
+**Primary MVP:** G00–G03 = approximately 13–21 working days of implementation (around 3–5 work weeks), excluding PRE-G00, approval waits, sandbox repairs, and surprises.
+**Extended delivery:** G00–G05 = approximately 21–34 working days (around 4–7 work weeks) when G04 is included. G04 is optional, not a blocker for an independently approved G05.
 **Calendar dates:** Set only after the start date, environment readiness, dependency compatibility, and group approvals are confirmed.
 
-Indicative progression: **Week 1:** PRE-G00/G00; **Weeks 1â€“2:** G01; **Weeks 2â€“4:** G02; **Weeks 4â€“5:** G03 MVP gate; **Weeks 5â€“7:** optional G04/G05. These windows can slide.
+Indicative progression: **Week 1:** PRE-G00/G00; **Weeks 1–2:** G01; **Weeks 2–4:** G02; **Weeks 4–5:** G03 MVP gate; **Weeks 5–7:** optional G04/G05. These windows can slide.
 
-## 4. PRE-G00 â€” Architecture and execution-readiness gate
+## 4. PRE-G00 — Architecture and execution-readiness gate
 
 **Goal:** Establish what is approved before writing executable product code.
 
@@ -74,7 +74,7 @@ Decision checklist:
 
 **Exit:** Accepted architecture and G00 brief; working approved Codex terminal execution; group TODO with integrated tests and explicit implementation authorization.
 
-## 5. G00 â€” Complete simulated CLI UX demo
+## 5. G00 — Complete simulated CLI UX demo
 
 **One observable outcome:** A native terminal application demonstrates the COMPLETE CodeGuardian UX without contacting GitHub, an AI provider, a Docker service, or any publishing endpoint.
 
@@ -92,7 +92,7 @@ Decision checklist:
 | Package management | npm 11.17.0, exact lockfile | Preferred over pnpm for host compatibility |
 | Data | Local JSON mock fixtures | No real secrets, tokens, authentication, or network access |
 
-**Existing design track â€” Google AI Studio (visual reference only):** A nine-screen React/Vite browser mock with synthetic scenarios and test source now exists on remote `main`. This is a design reference, **not** accepted native CLI G00, and no tests were run by this governance review. Any further AI Studio sync/deployment still needs the applicable approval; Codex's native terminal implementation remains a separate accepted scope.
+**Existing design track — Google AI Studio (visual reference only):** A nine-screen React/Vite browser mock with synthetic scenarios and test source now exists on remote `main`. This is a design reference, **not** accepted native CLI G00, and no tests were run by this governance review. Any further AI Studio sync/deployment still needs the applicable approval; Codex's native terminal implementation remains a separate accepted scope.
 
 **Required G00 screens and flows:**
 - Welcome/help, command discovery, invalid commands and terminal controls.
@@ -112,7 +112,7 @@ Decision checklist:
 
 **Exit:** Complete reproducible demo and tests in ONE scoped feature branch and ONE group PR, followed by explicit operator UX acceptance. No G01 work starts until that acceptance.
 
-## 6. G01 â€” Authentication and real PR inspection
+## 6. G01 — Authentication and real PR inspection
 
 **Prerequisite:** G00 approved.
 
@@ -125,7 +125,7 @@ Decision checklist:
 
 **Exit:** Real inspect-only review entry point, test evidence and separately approved group acceptance.
 
-## 7. G02 â€” Real multi-agent Codex review
+## 7. G02 — Real multi-agent Codex review
 
 **Prerequisite:** G01 approved and supported Codex auth/SDK operation verified.
 
@@ -138,7 +138,7 @@ Decision checklist:
 
 **Exit:** One tested and reviewable real, read-only PR report; NO publication.
 
-## 8. G03 â€” Human-controlled GitHub review publication
+## 8. G03 — Human-controlled GitHub review publication
 
 **Prerequisite:** G02 accepted.
 
@@ -151,7 +151,7 @@ Decision checklist:
 
 **Exit:** A real, specifically authorized test review is posted exactly once and confirmed. This is the Codex-first MVP gate.
 
-## 9. G04 â€” Optional independent PR-Agent worker
+## 9. G04 — Optional independent PR-Agent worker
 
 **Prerequisite:** G03 and an independently accepted model-provider/A2A security setup. This group may be deferred.
 
@@ -166,14 +166,14 @@ Decision checklist:
 - Run A2A/auth, unavailable-provider, timeout, upgrade, compatibility and contract tests.
 
 **Requires separate approval before any G04 execution:**
-- Provider API access (PR-Agent's own model provider â€” separate from Codex).
+- Provider API access (PR-Agent's own model provider — separate from Codex).
 - Sending source diffs externally to a provider endpoint.
 - Any configuration granting PR-Agent access beyond the supplied validated diff.
 
 **Exit:** Optional second engine contributes independently verifiable findings, with confirmed runner isolation.
 
 
-## 10. G05 â€” Unattended GitHub automation
+## 10. G05 — Unattended GitHub automation
 
 **Prerequisite:** Explicit new design and security approval, accepted earlier real review and publisher functionality. G04 is optional.
 
@@ -186,9 +186,9 @@ Decision checklist:
 
 **Exit:** Verified, safe event-triggered runs with approved publication policy and observability.
 
-## 11. G06 â€” Optional Jules repository-wide audit (PROPOSED, NOT APPROVED)
+## 11. G06 — Optional Jules repository-wide audit (PROPOSED, NOT APPROVED)
 
-**Outcome:** A developer requests a pinned-snapshot **repository-wide audit**, Jules proposes systemic findings, and the CodeGuardian Manager verifies source evidence and coverage independently before presenting a separately approved `AUDIT.md`. This is not PR-diff review and does not modify G00â€“G05 costs/estimates, dependencies or the PR publication contract. G06 effort is **TBD** until an authorized pilot. G04/G05 are not mandatory dependencies.
+**Outcome:** A developer requests a pinned-snapshot **repository-wide audit**, Jules proposes systemic findings, and the CodeGuardian Manager verifies source evidence and coverage independently before presenting a separately approved `AUDIT.md`. This is not PR-diff review and does not modify G00–G05 costs/estimates, dependencies or the PR publication contract. G06 effort is **TBD** until an authorized pilot. G04/G05 are not mandatory dependencies.
 
 **Six proposed mock-only UX stages:**
 1. Select repository, branch, intended full SHA and inventory/exclusions.
@@ -205,7 +205,7 @@ Decision checklist:
 ## 12. Explicitly deferred work / release decisions
 
 
-- Web dashboard, team accounts, multi-tenancy, enterprise administration and reporting analytics: separate future groups, not counted in G00â€“G05.
+- Web dashboard, team accounts, multi-tenancy, enterprise administration and reporting analytics: separate future groups, not counted in G00–G05.
 - Code modifications, automatic approvals, automated PR merges, production service deployment and broad untrusted-fork execution: excluded until independently proposed and authorized.
 - License, branch protection, mandatory CI checks, release artifacts, security policy and any public launch: require explicit project/governance decisions.
 
@@ -225,7 +225,7 @@ For **every** group:
 
 ## 14. Immediate next group run
 
-**NEXT: PRE-G00 approval/setup, then G00 â€” Native Ink CLI Demo.**
+**NEXT: PRE-G00 approval/setup, then G00 — Native Ink CLI Demo.**
 
 1. The **browser G00 mock UX** (nine screens, `src/`) is accepted as the walkthrough reference and is FROZEN at `e8e5844`. No further browser development is authorized.
 2. Confirm architecture decisions, mock contract, complete G00 screen inventory in `G00-CLI-WIREFRAMES.md`, command names and precise framework/package versions for the Ink package (`ink/`).
@@ -240,12 +240,12 @@ For **every** group:
 
 ## 15. Source-of-truth references
 
-- `PROJECT-BRIEF.md` â€” accepted/proposed product definition, original G00â€“G05 groups and group estimates.
-- `ARCHITECTURE.md` â€” D-01â€“D-08, trust boundaries, security and operational design.
-- `API-CONTRACT.md` â€” proposed canonical internal JSON/schema and publication approval semantics.
-- `G00-SCOPE.md` â€” complete mock-only terminal demo acceptance scope.
-- `G00-CLI-WIREFRAMES.md` â€” command vocabulary and illustrative mock terminal states.
-- `SETUP.md`, `HANDOFF.md`, `REPO-INITIALIZATION.md` â€” earlier setup/history records, potentially stale after reconciliation.
-- `TECH-RESEARCH.md` â€” prior source checks and known unverified local integration claims.
-- Parent workspace governance documents and repository `AGENTS.md` â€” approvals, protected paths and group process.
+- `PROJECT-BRIEF.md` — accepted/proposed product definition, original G00–G05 groups and group estimates.
+- `ARCHITECTURE.md` — D-01–D-08, trust boundaries, security and operational design.
+- `API-CONTRACT.md` — proposed canonical internal JSON/schema and publication approval semantics.
+- `G00-SCOPE.md` — complete mock-only terminal demo acceptance scope.
+- `G00-CLI-WIREFRAMES.md` — command vocabulary and illustrative mock terminal states.
+- `SETUP.md`, `HANDOFF.md`, `REPO-INITIALIZATION.md` — earlier setup/history records, potentially stale after reconciliation.
+- `TECH-RESEARCH.md` — prior source checks and known unverified local integration claims.
+- Parent workspace governance documents and repository `AGENTS.md` — approvals, protected paths and group process.
 

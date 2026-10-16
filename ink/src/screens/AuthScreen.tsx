@@ -6,11 +6,18 @@ interface AuthScreenProps {
   githubAuth: AuthState;
   codexAuth: AuthState;
   onContinue: () => void;
+  onCycleAuth?: () => void;
   onBack: () => void;
 }
 
-export function AuthScreen({ githubAuth, codexAuth, onContinue, onBack }: AuthScreenProps) {
+export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onBack }: AuthScreenProps) {
+  const isAuthValid = githubAuth === "authenticated" && codexAuth === "authenticated";
+
   useInput((input, key) => {
+    if (input === 't' || input === 'T') {
+      onCycleAuth?.();
+      return;
+    }
     if (key.return) {
       onContinue();
     } else if (key.escape) {
@@ -63,10 +70,20 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onBack }: AuthSc
         <Text color="gray">Note: In G00 DEMO mode, simulated credentials allow walkthrough testing.</Text>
       </Box>
 
+      {(!isAuthValid) && (
+        <Box marginBottom={1}>
+          <Text color="yellow">⚠️  Preflight incomplete: Both services must be AUTHENTICATED before inspecting PRs.</Text>
+        </Box>
+      )}
+
       <Box>
-        <Text color="green" bold>Press [Enter] to Proceed to PR Entry</Text>
+        <Text color={isAuthValid ? "green" : "yellow"} bold>
+          Press [Enter] {isAuthValid ? "Proceed" : "Verify Preflight (Blocked)"}
+        </Text>
         <Text color="gray">  |  </Text>
-        <Text color="white">Press [Esc] to Return</Text>
+        <Text color="yellow" bold>[T] Cycle Auth State (Demo)</Text>
+        <Text color="gray">  |  </Text>
+        <Text color="white">Press [Esc] Return</Text>
       </Box>
     </Box>
   );

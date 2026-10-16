@@ -2,7 +2,7 @@
 
 **Group:** G00 - Complete CLI UX Demo
 **Phase:** Full product terminal UI/UX, all MVP CLI interactions, with **safe mocks only**
-**Status:** IMPLEMENTED LOCALLY â€” native Ink CLI package (`ink/`) implemented in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`; browser prototype frozen at `e8e5844`; unit/screen tests passing (21/21), strict TypeScript build passing, and CodeRabbit clean. Pending draft PR publication, full eight-layer acceptance testing, and formal operator UI/UX review.
+**Status:** IMPLEMENTED LOCALLY — native Ink CLI package (`ink/`) implemented in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`; browser prototype frozen at `e8e5844`; unit/screen tests passing (21/21), strict TypeScript build passing, and CodeRabbit clean. Pending draft PR publication, full eight-layer acceptance testing, and formal operator UI/UX review.
 **Active branch:** `feat/g00-ink-cli-demo` in dedicated feature worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`; target draft PR against `main`.
 
 ## Goal
