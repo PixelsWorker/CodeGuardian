@@ -28,10 +28,14 @@ describe('L6 — Complete Mock Pipeline Integration', () => {
     expect(state.prIdentity.owner).toBe('example');
     expect(state.prIdentity.number).toBe(42);
 
-    // 2. Start Specialists
+    // 2. Start Specialists (initial queued phase)
     state = cliReducer(state, { type: 'START_SPECIALISTS' });
     expect(state.screen).toBe('specialist');
     expect(state.runStatus).toBe('running');
+    expect(state.specialists.every(s => s.state === 'queued')).toBe(true);
+
+    // Step progress to running
+    state = cliReducer(state, { type: 'STEP_ALL_PROGRESS' });
     expect(state.specialists.every(s => s.state === 'running')).toBe(true);
 
     // 3. Complete Specialists
@@ -45,7 +49,7 @@ describe('L6 — Complete Mock Pipeline Integration', () => {
     expect(state.screen).toBe('report');
     expect(state.runStatus).toBe('ready');
     expect(state.report.status).toBe('ready');
-    expect(state.report.findings.length).toBe(4);
+    expect(state.report.findings.length).toBe(5);
     expect(state.report.tests.executed).toBe(false);
 
     // 5. Navigate to Publish gate
@@ -318,10 +322,12 @@ describe('L6 — Complete Mock Pipeline Integration', () => {
   it('Scenario 9: Publication Evidence — Only verified_diff Findings are Eligible for Inline Comments', () => {
     const findings = SYNTHETIC_REPORT.findings;
     const verifiedInline = findings.filter(f => f.verification === 'verified_diff');
-    const uncertainSummary = findings.filter(f => f.verification !== 'verified_diff');
+    const uncertainSummary = findings.filter(f => f.verification === 'needs_context');
+    const rejected = findings.filter(f => f.verification === 'rejected');
 
     expect(verifiedInline.length).toBe(3);
     expect(uncertainSummary.length).toBe(1);
+    expect(rejected.length).toBe(1);
 
     // Finding f-004 is uncertain (needs_context)
     const f4 = findings.find(f => f.id === 'f-004');
@@ -463,11 +469,11 @@ describe('L6 — Complete Mock Pipeline Integration', () => {
   it('Scenario 15: Specialist Stepping, Timeout, and Skip Lifecycle', () => {
     let state = createInitialState(true);
     state = cliReducer(state, { type: 'START_SPECIALISTS' });
-    expect(state.specialists.every(s => s.progress === 10)).toBe(true);
+    expect(state.specialists.every(s => s.state === 'queued' && s.progress === 0)).toBe(true);
 
-    // Step progress
+    // Step progress from queued to running
     state = cliReducer(state, { type: 'STEP_ALL_PROGRESS' });
-    expect(state.specialists.every(s => s.progress === 40)).toBe(true);
+    expect(state.specialists.every(s => s.state === 'running' && s.progress === 25)).toBe(true);
 
     // Timeout on architecture
     state = cliReducer(state, { type: 'SPECIALIST_TIMEOUT', role: 'architecture' });

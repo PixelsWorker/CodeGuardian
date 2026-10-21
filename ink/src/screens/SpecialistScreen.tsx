@@ -11,6 +11,7 @@ interface SpecialistScreenProps {
   onTimeoutLane?: (role: string, reason?: string) => void;
   onSkipLane?: (role: string, reason?: string) => void;
   onStepProgress?: () => void;
+  onResetQueue?: () => void;
   onCancel: () => void;
 }
 
@@ -21,6 +22,7 @@ export function SpecialistScreen({
   onTimeoutLane,
   onSkipLane,
   onStepProgress,
+  onResetQueue,
   onCancel,
 }: SpecialistScreenProps) {
   useSafeInput((input, key) => {
@@ -30,6 +32,8 @@ export function SpecialistScreen({
       onCancel();
     } else if (input === ' ') {
       onStepProgress?.();
+    } else if (input === 'u' || input === 'U') {
+      onResetQueue?.();
     } else if (input === 'f' || input === 'F') {
       onFailLane("quality", "Malformed AST parser exception in benchmark lane");
     } else if (input === 't' || input === 'T') {
@@ -92,7 +96,8 @@ export function SpecialistScreen({
 
       <Box flexDirection="column" borderStyle="single" borderColor="cyan" padding={1} marginBottom={1}>
         <Text bold color="cyan">Interactive Scenario Controls:</Text>
-        <Text color="white">• Press <Text bold color="cyan">[Space]</Text> to step/advance streaming worker progress</Text>
+        <Text color="white">• Press <Text bold color="cyan">[Space]</Text> to start/advance streaming worker progress</Text>
+        <Text color="white">• Press <Text bold color="gray">[U]</Text> to simulate Queued worker pool state</Text>
         <Text color="white">• Press <Text bold color="yellow">[F]</Text> to simulate Partial Failure (Quality lane)</Text>
         <Text color="white">• Press <Text bold color="yellow">[T]</Text> to simulate Worker Timeout (Architecture lane)</Text>
         <Text color="white">• Press <Text bold color="gray">[K]</Text> to simulate Worker Skip (Quality lane)</Text>

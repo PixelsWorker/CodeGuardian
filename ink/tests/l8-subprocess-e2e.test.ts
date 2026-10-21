@@ -88,7 +88,7 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
     expect(status).toBe(0);
     const parsed = JSON.parse(stdout);
     expect(parsed.schema_version).toBe('1.0.0');
-    expect(parsed.findings.length).toBe(4);
+    expect(parsed.findings.length).toBe(5);
     expect(parsed.tests.executed).toBe(false);
   });
 

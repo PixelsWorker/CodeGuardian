@@ -56,6 +56,7 @@ export type CliAction =
   | { type: "SPECIALIST_TIMEOUT"; role: string; reason?: string }
   | { type: "SPECIALIST_SKIP"; role: string; reason?: string }
   | { type: "STEP_ALL_PROGRESS" }
+  | { type: "RESET_SPECIALISTS_QUEUED" }
   | { type: "CANCEL_RUN" }
   | { type: "RETRY_RUN" }
   | { type: "FINISH_SPECIALISTS" }
@@ -95,6 +96,9 @@ export function createInitialState(isDemo: boolean = true): CliState {
 export function cliReducer(state: CliState, action: CliAction): CliState {
   switch (action.type) {
     case "NAVIGATE": {
+      if (state.runStatus === "published") {
+        return { ...state, screen: action.screen, errorMessage: null };
+      }
       let nextStatus = state.runStatus;
       if (action.screen === "consensus") {
         if (state.runStatus === "ready" || state.runStatus === "partial") {
@@ -225,6 +229,9 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
     }
 
     case "START_SPECIALISTS": {
+      if (state.screen === "inspection" && state.runStatus === "published") {
+        return { ...state, screen: "specialist" };
+      }
       const isAuthValid = state.githubAuth === "authenticated" && state.codexAuth === "authenticated";
       if (!isAuthValid) {
         return {
@@ -242,9 +249,9 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         publishDecision: "pending",
         specialists: state.specialists.map(s => ({
           ...s,
-          state: "running",
-          progress: 10,
-          currentActivity: "Analyzing diff hunks against policy...",
+          state: "queued",
+          progress: 0,
+          currentActivity: "Queued in manager execution pool. Waiting for worker assignment...",
         })),
       };
     }
@@ -338,7 +345,15 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
           if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped" || s.state === "complete") {
             return s;
           }
-          const nextProgress = Math.min(100, s.progress + 30);
+          if (s.state === "queued") {
+            return {
+              ...s,
+              state: "running",
+              progress: 25,
+              currentActivity: "Analyzing diff hunks against policy...",
+            };
+          }
+          const nextProgress = Math.min(100, s.progress + 25);
           return {
             ...s,
             progress: nextProgress,
@@ -348,7 +363,29 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         }),
       };
 
+    case "RESET_SPECIALISTS_QUEUED":
+      if (state.screen !== "specialist" || (state.runStatus !== "running" && state.runStatus !== "queued")) {
+        return state;
+      }
+      return {
+        ...state,
+        specialists: state.specialists.map(s => {
+          if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped" || s.state === "complete" || s.state === "partial") {
+            return s;
+          }
+          return {
+            ...s,
+            state: "queued",
+            progress: 0,
+            currentActivity: "Queued in manager execution pool. Waiting for worker assignment...",
+          };
+        }),
+      };
+
     case "CANCEL_RUN":
+      if (state.runStatus === "published") {
+        return state;
+      }
       return {
         ...state,
         screen: "error",
@@ -368,6 +405,9 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       };
 
     case "FINISH_SPECIALISTS":
+      if (state.screen === "specialist" && state.runStatus === "published") {
+        return { ...state, screen: "consensus" };
+      }
       if (state.screen !== "specialist" || state.runStatus !== "running") {
         return state;
       }
@@ -383,11 +423,15 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
             ...s,
             progress: 100,
             state: "complete",
+            currentActivity: s.currentActivity.startsWith("Queued") ? "Analysis complete." : s.currentActivity,
           };
         }),
       };
 
     case "VALIDATE_FINDINGS": {
+      if (state.screen === "consensus" && state.runStatus === "published") {
+        return { ...state, screen: "report" };
+      }
       // Allow validating findings when actively validating, ready, or partial
       if (
         state.screen !== "consensus" ||

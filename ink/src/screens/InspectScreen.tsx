@@ -47,6 +47,26 @@ export function InspectScreen({ pr, onStartAnalysis, onBack }: InspectScreenProp
         </Box>
       </Box>
 
+      {/* Pre-Review Surface Risk Overview */}
+      <Box borderStyle="round" borderColor="yellow" flexDirection="column" paddingX={1} marginBottom={1}>
+        <Box justifyContent="space-between">
+          <Text bold color="yellow">⚠️  Pre-Review Surface Risk Classifier:</Text>
+          <Text bold color="red">
+            {pr.owner === "example" && pr.repo === "demo" && pr.number === 42
+              ? "HIGH RISK (AUTH & CRYPTO)"
+              : "HIGH RISK [SYNTHETIC DEMO FIXTURE]"}
+          </Text>
+        </Box>
+        <Box marginTop={1} flexDirection="column">
+          <Text color="red">• RISK: SENSITIVE_AUTH_PATH (`src/auth/*` modified)</Text>
+          <Text color="yellow">• RISK: NEW_EXTERNAL_DEP (`jsonwebtoken` added to package.json)</Text>
+          <Text color="cyan">• SURFACE: IN_MEMORY_CACHE_STATE (`src/auth/session.ts` introduces unbounded map)</Text>
+          {(pr.owner !== "example" || pr.repo !== "demo" || pr.number !== 42) && (
+            <Text color="gray">  (Synthetic demo fixture heuristics applied for custom PR demonstration)</Text>
+          )}
+        </Box>
+      </Box>
+
       <Box marginBottom={1}>
         <Text bold color="white">
           Changed Files List (Use [↑/↓] or [j/k] to preview diff hunks):

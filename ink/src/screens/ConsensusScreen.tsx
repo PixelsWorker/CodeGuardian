@@ -20,9 +20,18 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
   });
 
   const hasFailedLanes = specialists.some(s => s.state !== "complete");
-  const verifiedFindings = findings.filter(f => f.verification === "verified_diff");
-  const needsContextFindings = findings.filter(f => f.verification === "needs_context");
-  const rejectedFindings = findings.filter(f => f.verification === "rejected");
+  const available = new Set(
+    specialists
+      .filter(s => s.state === "complete" || s.state === "partial")
+      .map(s => s.role as string)
+  );
+  const activeFindings = findings.filter(f =>
+    f.source_workers.some(r => available.has(r))
+  );
+
+  const verifiedFindings = activeFindings.filter(f => f.verification === "verified_diff");
+  const needsContextFindings = activeFindings.filter(f => f.verification === "needs_context");
+  const rejectedFindings = activeFindings.filter(f => f.verification === "rejected");
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -50,6 +59,10 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
           <Text color="yellow">
             ℹ️ Verification triage: {verifiedFindings.length} verified against PR changed lines, {needsContextFindings.length} require broader context (summary-only)
           </Text>
+        ) : rejectedFindings.length > 0 ? (
+          <Text color="yellow">
+            ℹ️ Verification triage: {verifiedFindings.length} verified against PR changed lines, {rejectedFindings.length} rejected as outside changed-line boundaries
+          </Text>
         ) : (
           <Text color="green">
             ✓ All {verifiedFindings.length} candidate findings verified against changed line boundaries
@@ -60,7 +73,9 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
             ✗ {rejectedFindings.length} finding(s) rejected as outside PR changed-line boundaries
           </Text>
         )}
-        <Text color="green">✓ Deduplicated overlap between Architecture and Quality on session memory leak</Text>
+        {available.has("architecture") && available.has("quality") && (
+          <Text color="green">✓ Deduplicated overlap between Architecture and Quality on session memory leak</Text>
+        )}
         <Text color="green">✓ PII / Credentials scrubbed from evidence quotes</Text>
         {hasFailedLanes && (
           <Text color="yellow">⚠️ Incomplete coverage warning: Specialist failure detected or coverage missing (partial results accepted)</Text>
@@ -72,7 +87,7 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
 
       <Box borderStyle="single" borderColor="cyan" flexDirection="column" padding={1} marginBottom={1}>
         <Text bold color="cyan">Consensus Summary Statistics:</Text>
-        <Text color="white">• Total Candidate Findings: {findings.length}</Text>
+        <Text color="white">• Total Candidate Findings: {activeFindings.length}</Text>
         <Text color="green">• Verified Diff Findings: {verifiedFindings.length} (eligible for inline review)</Text>
         {needsContextFindings.length > 0 && (
           <Text color="yellow">• Uncertain / Needs Context: {needsContextFindings.length} (summary-only, omitted from inline)</Text>
@@ -80,8 +95,8 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
         {rejectedFindings.length > 0 && (
           <Text color="red">• Rejected Findings: {rejectedFindings.length} (outside diff boundary)</Text>
         )}
-        <Text color="white">• P1 Critical Flaws: {findings.filter(f => f.severity === 'P1').length}</Text>
-        <Text color="white">• P2 Reliability/Perf Flaws: {findings.filter(f => f.severity === 'P2').length}</Text>
+        <Text color="white">• P1 Critical Flaws: {verifiedFindings.filter(f => f.severity === 'P1').length}</Text>
+        <Text color="white">• P2 Reliability/Perf Flaws: {verifiedFindings.filter(f => f.severity === 'P2').length}</Text>
       </Box>
 
       <Box>

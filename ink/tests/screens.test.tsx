@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import React from 'react';
 import { render, cleanup } from 'ink-testing-library';
 import { App } from '../src/App.js';
+import { cliReducer, createInitialState } from '../src/core/state-machine.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
 import { PrEntryScreen } from '../src/screens/PrEntryScreen.js';
@@ -96,6 +97,8 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).toContain('PR #42');
     expect(lastFrame()).toContain('Changed Files List');
     expect(lastFrame()).toContain('src/demo.ts');
+    expect(lastFrame()).toContain('HIGH RISK (AUTH & CRYPTO)');
+    expect(lastFrame()).toContain('SENSITIVE_AUTH_PATH');
   });
 
   it('renders Screen 5: SpecialistScreen with all 4 canonical specialists', () => {
@@ -112,9 +115,10 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).toContain('Architecture Specialist');
     expect(lastFrame()).toContain('Quality, Testing & Performance Specialist');
     expect(lastFrame()).toContain('Press [Esc] to test User Cancellation');
+    expect(lastFrame()).toContain('Press [U] to simulate Queued worker pool state');
   });
 
-  it('renders Screen 6: ConsensusScreen with deduplication stats', () => {
+  it('renders Screen 6: ConsensusScreen with deduplication stats and rejected findings', () => {
     const { lastFrame } = render(
       <ConsensusScreen
         specialists={CANONICAL_SPECIALISTS}
@@ -124,8 +128,30 @@ describe('G00 Nine-Screen Terminal Components', () => {
       />
     );
     expect(lastFrame()).toContain('Manager Validation, Synthesis & Deduplication');
-    expect(lastFrame()).toContain('Total Candidate Findings: 4');
+    expect(lastFrame()).toContain('Total Candidate Findings: 5');
     expect(lastFrame()).toContain('Verified Diff Findings: 3');
+    expect(lastFrame()).toContain('Rejected Findings: 1');
+    expect(lastFrame()).toContain('1 finding(s) rejected as outside PR changed-line boundaries');
+    expect(lastFrame()).toContain('P2 Reliability/Perf Flaws: 1');
+    expect(lastFrame()).toContain('Deduplicated overlap between Architecture and Quality');
+  });
+
+  it('renders Screen 6: ConsensusScreen excludes findings and deduplication when a lane fails', () => {
+    const specialistsWithFailedQuality = CANONICAL_SPECIALISTS.map(s =>
+      s.role === 'quality' ? { ...s, state: 'failed' as const } : s
+    );
+    const { lastFrame } = render(
+      <ConsensusScreen
+        specialists={specialistsWithFailedQuality}
+        findings={SYNTHETIC_FINDINGS}
+        onProceed={() => {}}
+        onBack={() => {}}
+      />
+    );
+    // When Quality fails, f-005 (quality only) is excluded, f-003 is retained via Architecture
+    expect(lastFrame()).toContain('PARTIAL REVIEW READY');
+    expect(lastFrame()).toContain('Total Candidate Findings: 4');
+    expect(lastFrame()).not.toContain('Deduplicated overlap between Architecture and Quality');
   });
 
   it('renders Screen 7: ReportScreen with findings', () => {
@@ -138,7 +164,7 @@ describe('G00 Nine-Screen Terminal Components', () => {
     );
     expect(lastFrame()).toContain('Consolidated Review Report');
     expect(lastFrame()).toContain('Null input is dereferenced in token resolver');
-    expect(lastFrame()).toContain('Findings (4 total — use [↑/↓] to inspect):');
+    expect(lastFrame()).toContain('Findings (5 total — use [↑/↓] to inspect):');
     expect(lastFrame()).not.toContain('Verified Findings');
   });
 
@@ -214,5 +240,49 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).toContain('CodeGuardian');
     expect(lastFrame()).toContain('DEMO ONLY');
     expect(lastFrame()).toContain('TUI v0.1.0');
+    expect(lastFrame()).toContain('[Enter] Begin');
+    expect(lastFrame()).toContain('[A] Auth status');
+  });
+
+  it('renders screen-specific footer hints across workflow screens', () => {
+    const specialistApp = render(<App initialScreen="specialist" isDemo={true} />);
+    expect(specialistApp.lastFrame()).toContain('[Enter] Synthesize');
+    expect(specialistApp.lastFrame()).toContain('[Esc] Cancel run');
+
+    const prApp = render(<App initialScreen="pr_input" isDemo={true} />);
+    expect(prApp.lastFrame()).toContain('[Enter] Submit');
+    expect(prApp.lastFrame()).toContain('[Ctrl+C] Quit');
+  });
+
+  it('supports backward navigation and preserves published state across specialist and inspection screens', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: "SUBMIT_PR_URL" });
+    state = cliReducer(state, { type: "START_SPECIALISTS" });
+    state = cliReducer(state, { type: "FINISH_SPECIALISTS" });
+    state = cliReducer(state, { type: "VALIDATE_FINDINGS" });
+    state = cliReducer(state, { type: "NAVIGATE", screen: "publish" });
+    state = cliReducer(state, { type: "APPROVE_PUBLISH" });
+    expect(state.runStatus).toBe("published");
+
+    // Backward navigation: publish -> report -> consensus -> specialist
+    state = cliReducer(state, { type: "NAVIGATE", screen: "report" });
+    expect(state.runStatus).toBe("published");
+    state = cliReducer(state, { type: "NAVIGATE", screen: "consensus" });
+    expect(state.runStatus).toBe("published");
+    state = cliReducer(state, { type: "NAVIGATE", screen: "specialist" });
+    expect(state.runStatus).toBe("published");
+
+    // CANCEL_RUN is disabled after publication
+    const afterCancel = cliReducer(state, { type: "CANCEL_RUN" });
+    expect(afterCancel.runStatus).toBe("published");
+    expect(afterCancel.screen).toBe("specialist");
+
+    // Navigate back to inspection and forward again
+    state = cliReducer(state, { type: "NAVIGATE", screen: "inspection" });
+    expect(state.screen).toBe("inspection");
+    expect(state.runStatus).toBe("published");
+    state = cliReducer(state, { type: "START_SPECIALISTS" });
+    expect(state.screen).toBe("specialist");
+    expect(state.runStatus).toBe("published");
   });
 });

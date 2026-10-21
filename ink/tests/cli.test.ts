@@ -13,7 +13,7 @@ describe('G00 CLI State Machine & Contracts', () => {
     expect(state.screen).toBe('welcome');
     expect(state.runStatus).toBe('queued');
     expect(state.specialists.length).toBe(4);
-    expect(state.findings.length).toBe(4);
+    expect(state.findings.length).toBe(5);
     expect(state.isDemo).toBe(true);
   });
 
@@ -187,6 +187,59 @@ describe('G00 CLI State Machine & Contracts', () => {
     const jsonStr = formatReportJson(SYNTHETIC_REPORT);
     const parsed = JSON.parse(jsonStr);
     expect(parsed.schema_version).toBe('1.0.0');
-    expect(parsed.findings.length).toBe(4);
+    expect(parsed.findings.length).toBe(5);
+  });
+
+  it('supports queued specialist lifecycle and post-publication backward navigation', () => {
+    let state = createInitialState(true);
+    state = cliReducer(state, { type: 'START_SPECIALISTS' });
+    expect(state.screen).toBe('specialist');
+    expect(state.runStatus).toBe('running');
+    expect(state.specialists.every(s => s.state === 'queued')).toBe(true);
+
+    // Step advances queued to running
+    state = cliReducer(state, { type: 'STEP_ALL_PROGRESS' });
+    expect(state.specialists.every(s => s.state === 'running')).toBe(true);
+
+    // Reset to queued
+    state = cliReducer(state, { type: 'RESET_SPECIALISTS_QUEUED' });
+    expect(state.specialists.every(s => s.state === 'queued')).toBe(true);
+
+    // Fail quality and timeout architecture
+    state = cliReducer(state, { type: 'SIMULATE_FAILURE', role: 'quality', reason: 'fail' });
+    state = cliReducer(state, { type: 'SPECIALIST_TIMEOUT', role: 'architecture' });
+    // Resetting queue preserves failed and timed_out lanes
+    state = cliReducer(state, { type: 'RESET_SPECIALISTS_QUEUED' });
+    expect(state.specialists.find(s => s.role === 'quality')?.state).toBe('failed');
+    expect(state.specialists.find(s => s.role === 'architecture')?.state).toBe('timed_out');
+    expect(state.specialists.find(s => s.role === 'security')?.state).toBe('queued');
+
+    // Finish specialists
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    expect(state.screen).toBe('consensus');
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    expect(state.screen).toBe('report');
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'publish' });
+    state = cliReducer(state, { type: 'APPROVE_PUBLISH' });
+    expect(state.runStatus).toBe('published');
+
+    // Backward navigation from publish -> report -> consensus -> specialist
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'report' });
+    expect(state.screen).toBe('report');
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'consensus' });
+    expect(state.screen).toBe('consensus');
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'specialist' });
+    expect(state.screen).toBe('specialist');
+
+    // CANCEL_RUN does not cancel a published run
+    state = cliReducer(state, { type: 'CANCEL_RUN' });
+    expect(state.screen).toBe('specialist');
+    expect(state.runStatus).toBe('published');
+
+    // Forward navigation does not trap operator
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    expect(state.screen).toBe('consensus');
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    expect(state.screen).toBe('report');
   });
 });

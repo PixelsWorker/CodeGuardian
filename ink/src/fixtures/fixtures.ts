@@ -123,6 +123,22 @@ export const SYNTHETIC_FINDINGS: ReviewFinding[] = [
     verification: "needs_context",
     fingerprint: "db/redis.ts:24:missing_timeout:arch",
   },
+  {
+    id: "f-005",
+    source_workers: ["quality"],
+    severity: "P2",
+    category: "correctness",
+    title: "Legacy helper assertion called outside modified diff hunk",
+    path: "src/utils/legacy-helper.ts",
+    line: 142,
+    side: "RIGHT",
+    evidence: "Specialist suggested check on unmodified helper function line 142, which is outside the PR diff boundaries.",
+    impact: "Comment on unmodified code outside PR scope violates review boundary safeguards.",
+    recommendation: "Omit comment from PR inline review; retain in audit log only.",
+    confidence: "low",
+    verification: "rejected",
+    fingerprint: "utils/legacy-helper.ts:142:outside_diff:qty",
+  },
 ];
 
 export const CANONICAL_SPECIALISTS: WorkerInfo[] = [
@@ -178,8 +194,8 @@ export const CANONICAL_SPECIALISTS: WorkerInfo[] = [
     state: "complete",
     progress: 100,
     elapsedMs: 3500,
-    findingsCount: 1,
-    currentActivity: "Analysis complete. 1 verified finding.",
+    findingsCount: 2,
+    currentActivity: "Analysis complete. 1 verified finding (1 candidate outside diff).",
     logs: [
       "[INFO] Evaluating test coverage for new auth routes...",
       "[WARN] Corroborating memory leak finding with Architecture lane",
@@ -194,7 +210,7 @@ export const SYNTHETIC_REPORT: ReviewReport = finalizeReport({
   pr: SYNTHETIC_PR_IDENTITY,
   status: "ready",
   findings: SYNTHETIC_FINDINGS,
-  summary: "Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated publishing is gated on operator dry-run review.",
+  summary: "Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is gated on operator dry-run review.",
   tests: {
     executed: false,
     details: [

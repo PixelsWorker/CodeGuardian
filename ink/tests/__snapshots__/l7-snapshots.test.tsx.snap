@@ -180,6 +180,14 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 4 — Diff I
  │ Changes: +115 -27 across 5 modified files                                                      │
  └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ⚠️  Pre-Review Surface Risk Classifier:                              HIGH RISK (AUTH & CRYPTO) │
+ │                                                                                                │
+ │ • RISK: SENSITIVE_AUTH_PATH (\`src/auth/*\` modified)                                            │
+ │ • RISK: NEW_EXTERNAL_DEP (\`jsonwebtoken\` added to package.json)                                │
+ │ • SURFACE: IN_MEMORY_CACHE_STATE (\`src/auth/session.ts\` introduces unbounded map)              │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
  Changed Files List (Use [↑/↓] or [j/k] to preview diff hunks):
 
   ▶ src/demo.ts +12 -4
@@ -252,7 +260,8 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 5 — Specia
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
  │ Interactive Scenario Controls:                                                                 │
- │ • Press [Space] to step/advance streaming worker progress                                      │
+ │ • Press [Space] to start/advance streaming worker progress                                     │
+ │ • Press [U] to simulate Queued worker pool state                                               │
  │ • Press [F] to simulate Partial Failure (Quality lane)                                         │
  │ • Press [T] to simulate Worker Timeout (Architecture lane)                                     │
  │ • Press [K] to simulate Worker Skip (Quality lane)                                             │
@@ -278,17 +287,19 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 6 — Manage
  Validation Pipeline Verification Checks:
  ℹ️ Verification triage: 3 verified against PR changed lines, 1 require broader context
  (summary-only)
+ ✗ 1 finding(s) rejected as outside PR changed-line boundaries
  ✓ Deduplicated overlap between Architecture and Quality on session memory leak
  ✓ PII / Credentials scrubbed from evidence quotes
 
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
  │ Consensus Summary Statistics:                                                                  │
- │ • Total Candidate Findings: 4                                                                  │
+ │ • Total Candidate Findings: 5                                                                  │
  │ • Verified Diff Findings: 3 (eligible for inline review)                                       │
  │ • Uncertain / Needs Context: 1 (summary-only, omitted from inline)                             │
+ │ • Rejected Findings: 1 (outside diff boundary)                                                 │
  │ • P1 Critical Flaws: 2                                                                         │
- │ • P2 Reliability/Perf Flaws: 2                                                                 │
+ │ • P2 Reliability/Perf Flaws: 1                                                                 │
  │                                                                                                │
  └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -354,7 +365,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Public
  │ • Target PR: #42 (example/demo)                                                                │
  │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
  │ • Cryptographic Report Digest:                                                                 │
- │ sha256-a265038c8acabfc28dcf80316b5730fa7e73b3c2943ad3e0b510e3799f433289                        │
+ │ sha256-de31eed146a23ddd379a6395dcb35b4194136307a74e9d2d7ab2b6618fda1753                        │
  │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
  │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
  │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
@@ -362,8 +373,9 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Public
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
  Run: run-20261016-demo42 | Review status: ready
- Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated
- publishing is gated on operator dry-run review.
+ Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
+ P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
+ gated on operator dry-run review.
  worker-sec: complete
  worker-log: complete
  worker-arc: complete
@@ -395,7 +407,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Simula
  │ • Target PR: #42 (example/demo)                                                                │
  │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
  │ • Cryptographic Report Digest:                                                                 │
- │ sha256-a265038c8acabfc28dcf80316b5730fa7e73b3c2943ad3e0b510e3799f433289                        │
+ │ sha256-de31eed146a23ddd379a6395dcb35b4194136307a74e9d2d7ab2b6618fda1753                        │
  │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
  │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
  │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
@@ -403,8 +415,9 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Simula
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
  Run: run-20261016-demo42 | Review status: ready
- Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated
- publishing is gated on operator dry-run review.
+ Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
+ P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
+ gated on operator dry-run review.
  worker-sec: complete
  worker-log: complete
  worker-arc: complete
@@ -436,7 +449,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Stale 
  │ • Target PR: #42 (example/demo)                                                                │
  │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
  │ • Cryptographic Report Digest:                                                                 │
- │ sha256-a265038c8acabfc28dcf80316b5730fa7e73b3c2943ad3e0b510e3799f433289                        │
+ │ sha256-de31eed146a23ddd379a6395dcb35b4194136307a74e9d2d7ab2b6618fda1753                        │
  │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
  │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
  │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
@@ -444,8 +457,9 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Stale 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
  Run: run-20261016-demo42 | Review status: ready
- Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated
- publishing is gated on operator dry-run review.
+ Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
+ P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
+ gated on operator dry-run review.
  worker-sec: complete
  worker-log: complete
  worker-arc: complete

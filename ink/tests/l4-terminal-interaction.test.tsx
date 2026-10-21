@@ -139,12 +139,20 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
   });
 
   it('demonstrates streaming progress, timeout, skip, failure, and cancel on SpecialistScreen', async () => {
-    // 1. Test [Space] stepping progress
+    // 1. Test initial [QUEUED] state and [Space] stepping progress
     const streamApp = render(<App initialScreen="specialist" isDemo={true} />);
-    expect(streamApp.lastFrame()).toContain('RUNNING (10%)');
+    expect(streamApp.lastFrame()).toContain('QUEUED');
     streamApp.stdin.write(' ');
     await delay();
-    expect(streamApp.lastFrame()).toContain('RUNNING (40%)');
+    expect(streamApp.lastFrame()).toContain('RUNNING (25%)');
+
+    // Test [U] re-queuing
+    streamApp.stdin.write('u');
+    await delay();
+    expect(streamApp.lastFrame()).toContain('QUEUED');
+    streamApp.stdin.write(' ');
+    await delay();
+    expect(streamApp.lastFrame()).toContain('RUNNING (25%)');
 
     // 2. Test [T] timeout on Architecture lane
     streamApp.stdin.write('t');

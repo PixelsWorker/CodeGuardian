@@ -41,9 +41,9 @@ export function App({ initialScreen = "welcome", initialPrUrl, initialReport, is
       s.runStatus = "running";
       s.specialists = s.specialists.map(sp => ({
         ...sp,
-        state: "running",
-        progress: 10,
-        currentActivity: "Analyzing diff hunks against policy...",
+        state: "queued",
+        progress: 0,
+        currentActivity: "Queued in manager execution pool. Waiting for worker assignment...",
       }));
     } else if (initialScreen === "inspection") {
       s.runStatus = "inspecting";
@@ -134,7 +134,14 @@ export function App({ initialScreen = "welcome", initialPrUrl, initialReport, is
             onTimeoutLane={(role, reason) => dispatch({ type: "SPECIALIST_TIMEOUT", role, reason })}
             onSkipLane={(role, reason) => dispatch({ type: "SPECIALIST_SKIP", role, reason })}
             onStepProgress={() => dispatch({ type: "STEP_ALL_PROGRESS" })}
-            onCancel={() => dispatch({ type: "CANCEL_RUN" })}
+            onResetQueue={() => dispatch({ type: "RESET_SPECIALISTS_QUEUED" })}
+            onCancel={() => {
+              if (state.runStatus === "published") {
+                dispatch({ type: "NAVIGATE", screen: "inspection" });
+              } else {
+                dispatch({ type: "CANCEL_RUN" });
+              }
+            }}
           />
         )}
 
@@ -179,7 +186,17 @@ export function App({ initialScreen = "welcome", initialPrUrl, initialReport, is
         )}
       </Box>
 
-      <Footer />
+      <Footer hints={
+        state.screen === "specialist" ? (
+          state.runStatus === "published"
+            ? ["[Enter] Synthesize", "[Esc] Back", "[Q] Quit"]
+            : ["[Enter] Synthesize", "[Esc] Cancel run", "[Q] Quit"]
+        )
+        : state.screen === "error" ? ["[R] Retry", "[Esc] Exit", "[Q] Quit"]
+        : state.screen === "welcome" ? ["[Enter] Begin", "[A] Auth status", "[Q] Quit"]
+        : state.screen === "pr_input" ? ["[Enter] Submit", "[Esc] Back", "[Ctrl+C] Quit"]
+        : ["[Enter] Continue", "[Esc] Back", "[Q] Quit"]
+      } />
     </Box>
   );
 }

@@ -141,8 +141,9 @@ describe('L7 — Deterministic Terminal Snapshots', () => {
     );
     const frame = cleanSnapshotFrame(lastFrame());
     expect(frame).toContain('FULL CONSENSUS READY');
-    expect(frame).toContain('Total Candidate Findings: 4');
+    expect(frame).toContain('Total Candidate Findings: 5');
     expect(frame).toContain('Verified Diff Findings: 3');
+    expect(frame).toContain('Rejected Findings: 1');
     expect(frame).toMatchSnapshot();
   });
 
