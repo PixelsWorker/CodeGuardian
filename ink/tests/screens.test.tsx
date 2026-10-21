@@ -62,7 +62,7 @@ describe('G00 Nine-Screen Terminal Components', () => {
       <PrEntryScreen
         prUrl="https://github.com/example/demo/pull/42"
         error={null}
-        onChangeUrl={() => {}}
+        onEditUrl={() => {}}
         onSubmit={() => {}}
         onBack={() => {}}
       />
@@ -76,7 +76,7 @@ describe('G00 Nine-Screen Terminal Components', () => {
       <PrEntryScreen
         prUrl="https://gitlab.com/wrong/url"
         error="Invalid GitHub PR URL. Expected format: https://github.com/:owner/:repo/pull/:number"
-        onChangeUrl={() => {}}
+        onEditUrl={() => {}}
         onSubmit={() => {}}
         onBack={() => {}}
       />
@@ -138,6 +138,8 @@ describe('G00 Nine-Screen Terminal Components', () => {
     );
     expect(lastFrame()).toContain('Consolidated Review Report');
     expect(lastFrame()).toContain('Null input is dereferenced in token resolver');
+    expect(lastFrame()).toContain('Findings (4 total — use [↑/↓] to inspect):');
+    expect(lastFrame()).not.toContain('Verified Findings');
   });
 
   it('renders Screen 8: PublishScreen with dry-run safety warnings', () => {

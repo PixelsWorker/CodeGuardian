@@ -17,6 +17,7 @@ import {
   CANONICAL_SPECIALISTS,
   SYNTHETIC_FINDINGS,
   SYNTHETIC_REPORT,
+  SYNTHETIC_PARTIAL_REPORT,
 } from '../src/fixtures/fixtures.js';
 
 // Helper to sanitize terminal frame for deterministic snapshotting
@@ -78,7 +79,7 @@ describe('L7 — Deterministic Terminal Snapshots', () => {
       <PrEntryScreen
         prUrl="https://gitlab.com/invalid/repo/pull/99"
         error="Invalid GitHub PR URL. Expected format: https://github.com/:owner/:repo/pull/:number"
-        onChangeUrl={() => {}}
+        onEditUrl={() => {}}
         onSubmit={() => {}}
         onBack={() => {}}
       />
@@ -146,11 +147,7 @@ describe('L7 — Deterministic Terminal Snapshots', () => {
   });
 
   it('Snapshot: Screen 7 — Partial Review Report', () => {
-    const partialReport = {
-      ...SYNTHETIC_REPORT,
-      status: 'partial' as const,
-      summary: 'PARTIAL REVIEW: Incomplete specialist coverage (Quality lane failed).',
-    };
+    const partialReport = SYNTHETIC_PARTIAL_REPORT;
 
     const { lastFrame } = render(
       <ReportScreen

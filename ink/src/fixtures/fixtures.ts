@@ -1,4 +1,6 @@
-import { PullRequestIdentity, ReviewFinding, ReviewReport, WorkerInfo } from '../types/contracts.js';
+import { finalizeReport } from '../core/report-digest.js';
+import { parseGitHubPrUrl } from '../core/github-url.js';
+import type { PullRequestIdentity, ReviewFinding, ReviewReport, WorkerInfo } from '../types/contracts.js';
 
 export const SYNTHETIC_PR_IDENTITY: PullRequestIdentity = {
   provider: "github",
@@ -186,7 +188,7 @@ export const CANONICAL_SPECIALISTS: WorkerInfo[] = [
   },
 ];
 
-export const SYNTHETIC_REPORT: ReviewReport = {
+export const SYNTHETIC_REPORT: ReviewReport = finalizeReport({
   schema_version: "1.0.0",
   run_id: "run-20261016-demo42",
   pr: SYNTHETIC_PR_IDENTITY,
@@ -212,39 +214,8 @@ export const SYNTHETIC_REPORT: ReviewReport = {
   ],
   generated_at: "2026-10-16T11:25:00Z",
   policy_revision: "codeguardian-v1.0-strict",
-  report_digest: "sha256-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-};
-
-export const SYNTHETIC_PARTIAL_REPORT: ReviewReport = {
-  schema_version: "1.0.0",
-  run_id: "run-20261016-g00-partial",
-  pr: SYNTHETIC_PR_IDENTITY,
-  status: "partial",
-  findings: SYNTHETIC_FINDINGS.filter(f => !f.source_workers.includes("quality")),
-  summary: "PARTIAL REVIEW: Incomplete specialist coverage (Quality, Testing & Performance failed). Automated publishing gated on operator review.",
-  tests: {
-    executed: false,
-    details: [
-      "No actual unit tests executed by specialist lanes (static analysis mode)",
-      "Findings verified against syntactic diff placement"
-    ],
-  },
-  worker_states: [
-    { worker_id: "worker-sec", state: "complete" },
-    { worker_id: "worker-log", state: "complete" },
-    { worker_id: "worker-arc", state: "complete" },
-    { worker_id: "worker-qty", state: "failed" },
-  ],
-  warnings: [
-    "Tests were not executed directly by specialist workers (tests.executed=false)",
-    "Findings based on AST diff heuristic simulation [DEMO ONLY]",
-    "Incomplete worker coverage: 1 specialist lane(s) failed (Quality, Testing & Performance)",
-    "Findings from failed specialists may be omitted or unverified"
-  ],
-  generated_at: "2026-10-16T11:25:00Z",
-  policy_revision: "codeguardian-v1.0-strict",
-  report_digest: "sha256-a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
-};
+  report_digest: "",
+});
 
 export function getReportForRunId(runId: string): ReviewReport | null {
   if (
@@ -263,31 +234,63 @@ export function getReportForRunId(runId: string): ReviewReport | null {
   ) {
     return SYNTHETIC_PARTIAL_REPORT;
   }
-  const customMatch = runId.match(/^run-\d{8}-([a-zA-Z0-9_-]+)-([a-zA-Z0-9_-]+)-(\d+)(-partial)?$/);
-  if (customMatch) {
-    const [, owner, repo, numStr, partialFlag] = customMatch;
-    const isPartial = Boolean(partialFlag);
-    const prNumber = parseInt(numStr, 10);
-    const prIdentity = {
-      ...SYNTHETIC_PR_IDENTITY,
-      owner,
-      repo,
-      number: prNumber,
-      url: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
-      title: `[DEMO] PR #${prNumber}: ${owner}/${repo}`,
-      author: `${owner}-contributor`,
-      head_branch: `feature/pr-${prNumber}`,
-    };
-    const base = isPartial ? SYNTHETIC_PARTIAL_REPORT : SYNTHETIC_REPORT;
-    return {
-      ...base,
-      run_id: runId,
-      pr: prIdentity,
-      summary: isPartial
-        ? `PARTIAL REVIEW: Incomplete specialist coverage for ${owner}/${repo}#${prNumber}. Quality specialist failed.`
-        : `Completed review of PR #${prNumber} (${owner}/${repo}) across 4 canonical specialists.`,
-      report_digest: `sha256-custom-${owner}-${repo}-${prNumber}-${isPartial ? 'partial' : 'full'}`,
-    };
-  }
-  return null;
+  // '~' cannot occur in validated owner/repository segments. Four ordered
+  // outcome codes preserve Security, Logic, Architecture and Quality independently.
+  const match = runId.match(/^run-g00~([^~]+)~([^~]+)~([1-9][0-9]*)~([cftsp]{4})$/);
+  if (!match) return null;
+  const [, owner, repo, number, codes] = match;
+  const parsed = parseGitHubPrUrl(`https://github.com/${owner}/${repo}/pull/${number}`);
+  if (!parsed) return null;
+  const canonical = owner === 'example' && repo === 'demo' && parsed.number === 42;
+  const pr = canonical ? SYNTHETIC_PR_IDENTITY : {
+    ...SYNTHETIC_PR_IDENTITY, ...parsed,
+    title: `[DEMO] PR #${number}: ${owner}/${repo}`,
+    author: `${owner}-contributor`, head_branch: `feature/pr-${number}`,
+  };
+  const workers = CANONICAL_SPECIALISTS.map((worker, i) => ({ ...worker, state: codeToState[codes[i]] }));
+  const report = buildDemoReport(pr, workers);
+  // Reject alternate encodings and legacy ambiguous owner-repo IDs.
+  return report.run_id === runId ? report : null;
 }
+
+const stateToCode: Record<string, string> = { complete: 'c', failed: 'f', timed_out: 't', skipped: 's', partial: 'p' };
+const codeToState: Record<string, WorkerInfo['state']> = { c: 'complete', f: 'failed', t: 'timed_out', s: 'skipped', p: 'partial' };
+export const WORKER_IDS = ['worker-sec', 'worker-log', 'worker-arc', 'worker-qty'];
+
+/** Deterministic offline demo recipes, not a store of arbitrary past sessions. */
+export function buildDemoReport(pr: PullRequestIdentity, workers: WorkerInfo[], findings = SYNTHETIC_FINDINGS): ReviewReport {
+  const ordered = CANONICAL_SPECIALISTS.map(lane => workers.find(w => w.role === lane.role)!);
+  if (ordered.some(w => !w || !stateToCode[w.state])) throw new Error('Cannot finalize unfinished specialist results');
+  const codes = ordered.map(w => stateToCode[w.state]).join('');
+  const canonical = pr.owner === 'example' && pr.repo === 'demo' && pr.number === 42;
+  const missing = ordered.filter(w => w.state !== 'complete');
+  const run_id = canonical && codes === 'cccc' ? SYNTHETIC_REPORT.run_id
+    : canonical && codes === 'cccf' ? 'run-20261016-g00-partial'
+    : `run-g00~${pr.owner}~${pr.repo}~${pr.number}~${codes}`;
+  const unavailableRoles = missing.filter(w => w.state !== 'partial').map(w => w.role);
+  // A corroborating completed worker may still contribute a finding.
+  const availableFindings = findings.filter(f => f.source_workers.some(role => !unavailableRoles.includes(role as WorkerInfo['role'])));
+  const limitations = missing.map(w => `${w.displayName}: ${w.state}`);
+  const summary = missing.length
+    ? `PARTIAL REVIEW: Incomplete specialist coverage (${limitations.join('; ')}). Automated publishing gated on operator review.`
+    : canonical ? SYNTHETIC_REPORT.summary : `Completed review of PR #${pr.number} (${pr.owner}/${pr.repo}) across 4 canonical specialists.`;
+  return finalizeReport({
+    ...SYNTHETIC_REPORT, run_id, pr, status: missing.length ? 'partial' : 'ready',
+    findings: availableFindings, summary,
+    worker_states: ordered.map((w, i) => ({ worker_id: WORKER_IDS[i], state: w.state === 'timed_out' ? 'failed' : w.state as 'complete' | 'failed' | 'skipped' | 'partial' })),
+    warnings: [...SYNTHETIC_REPORT.warnings, ...limitations.map(w => `Incomplete worker coverage: ${w}`)],
+  });
+}
+
+/** Restore final worker states on CLI publish/back navigation; timeouts remain
+ * contract-compatible 'failed' worker results, with their cause in warnings. */
+export function restoreSpecialists(report: ReviewReport): WorkerInfo[] {
+  return CANONICAL_SPECIALISTS.map((worker, i) => {
+    let state: WorkerInfo['state'] = report.worker_states.find(w => w.worker_id === WORKER_IDS[i])?.state ?? 'skipped';
+    if (state === 'failed' && report.warnings.some(w => w.includes(worker.displayName) && w.includes('timed_out'))) state = 'timed_out';
+    return { ...worker, state, currentActivity: `Loaded report: ${state}` };
+  });
+}
+
+// Keep the historical partial alias consistent with the same recipe used by TUI runs.
+export const SYNTHETIC_PARTIAL_REPORT = buildDemoReport(SYNTHETIC_PR_IDENTITY, CANONICAL_SPECIALISTS.map(w => ({ ...w, state: w.role === 'quality' ? 'failed' : 'complete' })));

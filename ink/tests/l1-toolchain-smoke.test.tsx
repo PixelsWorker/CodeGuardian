@@ -70,7 +70,9 @@ describe('L1 — Toolchain & Ink 8 Smoke Testing', () => {
 
     const cliContent = fs.readFileSync(cliDistPath, 'utf8');
     expect(cliContent.length).toBeGreaterThan(100);
-    expect(cliContent).toContain('#!/usr/bin/env node');
+    expect(cliContent.startsWith('#!/usr/bin/env node\n')).toBe(true);
+    const cliSource = fs.readFileSync(path.join(inkRoot, 'src/cli.tsx'), 'utf8');
+    expect(cliSource.startsWith('#!/usr/bin/env node\n')).toBe(true);
     expect(cliContent).toContain('createCliProgram');
   });
 

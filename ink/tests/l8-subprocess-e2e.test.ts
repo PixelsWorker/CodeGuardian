@@ -34,7 +34,7 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
   beforeAll(() => {
     expect(fs.existsSync(cliScript)).toBe(true);
   });
-  it('verifies declared package.json bin entry executes compiled binary under Node 24', () => {
+  it('verifies declared package.json bin entry executes compiled binary under the current Node runtime', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(inkRoot, 'package.json'), 'utf8'));
     const binPath = path.resolve(inkRoot, pkg.bin.codeguardian);
     expect(fs.existsSync(binPath)).toBe(true);
@@ -46,7 +46,7 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
     expect(result.trim()).toBe('0.1.0');
   });
 
-  it('executes --help in Windows subprocess and exits with code 0', () => {
+  it('executes --help in the current-platform subprocess and exits with code 0', () => {
     const { status, stdout, stderr, error } = runCliSubprocess(['--help']);
     expect(error).toBeUndefined();
     expect(status).toBe(0);
@@ -56,7 +56,7 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
     expect(stdout).toContain('publish');
   });
 
-  it('executes --version in Windows subprocess and exits with code 0', () => {
+  it('executes --version in the current-platform subprocess and exits with code 0', () => {
     const { status, stdout, stderr, error } = runCliSubprocess(['--version']);
     expect(error).toBeUndefined();
     expect(status).toBe(0);

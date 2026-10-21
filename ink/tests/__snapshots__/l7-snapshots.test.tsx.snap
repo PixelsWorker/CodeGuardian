@@ -296,15 +296,16 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 6 — Manage
 `;
 
 exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 7 — Partial Review Report 1`] = `
-"Consolidated Review Report (Run: run-20261016-demo42):                           Format: [SUMMARY]
+"Consolidated Review Report (Run: run-20261016-g00-partial):                      Format: [SUMMARY]
 
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                │
- │ PARTIAL REVIEW: Incomplete specialist coverage (Quality lane failed).                          │
+ │ PARTIAL REVIEW: Incomplete specialist coverage (Quality, Testing & Performance Specialist:     │
+ │ failed). Automated publishing gated on operator review.                                        │
  │                                                                                                │
  └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
- Verified Findings (4 total — use [↑/↓] to inspect):
+ Findings (4 total — use [↑/↓] to inspect):
 
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
  │                                                                                                │
@@ -324,6 +325,15 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 7 — Partia
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Status: partial | Digest: sha256-c1dace56992d2c8446bd1c3a5992d8c8eafc2eecc64efe4833dbc293ef69c18e
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: failed
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
+ Incomplete worker coverage: Quality, Testing & Performance Specialist: failed
+ [E] Full current report (no file writes); CLI IDs reconstruct fixed offline recipes.
  Controls: Press [M] for Markdown toggle | [J] for JSON toggle
 
  Press [Enter] to Open Dry-Run Publication Gate  |  Press [Esc] to Return"
@@ -343,17 +353,27 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Public
  │ Publication Payload Verification:                                                              │
  │ • Target PR: #42 (example/demo)                                                                │
  │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
- │ • Cryptographic Report Digest: sha256-e3b0c44298fc1c149afbf4c89...                             │
+ │ • Cryptographic Report Digest:                                                                 │
+ │ sha256-a265038c8acabfc28dcf80316b5730fa7e73b3c2943ad3e0b510e3799f433289                        │
  │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
  │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
  │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Run: run-20261016-demo42 | Review status: ready
+ Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated
+ publishing is gated on operator dry-run review.
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: complete
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
  ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
  ║                                                                                                ║
  ║ ✗ PUBLICATION DENIED BY OPERATOR                                                               ║
- ║ Review submission aborted. Report remains safely exported to local run artifact.               ║
+ ║ Review submission aborted. Report remains available in the current session.                    ║
  ║                                                                                                ║
  ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
 
@@ -374,13 +394,23 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Simula
  │ Publication Payload Verification:                                                              │
  │ • Target PR: #42 (example/demo)                                                                │
  │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
- │ • Cryptographic Report Digest: sha256-e3b0c44298fc1c149afbf4c89...                             │
+ │ • Cryptographic Report Digest:                                                                 │
+ │ sha256-a265038c8acabfc28dcf80316b5730fa7e73b3c2943ad3e0b510e3799f433289                        │
  │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
  │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
  │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Run: run-20261016-demo42 | Review status: ready
+ Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated
+ publishing is gated on operator dry-run review.
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: complete
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
  ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
  ║                                                                                                ║
  ║ ✓ SIMULATED PUBLICATION CONFIRMED                                                              ║
@@ -405,13 +435,23 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Stale 
  │ Publication Payload Verification:                                                              │
  │ • Target PR: #42 (example/demo)                                                                │
  │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
- │ • Cryptographic Report Digest: sha256-e3b0c44298fc1c149afbf4c89...                             │
+ │ • Cryptographic Report Digest:                                                                 │
+ │ sha256-a265038c8acabfc28dcf80316b5730fa7e73b3c2943ad3e0b510e3799f433289                        │
  │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
  │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
  │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Run: run-20261016-demo42 | Review status: ready
+ Completed review of PR #42 across 4 canonical specialists. Found 2 P1 and 2 P2 issues. Automated
+ publishing is gated on operator dry-run review.
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: complete
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
  ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
  ║                                                                                                ║
  ║ ✗ PUBLICATION BLOCKED: STALE HEAD SHA                                                          ║

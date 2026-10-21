@@ -98,3 +98,30 @@ In all fixtures, screens, and progress indicators, Codex must use the canonical 
 - [ ] `npm test` runs all component tests and passes cleanly.
 - [ ] `npm run build` (`tsc`) passes with zero TypeScript errors.
 - [ ] Zero real external network calls (no GitHub API, no OpenAI SDK, no Jules, no PR-Agent).
+
+
+## 2026-10-21 bounded correction run — verification blocked
+
+- Working branch: `feat/g00-ink-cli-demo`; opening HEAD `db72749cb1dee6e43f20a10f45dccb1b2aec7961`.
+- Implemented reducer-based PR text edits; buffered non-raw CSI/CRLF/UTF-8 input; shared stream listener lifecycle.
+- Implemented deterministic offline report recipes encoding owner, repository, PR number and four worker outcomes; full current-session report display; restored loaded report coverage on backward navigation.
+- Added canonical SHA-256 finalization, strict shared URL parsing, explicit skipped/partial coverage and focused L2/L3/L4/L6/L8 regressions.
+- Removed only the redundant `pretest` manifest entry. No dependency or lockfile changes.
+- Supplementary Node 24 source checks passed 2,500 recipe round-trips and stream parser cases. This is NOT an eight-layer suite receipt.
+- Full Vitest/type/compiled-CLI execution BLOCKED: this Linux checkout has no Ink dependencies. Installation permission requested; no packages installed.
+- Windows TTY/non-TTY acceptance UNAVAILABLE in this Linux environment. Snapshot updates require actual renderer execution; existing snapshots preserved.
+- Evidence: workspace sibling `evidence/g00-ink-cli-demo/2026-10-21-corrections/`.
+- No commits, pushes, merges, PR state changes or G01 work. G00 technical and operator acceptance remain open.
+
+
+## 2026-10-21 dependency-backed Linux verification — supersedes blocked status above
+
+- Explicit one-time dependency restoration approved. `npm ci --ignore-scripts --no-audit --no-fund` succeeded; no package lifecycle script was enabled.
+- Existing locked toolchain: Node 24.21.0, TypeScript 5.9.3, Vitest 5.0.5, React 19.3.1, Ink 8.0.0. Locked TypeScript `--noEmit`: PASS, zero diagnostics.
+- Full Linux eight-layer run: **227/227 tests across 16 files PASS; 14/14 snapshots match**. Four intended report/publication snapshots updated after inspecting their differences; partial snapshot uses the actual partial fixture.
+- Linux compiled CLI: redirected whole/split URL, CSI, CRLF, custom/partial exports and digest/publication parity pass. Test network guard allows Yoga's bundled WASM data URL while continuing to reject external connections.
+- Separate real Linux PTY run: nine screens, 40/60/80/100-column resize responsiveness, progress, Architecture timeout, Quality skip, partial digest parity, stale/permission/duplicate gates, confirmation, reset, auth error/retry, Escape cancellation and q exit PASS.
+- Evidence: workspace sibling `evidence/g00-ink-cli-demo/2026-10-21-dependency-verification/`.
+- Windows TTY/non-TTY and Rockson's full operator UI/UX acceptance remain separate pending gates. No accessible Windows workspace was verified from Linux.
+- Addressed GitHub review findings: restricted simulated failure scenarios to exact preset identities in `state-machine.ts` (eliminating substring false positives on repos like `draft-js`), verified `ReportScreen.tsx` avoids mislabeling unverified findings as verified, and added focused regressions. Full suite: **237/237 tests PASS; 14/14 snapshots match**.
+- Existing uncommitted correction set retained. No commit, push, merge, PR state change, dependency/lockfile change or G01 work.

@@ -12,6 +12,7 @@ interface ReportScreenProps {
 
 export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScreenProps) {
   const [format, setFormat] = useState<"summary" | "markdown" | "json">("summary");
+  const [fullExport, setFullExport] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
 
   useSafeInput((input, key) => {
@@ -23,6 +24,8 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
       setFormat(prev => (prev === "markdown" ? "summary" : "markdown"));
     } else if (input === 'j' || input === 'J') {
       setFormat(prev => (prev === "json" ? "summary" : "json"));
+    } else if (input === 'e' || input === 'E') {
+      setFullExport(prev => !prev);
     } else if (key.downArrow) {
       setSelectedIdx(prev => (prev < report.findings.length - 1 ? prev + 1 : prev));
     } else if (key.upArrow) {
@@ -48,7 +51,7 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
 
           <Box marginBottom={1}>
             <Text bold color="white">
-              Verified Findings ({report.findings.length} total — use [↑/↓] to inspect):
+              Findings ({report.findings.length} total — use [↑/↓] to inspect):
             </Text>
           </Box>
 
@@ -81,23 +84,27 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
 
       {format === "markdown" && (
         <Box borderStyle="single" borderColor="gray" padding={1} marginBottom={1} flexDirection="column">
-          <Text color="cyan">{formatReportMarkdown(report).substring(0, 800)}...</Text>
+          <Text color="cyan">{fullExport ? formatReportMarkdown(report) : `${formatReportMarkdown(report).substring(0, 800)}...`}</Text>
           <Box marginTop={1}>
-            <Text color="gray">[Truncated terminal preview. Full export: codeguardian report {report.run_id} --format markdown]</Text>
+            <Text color="gray">[E toggles full in-session export. CLI offline recipe: codeguardian report {report.run_id} --format markdown]</Text>
           </Box>
         </Box>
       )}
 
       {format === "json" && (
         <Box borderStyle="single" borderColor="gray" padding={1} marginBottom={1} flexDirection="column">
-          <Text color="green">{formatReportJson(report).substring(0, 800)}...</Text>
+          <Text color="green">{fullExport ? formatReportJson(report) : `${formatReportJson(report).substring(0, 800)}...`}</Text>
           <Box marginTop={1}>
-            <Text color="gray">[Truncated terminal preview. Full export: codeguardian report {report.run_id} --format json]</Text>
+            <Text color="gray">[E toggles full in-session export. CLI offline recipe: codeguardian report {report.run_id} --format json]</Text>
           </Box>
         </Box>
       )}
 
       <Box flexDirection="column" marginBottom={1}>
+        <Text>Status: {report.status} | Digest: {report.report_digest}</Text>
+        {report.worker_states.map(w => <Text key={w.worker_id}>{w.worker_id}: {w.state}</Text>)}
+        {report.warnings.map((w, i) => <Text key={i} color="yellow">{w}</Text>)}
+        <Text color="gray">[E] Full current report (no file writes); CLI IDs reconstruct fixed offline recipes.</Text>
         <Text color="gray">Controls: Press <Text bold color="cyan">[M]</Text> for Markdown toggle | <Text bold color="cyan">[J]</Text> for JSON toggle</Text>
       </Box>
 

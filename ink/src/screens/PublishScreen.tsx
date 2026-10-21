@@ -98,12 +98,19 @@ export function PublishScreen({
         <Text bold color="white">Publication Payload Verification:</Text>
         <Text color="gray">• Target PR: <Text color="white">#{report.pr.number} ({report.pr.owner}/{report.pr.repo})</Text></Text>
         <Text color="gray">• Target Head SHA: <Text color="white">{report.pr.head_sha}</Text></Text>
-        <Text color="gray">• Cryptographic Report Digest: <Text color="cyan">{report.report_digest.substring(0, 32)}...</Text></Text>
+        <Text color="gray">• Cryptographic Report Digest: <Text color="cyan">{report.report_digest}</Text></Text>
         <Text color="gray">• Review Action: <Text bold color="white">COMMENT</Text> (Never APPROVE or REQUEST_CHANGES)</Text>
         <Text color="gray">• Inline Comments: <Text color="white">{verifiedInline.length} findings placed on verified diff hunks</Text></Text>
         {uncertainSummary.length > 0 && (
           <Text color="yellow">• Summary-only Findings: <Text color="yellow">{uncertainSummary.length} unverified findings (needs context, omitted from inline)</Text></Text>
         )}
+      </Box>
+
+      <Box flexDirection="column">
+        <Text>Run: {report.run_id} | Review status: {report.status}</Text>
+        <Text>{report.summary}</Text>
+        {report.worker_states.map(w => <Text key={w.worker_id}>{w.worker_id}: {w.state}</Text>)}
+        {report.warnings.map((w, i) => <Text key={i} color="yellow">{w}</Text>)}
       </Box>
 
       {isDuplicate && !confirmed && !denied && (
@@ -134,7 +141,7 @@ export function PublishScreen({
       ) : denied ? (
         <Box borderStyle="double" borderColor="red" padding={1} flexDirection="column" marginBottom={1}>
           <Text bold color="red">✗ PUBLICATION DENIED BY OPERATOR</Text>
-          <Text color="white">Review submission aborted. Report remains safely exported to local run artifact.</Text>
+          <Text color="white">Review submission aborted. Report remains available in the current session.</Text>
         </Box>
       ) : (
         <Box borderStyle="single" borderColor="cyan" padding={1} marginBottom={1}>

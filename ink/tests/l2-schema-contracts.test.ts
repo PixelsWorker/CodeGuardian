@@ -240,3 +240,10 @@ describe('L2 — Schema and Domain Unit Testing', () => {
     });
   });
 });
+
+
+describe('L2 — Authentic digest shape', () => {
+  it.each(['sample-not-a-real-digest', 'sha256-custom-org-repo-1-full', 'sha256-1234', ''])('rejects placeholder digest %s', report_digest => {
+    expect(ReviewReportSchema.safeParse({ ...SYNTHETIC_REPORT, report_digest }).success).toBe(false);
+  });
+});

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { parseGitHubPrUrl } from './core/github-url.js';
 import React from 'react';
 import { render } from 'ink';
 import { Command } from 'commander';
@@ -48,19 +49,18 @@ export function createCliProgram(options: {
         process.exitCode = 1;
         return;
       }
-      const trimmed = (prUrl || '').trim();
-      const match = trimmed.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)$/);
-      if (!match) {
+      const parsed = parseGitHubPrUrl(prUrl || '');
+      if (!parsed) {
         console.error("Error: Invalid GitHub PR URL. Expected format: https://github.com/:owner/:repo/pull/:number");
         process.exitCode = 1;
         return;
       }
-      renderElement(<App initialScreen="inspection" initialPrUrl={trimmed} isDemo={cmdOpts.demo} />);
+      renderElement(<App initialScreen="inspection" initialPrUrl={parsed.url} isDemo={cmdOpts.demo} />);
     });
 
   program
     .command('report')
-    .description('Export or inspect consolidated review findings')
+    .description('Export a deterministic offline G00 demo recipe (no session storage)')
     .argument('<run_id>', 'Run ID of the review session')
     .option('-f, --format <format>', 'Export format (markdown or json)', 'markdown')
     .action((runId, cmdOpts) => {
@@ -83,7 +83,7 @@ export function createCliProgram(options: {
 
   program
     .command('publish')
-    .description('Inspect dry-run review publication preview and confirmation')
+    .description('Inspect dry-run publication for an offline G00 demo recipe')
     .argument('<run_id>', 'Run ID of the review to publish')
     .option('--dry-run', 'Preview without making external writes', true)
     .option('--no-dry-run', 'Disallow real publication (blocked in G00)')

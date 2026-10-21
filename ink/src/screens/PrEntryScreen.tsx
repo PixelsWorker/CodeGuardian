@@ -5,7 +5,7 @@ import { useSafeInput } from '../hooks/useSafeInput.js';
 interface PrEntryScreenProps {
   prUrl: string;
   error: string | null;
-  onChangeUrl: (url: string) => void;
+  onEditUrl: (edit: { text?: string; backspace?: boolean; preset?: string }) => void;
   onSubmit: () => void;
   onBack: () => void;
 }
@@ -26,7 +26,7 @@ const DEMO_PRESET_SYMBOLS: Record<string, string> = {
   '%': 'https://github.com/example/demo/pull/429',
 };
 
-export function PrEntryScreen({ prUrl, error, onChangeUrl, onSubmit, onBack }: PrEntryScreenProps) {
+export function PrEntryScreen({ prUrl, error, onEditUrl, onSubmit, onBack }: PrEntryScreenProps) {
   useSafeInput((input, key) => {
     if (key.return) {
       onSubmit();
@@ -37,23 +37,22 @@ export function PrEntryScreen({ prUrl, error, onChangeUrl, onSubmit, onBack }: P
       return;
     }
 
-    // Ctrl+1..5 always triggers preset
-    if (key.ctrl && input in DEMO_PRESETS) {
-      onChangeUrl(DEMO_PRESETS[input]);
+    // Reducer decides whether a preset may replace the current text.
+    if (key.ctrl && Object.hasOwn(DEMO_PRESETS, input)) {
+      onEditUrl({ preset: DEMO_PRESETS[input], text: input });
       return;
     }
 
     // [!]..[%] triggers preset when empty or when currently displaying a known preset
-    const isKnownPreset = prUrl === '' || Object.values(DEMO_PRESETS).includes(prUrl);
-    if (input in DEMO_PRESET_SYMBOLS && isKnownPreset) {
-      onChangeUrl(DEMO_PRESET_SYMBOLS[input]);
+    if (Object.hasOwn(DEMO_PRESET_SYMBOLS, input)) {
+      onEditUrl({ preset: DEMO_PRESET_SYMBOLS[input], text: input });
       return;
     }
 
     if (key.backspace || key.delete) {
-      onChangeUrl(prUrl.slice(0, -1));
+      onEditUrl({ backspace: true });
     } else if (input && !key.ctrl && !key.meta) {
-      onChangeUrl(prUrl + input);
+      onEditUrl({ text: input });
     }
   });
 

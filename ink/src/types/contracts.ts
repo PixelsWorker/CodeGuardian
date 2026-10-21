@@ -124,7 +124,7 @@ export const ReviewReportSchema = z.object({
   warnings: z.array(z.string()),
   generated_at: z.string(),
   policy_revision: z.string(),
-  report_digest: z.string(),
+  report_digest: z.string().regex(/^sha256-[0-9a-f]{64}$/),
 });
 export type ReviewReport = z.infer<typeof ReviewReportSchema>;
 

@@ -19,7 +19,7 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
     }
   });
 
-  const hasFailedLanes = specialists.some(s => s.state === "failed" || s.state === "timed_out");
+  const hasFailedLanes = specialists.some(s => s.state !== "complete");
   const verifiedFindings = findings.filter(f => f.verification === "verified_diff");
   const needsContextFindings = findings.filter(f => f.verification === "needs_context");
   const rejectedFindings = findings.filter(f => f.verification === "rejected");
@@ -63,8 +63,11 @@ export function ConsensusScreen({ specialists, findings, onProceed, onBack }: Co
         <Text color="green">✓ Deduplicated overlap between Architecture and Quality on session memory leak</Text>
         <Text color="green">✓ PII / Credentials scrubbed from evidence quotes</Text>
         {hasFailedLanes && (
-          <Text color="yellow">⚠️ Incomplete coverage warning: Specialist failure detected (partial results accepted)</Text>
+          <Text color="yellow">⚠️ Incomplete coverage warning: Specialist failure detected or coverage missing (partial results accepted)</Text>
         )}
+        {specialists.filter(s => s.state !== "complete").map(s => (
+          <Text key={s.role} color="yellow">{s.displayName}: {s.state}</Text>
+        ))}
       </Box>
 
       <Box borderStyle="single" borderColor="cyan" flexDirection="column" padding={1} marginBottom={1}>

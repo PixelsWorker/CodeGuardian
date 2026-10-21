@@ -1,7 +1,8 @@
-import {
+import { parseGitHubPrUrl } from './github-url.js';
+import { buildDemoReport } from '../fixtures/fixtures.js';
+import type {
   ActiveScreen,
   AuthState,
-  FinalWorkerState,
   PullRequestIdentity,
   ReviewFinding,
   ReviewReport,
@@ -13,8 +14,7 @@ import {
   MOCK_DIFF_FILES,
   SYNTHETIC_FINDINGS,
   CANONICAL_SPECIALISTS,
-  SYNTHETIC_REPORT,
-  SYNTHETIC_PARTIAL_REPORT
+  SYNTHETIC_REPORT
 } from '../fixtures/fixtures.js';
 
 export type PublishOutcome =
@@ -47,6 +47,7 @@ export interface CliState {
 export type CliAction =
   | { type: "NAVIGATE"; screen: ActiveScreen }
   | { type: "SET_PR_URL"; url: string }
+  | { type: "EDIT_PR_URL"; text?: string; backspace?: boolean; preset?: string }
   | { type: "SUBMIT_PR_URL" }
   | { type: "START_INSPECTION" }
   | { type: "START_SPECIALISTS" }
@@ -105,7 +106,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         }
       } else if (action.screen === "report") {
         if (state.runStatus === "validating") {
-          const hasFailed = state.specialists.some(s => s.state === "failed" || s.state === "timed_out");
+          const hasFailed = state.specialists.some(s => s.state !== "complete");
           nextStatus = hasFailed ? "partial" : "ready";
         }
       }
@@ -114,6 +115,14 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
 
     case "SET_PR_URL":
       return { ...state, prUrl: action.url, urlError: null };
+
+    case "EDIT_PR_URL": {
+      if (state.screen !== "pr_input") return state;
+      const knownPreset = state.prUrl === '' || [42, 404, 99, 429].some(n => state.prUrl === `https://github.com/example/demo/pull/${n}`) || state.prUrl === 'https://github.com/private-org/secret-repo/pull/1';
+      const prUrl = action.backspace ? Array.from(state.prUrl).slice(0, -1).join('')
+        : action.preset && knownPreset ? action.preset : state.prUrl + (action.text ?? '');
+      return { ...state, prUrl, urlError: null };
+    }
 
     case "SUBMIT_PR_URL": {
       // Block inspection when preflight authentication fails
@@ -127,27 +136,14 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      const trimmed = state.prUrl.trim();
-      const match = trimmed.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)$/);
-      if (!match) {
-        return {
-          ...state,
-          urlError: "Invalid GitHub PR URL. Expected format: https://github.com/:owner/:repo/pull/:number",
-        };
-      }
+      const parsed = parseGitHubPrUrl(state.prUrl);
+      if (!parsed) return { ...state, urlError: "Invalid GitHub PR URL. Expected format: https://github.com/:owner/:repo/pull/:number" };
+      const { owner, repo, number: prNumber, url: trimmed } = parsed;
 
-      const owner = match[1];
-      const repo = match[2];
-      const prNumber = parseInt(match[3], 10);
-      const lowerUrl = trimmed.toLowerCase();
-
-      // Offline PR failure demonstrations
-      if (
-        lowerUrl.includes("unauthorized") ||
-        lowerUrl.includes("forbidden") ||
-        owner === "private-org" ||
-        owner === "unauthorized-org"
-      ) {
+      // Offline PR failure demonstrations: restricted to exact documented preset identities
+      // so arbitrary custom repositories (e.g. 'draft-js', 'closed-loop', 'forbidden-planet')
+      // are not erroneously treated as failure scenarios.
+      if (owner === "private-org" || owner === "unauthorized-org") {
         return {
           ...state,
           screen: "error",
@@ -156,7 +152,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      if (lowerUrl.includes("closed") || lowerUrl.includes("deleted") || prNumber === 404) {
+      if ((owner === "example" && repo === "demo" && prNumber === 404) || (owner === "demo-org" && prNumber === 404)) {
         return {
           ...state,
           screen: "error",
@@ -165,7 +161,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      if (lowerUrl.includes("draft") || prNumber === 99) {
+      if ((owner === "example" && repo === "demo" && prNumber === 99) || (owner === "demo-org" && prNumber === 99)) {
         return {
           ...state,
           screen: "error",
@@ -174,7 +170,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      if (lowerUrl.includes("rate-limit") || lowerUrl.includes("ratelimit") || prNumber === 429) {
+      if ((owner === "example" && repo === "demo" && prNumber === 429) || (owner === "demo-org" && prNumber === 429)) {
         return {
           ...state,
           screen: "error",
@@ -372,7 +368,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       };
 
     case "FINISH_SPECIALISTS":
-      if (state.screen !== "specialist") {
+      if (state.screen !== "specialist" || state.runStatus !== "running") {
         return state;
       }
       return {
@@ -380,7 +376,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         screen: "consensus",
         runStatus: "validating",
         specialists: state.specialists.map(s => {
-          if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped") {
+          if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped" || s.state === "partial") {
             return s;
           }
           return {
@@ -399,65 +395,8 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       ) {
         return state;
       }
-      const failedSpecialists = state.specialists.filter(
-        s => s.state === "failed" || s.state === "timed_out"
-      );
-      const isPartial = failedSpecialists.length > 0;
-      const status: RunStatus = isPartial ? "partial" : "ready";
-      const roleToId: Record<string, string> = {
-        security: "worker-sec",
-        logic: "worker-log",
-        architecture: "worker-arc",
-        quality: "worker-qty",
-      };
-      const updatedWorkerStates: Array<{ worker_id: string; state: FinalWorkerState }> = state.specialists.map(s => {
-        let finalState: FinalWorkerState = "complete";
-        if (s.state === "failed" || s.state === "timed_out") {
-          finalState = "failed";
-        } else if (s.state === "skipped") {
-          finalState = "skipped";
-        } else if (s.state === "partial") {
-          finalState = "partial";
-        }
-        return {
-          worker_id: roleToId[s.role] || `worker-${s.role}`,
-          state: finalState,
-        };
-      });
-      const additionalWarnings = isPartial
-        ? [
-            `Incomplete worker coverage: ${failedSpecialists.length} specialist lane(s) failed (${failedSpecialists.map(s => s.displayName).join(', ')})`,
-            "Findings from failed specialists may be omitted or unverified"
-          ]
-        : [];
-      const updatedSummary = isPartial
-        ? `PARTIAL REVIEW: Incomplete specialist coverage (${failedSpecialists.map(s => s.displayName).join(', ')} failed). Automated publishing gated on operator review.`
-        : (state.prIdentity.number === 42 && state.prIdentity.owner === "example"
-            ? SYNTHETIC_REPORT.summary
-            : `Completed review of PR #${state.prIdentity.number} (${state.prIdentity.owner}/${state.prIdentity.repo}) across 4 canonical specialists.`);
-
-      const isCustomPr = !(state.prIdentity.owner === "example" && state.prIdentity.repo === "demo" && state.prIdentity.number === 42);
-      let calculatedRunId: string;
-      if (isCustomPr) {
-        calculatedRunId = `run-20261016-${state.prIdentity.owner}-${state.prIdentity.repo}-${state.prIdentity.number}${isPartial ? '-partial' : ''}`;
-      } else {
-        calculatedRunId = isPartial ? "run-20261016-g00-partial" : SYNTHETIC_REPORT.run_id;
-      }
-
-      return {
-        ...state,
-        screen: "report",
-        runStatus: status,
-        report: {
-          ...state.report,
-          run_id: calculatedRunId,
-          status,
-          pr: state.prIdentity,
-          worker_states: updatedWorkerStates,
-          warnings: [...SYNTHETIC_REPORT.warnings, ...additionalWarnings],
-          summary: updatedSummary,
-        },
-      };
+      const report = buildDemoReport(state.prIdentity, state.specialists, state.findings);
+      return { ...state, screen: "report", runStatus: report.status, report };
     }
 
     case "TOGGLE_EXPORT_FORMAT":

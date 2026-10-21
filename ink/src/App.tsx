@@ -2,6 +2,7 @@ import React, { useReducer } from 'react';
 import { Box, useApp } from 'ink';
 import { useSafeInput } from './hooks/useSafeInput.js';
 import { cliReducer, createInitialState } from './core/state-machine.js';
+import { restoreSpecialists } from './fixtures/fixtures.js';
 import { ActiveScreen, ReviewReport } from './types/contracts.js';
 import { Header } from './components/Header.js';
 import { Footer } from './components/Footer.js';
@@ -30,10 +31,12 @@ export function App({ initialScreen = "welcome", initialPrUrl, initialReport, is
       s.report = initialReport;
       s.prIdentity = initialReport.pr;
       s.prUrl = initialReport.pr.url;
-      s.runStatus = initialReport.status === "partial" ? "partial" : "ready";
+      s.runStatus = initialReport.status;
+      s.findings = initialReport.findings;
+      s.specialists = restoreSpecialists(initialReport);
     }
     if (initialScreen === "publish" || initialScreen === "report") {
-      s.runStatus = s.report.status === "partial" ? "partial" : "ready";
+      s.runStatus = s.report.status;
     } else if (initialScreen === "specialist") {
       s.runStatus = "running";
       s.specialists = s.specialists.map(sp => ({
@@ -109,7 +112,7 @@ export function App({ initialScreen = "welcome", initialPrUrl, initialReport, is
           <PrEntryScreen
             prUrl={state.prUrl}
             error={state.urlError}
-            onChangeUrl={(url) => dispatch({ type: "SET_PR_URL", url })}
+            onEditUrl={(edit) => dispatch({ type: "EDIT_PR_URL", ...edit })}
             onSubmit={() => dispatch({ type: "SUBMIT_PR_URL" })}
             onBack={() => dispatch({ type: "NAVIGATE", screen: "auth" })}
           />

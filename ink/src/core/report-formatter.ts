@@ -1,10 +1,11 @@
-import { ReviewReport, ReviewFinding } from '../types/contracts.js';
+import type { ReviewReport } from '../types/contracts.js';
 
 export function formatReportMarkdown(report: ReviewReport): string {
   const lines: string[] = [];
   lines.push(`# CodeGuardian Review Report — PR #${report.pr.number}`);
   lines.push(`**Repository:** ${report.pr.owner}/${report.pr.repo}`);
   lines.push(`**Run ID:** \`${report.run_id}\` | **Status:** ${report.status.toUpperCase()} | **Generated:** ${report.generated_at}`);
+  lines.push(`**Target Base SHA:** \`${report.pr.base_sha}\``);
   lines.push(`**Target Head SHA:** \`${report.pr.head_sha}\``);
   lines.push(`**Digest:** \`${report.report_digest}\``);
   lines.push('');
@@ -18,12 +19,15 @@ export function formatReportMarkdown(report: ReviewReport): string {
   const p3s = report.findings.filter(f => f.severity === 'P3').length;
   lines.push(`- **Breakdown:** ${p0s} P0 | ${p1s} P1 | ${p2s} P2 | ${p3s} P3`);
   lines.push('');
+  lines.push('## Worker Coverage');
+  for (const w of report.worker_states) lines.push(`- ${w.worker_id}: ${w.state}`);
+  lines.push('');
   lines.push('## Findings Details');
 
   for (const f of report.findings) {
     lines.push(`### [${f.severity}] ${f.title}`);
     lines.push(`- **File:** \`${f.path}${f.line ? `:${f.line}` : ''}\` (${f.side || 'RIGHT'})`);
-    lines.push(`- **Category:** ${f.category} | **Confidence:** ${f.confidence}`);
+    lines.push(`- **Category:** ${f.category} | **Confidence:** ${f.confidence} | **Verification:** ${f.verification}`);
     lines.push(`- **Specialists:** ${f.source_workers.join(', ')}`);
     lines.push(`- **Evidence:** ${f.evidence}`);
     lines.push(`- **Impact:** ${f.impact}`);

@@ -158,7 +158,7 @@ describe('L3 — CLI Parser and Safety Tests', () => {
 
   it('exports deterministic custom-PR review report for custom run ID', () => {
     const program = createCliProgram({ exitOverride: true });
-    program.parse(['node', 'cli.js', 'report', 'run-20261016-acme-frontend-101', '-f', 'json']);
+    program.parse(['node', 'cli.js', 'report', 'run-g00~acme~frontend~101~cccc', '-f', 'json']);
     expect(process.exitCode).toBeUndefined();
     const jsonStr = stdoutOutput.join('\n');
     const parsed = JSON.parse(jsonStr);
