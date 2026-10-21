@@ -3,7 +3,7 @@ import React from 'react';
 import { createHash } from 'node:crypto';
 import { render, cleanup } from 'ink-testing-library';
 import { cliReducer, createInitialState, type CliAction } from '../src/core/state-machine.js';
-import { SYNTHETIC_REPORT, CANONICAL_SPECIALISTS, buildDemoReport, getReportForRunId } from '../src/fixtures/fixtures.js';
+import { SYNTHETIC_REPORT, SYNTHETIC_FINDINGS, CANONICAL_SPECIALISTS, buildDemoReport, getReportForRunId } from '../src/fixtures/fixtures.js';
 import { canonicalReportPayload, finalizeReport } from '../src/core/report-digest.js';
 import { formatReportJson, formatReportMarkdown } from '../src/core/report-formatter.js';
 import { ReviewReportSchema } from '../src/types/contracts.js';
@@ -101,5 +101,21 @@ describe('L6 — Report/export/publication integrity', () => {
     expect(report.status).toBe('partial');
     expect(report.warnings.join()).toContain('Logic & Correctness Specialist: partial');
     expect(getReportForRunId(report.run_id)).toEqual(report);
+  });
+  it('preserves nullable line and side in formatReportMarkdown without fabricating (RIGHT)', () => {
+    const reportWithNullableSide = {
+      ...SYNTHETIC_REPORT,
+      findings: [
+        {
+          ...SYNTHETIC_FINDINGS[0],
+          line: null,
+          side: null,
+          verification: 'needs_context' as const,
+        },
+      ],
+    };
+    const md = formatReportMarkdown(reportWithNullableSide);
+    expect(md).toContain(`- **File:** \`${SYNTHETIC_FINDINGS[0].path}\``);
+    expect(md).not.toContain(`(RIGHT)`);
   });
 });

@@ -26,7 +26,8 @@ export function formatReportMarkdown(report: ReviewReport): string {
 
   for (const f of report.findings) {
     lines.push(`### [${f.severity}] ${f.title}`);
-    lines.push(`- **File:** \`${f.path}${f.line ? `:${f.line}` : ''}\` (${f.side || 'RIGHT'})`);
+    const sidePart = f.side ? ` (${f.side})` : '';
+    lines.push(`- **File:** \`${f.path}${f.line ? `:${f.line}` : ''}\`${sidePart}`);
     lines.push(`- **Category:** ${f.category} | **Confidence:** ${f.confidence} | **Verification:** ${f.verification}`);
     lines.push(`- **Specialists:** ${f.source_workers.join(', ')}`);
     lines.push(`- **Evidence:** ${f.evidence}`);

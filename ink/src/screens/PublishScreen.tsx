@@ -36,7 +36,7 @@ export function PublishScreen({
   const isDuplicate = outcome === "duplicate";
 
   const verifiedInline = report.findings.filter(f => f.verification === "verified_diff");
-  const uncertainSummary = report.findings.filter(f => f.verification !== "verified_diff");
+  const uncertainSummary = report.findings.filter(f => f.verification === "needs_context");
 
   useSafeInput((input, key) => {
     if (input === 'r' || input === 'R') {

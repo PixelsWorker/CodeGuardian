@@ -159,6 +159,29 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).toContain('Summary-only Findings');
   });
 
+  it('renders Screen 8: PublishScreen excludes rejected findings from Summary-only count', () => {
+    const reportWithRejected = {
+      ...SYNTHETIC_REPORT,
+      findings: [
+        { ...SYNTHETIC_FINDINGS[0], verification: 'verified_diff' as const },
+        { ...SYNTHETIC_FINDINGS[1], verification: 'needs_context' as const },
+        { ...SYNTHETIC_FINDINGS[2], verification: 'rejected' as const },
+      ],
+    };
+    const { lastFrame } = render(
+      <PublishScreen
+        report={reportWithRejected}
+        outcome="normal"
+        onConfirmPublish={() => {}}
+        onDenyPublish={() => {}}
+        onBack={() => {}}
+        onRestart={() => {}}
+      />
+    );
+    expect(lastFrame()).toContain('1 unverified findings (needs context, omitted from inline)');
+    expect(lastFrame()).not.toContain('2 unverified findings');
+  });
+
   it('renders Screen 8: PublishScreen with blocked stale head SHA', () => {
     const { lastFrame } = render(
       <PublishScreen
