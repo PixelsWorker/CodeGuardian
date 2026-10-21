@@ -46,6 +46,12 @@ describe('L3 — Shared strict offline URL parsing', () => {
     'https://github.com/rate-limiter/bucket/pull/4',
     'https://github.com/deleted-files/purge/pull/5',
     'https://github.com/unauthorized-access/audit/pull/6',
+    'https://github.com/private-org/public/pull/2',
+    'https://github.com/unauthorized-org/public/pull/1',
+    'https://github.com/demo-org/other-repo/pull/404',
+    'https://github.com/demo-org/other-repo/pull/99',
+    'https://github.com/demo-org/other-repo/pull/429',
+    'https://github.com/example/other-repo/pull/404',
   ])('does not falsely trigger simulated failure scenarios for custom repository %s', url => {
     const state = cliReducer({ ...createInitialState(), prUrl: url }, { type: 'SUBMIT_PR_URL' });
     expect(state.screen).toBe('inspection');

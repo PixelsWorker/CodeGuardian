@@ -141,9 +141,9 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       const { owner, repo, number: prNumber, url: trimmed } = parsed;
 
       // Offline PR failure demonstrations: restricted to exact documented preset identities
-      // so arbitrary custom repositories (e.g. 'draft-js', 'closed-loop', 'forbidden-planet')
-      // are not erroneously treated as failure scenarios.
-      if (owner === "private-org" || owner === "unauthorized-org") {
+      // (owner, repo, prNumber) so arbitrary custom repositories (e.g. 'draft-js', 'closed-loop',
+      // 'forbidden-planet', or custom PRs on orgs like 'private-org') are not erroneously treated as failure scenarios.
+      if (owner === "private-org" && repo === "secret-repo" && prNumber === 1) {
         return {
           ...state,
           screen: "error",
@@ -152,7 +152,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      if ((owner === "example" && repo === "demo" && prNumber === 404) || (owner === "demo-org" && prNumber === 404)) {
+      if (owner === "example" && repo === "demo" && prNumber === 404) {
         return {
           ...state,
           screen: "error",
@@ -161,7 +161,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      if ((owner === "example" && repo === "demo" && prNumber === 99) || (owner === "demo-org" && prNumber === 99)) {
+      if (owner === "example" && repo === "demo" && prNumber === 99) {
         return {
           ...state,
           screen: "error",
@@ -170,7 +170,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         };
       }
 
-      if ((owner === "example" && repo === "demo" && prNumber === 429) || (owner === "demo-org" && prNumber === 429)) {
+      if (owner === "example" && repo === "demo" && prNumber === 429) {
         return {
           ...state,
           screen: "error",

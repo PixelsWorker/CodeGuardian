@@ -70,10 +70,31 @@ describe('L1 — Toolchain & Ink 8 Smoke Testing', () => {
 
     const cliContent = fs.readFileSync(cliDistPath, 'utf8');
     expect(cliContent.length).toBeGreaterThan(100);
-    expect(cliContent.startsWith('#!/usr/bin/env node\n')).toBe(true);
+    expect(/^#!\/usr\/bin\/env node\r?\n/.test(cliContent)).toBe(true);
     const cliSource = fs.readFileSync(path.join(inkRoot, 'src/cli.tsx'), 'utf8');
-    expect(cliSource.startsWith('#!/usr/bin/env node\n')).toBe(true);
+    expect(/^#!\/usr\/bin\/env node\r?\n/.test(cliSource)).toBe(true);
     expect(cliContent).toContain('createCliProgram');
+  });
+
+  it('verifies shebang validation pattern correctly handles LF, CRLF, and rejects invalid headers', () => {
+    const shebangRegex = /^#!\/usr\/bin\/env node\r?\n/;
+
+    // Meaningful checks covering LF and CRLF
+    expect(shebangRegex.test('#!/usr/bin/env node\nconsole.log(1);\n')).toBe(true);
+    expect(shebangRegex.test('#!/usr/bin/env node\r\nconsole.log(1);\r\n')).toBe(true);
+
+    // Missing shebang
+    expect(shebangRegex.test('console.log(1);\n')).toBe(false);
+
+    // Misplaced shebang (not at the start of the file)
+    expect(shebangRegex.test('\n#!/usr/bin/env node\n')).toBe(false);
+    expect(shebangRegex.test('// comment\n#!/usr/bin/env node\n')).toBe(false);
+
+    // Unexpected leading bytes (BOM, whitespace, invalid shebang paths)
+    expect(shebangRegex.test('\uFEFF#!/usr/bin/env node\n')).toBe(false);
+    expect(shebangRegex.test(' #!/usr/bin/env node\n')).toBe(false);
+    expect(shebangRegex.test('#!/bin/sh\n')).toBe(false);
+    expect(shebangRegex.test('#!/usr/bin/node\n')).toBe(false);
   });
 
   it('verifies compiled ESM module loading without resolution errors', async () => {
