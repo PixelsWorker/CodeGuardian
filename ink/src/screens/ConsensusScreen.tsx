@@ -1,0 +1,109 @@
+import React from 'react';
+import { Box, Text } from 'ink';
+import { useSafeInput } from '../hooks/useSafeInput.js';
+import { ReviewFinding, WorkerInfo } from '../types/contracts.js';
+
+interface ConsensusScreenProps {
+  specialists: WorkerInfo[];
+  findings: ReviewFinding[];
+  onProceed: () => void;
+  onBack: () => void;
+}
+
+export function ConsensusScreen({ specialists, findings, onProceed, onBack }: ConsensusScreenProps) {
+  useSafeInput((input, key) => {
+    if (key.return) {
+      onProceed();
+    } else if (key.escape) {
+      onBack();
+    }
+  });
+
+  const hasFailedLanes = specialists.some(s => s.state !== "complete");
+  const available = new Set(
+    specialists
+      .filter(s => s.state === "complete" || s.state === "partial")
+      .map(s => s.role as string)
+  );
+  const activeFindings = findings.filter(f =>
+    f.source_workers.some(r => available.has(r))
+  );
+
+  const verifiedFindings = activeFindings.filter(f => f.verification === "verified_diff");
+  const needsContextFindings = activeFindings.filter(f => f.verification === "needs_context");
+  const rejectedFindings = activeFindings.filter(f => f.verification === "rejected");
+
+  return (
+    <Box flexDirection="column" padding={1}>
+      <Box marginBottom={1}>
+        <Text bold color="white">Manager Validation, Synthesis & Deduplication Engine:</Text>
+      </Box>
+
+      <Box flexDirection="column" borderStyle="round" borderColor={hasFailedLanes ? "yellow" : "green"} padding={1} marginBottom={1}>
+        <Box justifyContent="space-between">
+          <Text bold color="white">Overall Review Synthesis Status:</Text>
+          <Text bold color={hasFailedLanes ? "yellow" : "green"}>
+            {hasFailedLanes ? "⚠️ PARTIAL REVIEW READY" : "✓ FULL CONSENSUS READY"}
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text color="gray">
+            Manager independently validated all specialist assertions against actual changed diff hunks and canonical JSON schemas.
+          </Text>
+        </Box>
+      </Box>
+
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold color="white">Validation Pipeline Verification Checks:</Text>
+        {needsContextFindings.length > 0 ? (
+          <Text color="yellow">
+            ℹ️ Verification triage: {verifiedFindings.length} verified against PR changed lines, {needsContextFindings.length} require broader context (summary-only)
+          </Text>
+        ) : rejectedFindings.length > 0 ? (
+          <Text color="yellow">
+            ℹ️ Verification triage: {verifiedFindings.length} verified against PR changed lines, {rejectedFindings.length} rejected as outside changed-line boundaries
+          </Text>
+        ) : (
+          <Text color="green">
+            ✓ All {verifiedFindings.length} candidate findings verified against changed line boundaries
+          </Text>
+        )}
+        {rejectedFindings.length > 0 && (
+          <Text color="red">
+            ✗ {rejectedFindings.length} finding(s) rejected as outside PR changed-line boundaries
+          </Text>
+        )}
+        {available.has("architecture") && available.has("quality") && (
+          <Text color="green">✓ Deduplicated overlap between Architecture and Quality on session memory leak</Text>
+        )}
+        <Text color="green">✓ PII / Credentials scrubbed from evidence quotes</Text>
+        {hasFailedLanes && (
+          <Text color="yellow">⚠️ Incomplete coverage warning: Specialist failure detected or coverage missing (partial results accepted)</Text>
+        )}
+        {specialists.filter(s => s.state !== "complete").map(s => (
+          <Text key={s.role} color="yellow">{s.displayName}: {s.state}</Text>
+        ))}
+      </Box>
+
+      <Box borderStyle="single" borderColor="cyan" flexDirection="column" padding={1} marginBottom={1}>
+        <Text bold color="cyan">Consensus Summary Statistics:</Text>
+        <Text color="white">• Total Candidate Findings: {activeFindings.length}</Text>
+        <Text color="green">• Verified Diff Findings: {verifiedFindings.length} (eligible for inline review)</Text>
+        {needsContextFindings.length > 0 && (
+          <Text color="yellow">• Uncertain / Needs Context: {needsContextFindings.length} (summary-only, omitted from inline)</Text>
+        )}
+        {rejectedFindings.length > 0 && (
+          <Text color="red">• Rejected Findings: {rejectedFindings.length} (outside diff boundary)</Text>
+        )}
+        <Text color="white">• P1 Critical Flaws: {verifiedFindings.filter(f => f.severity === 'P1').length}</Text>
+        <Text color="white">• P2 Reliability/Perf Flaws: {verifiedFindings.filter(f => f.severity === 'P2').length}</Text>
+      </Box>
+
+      <Box>
+        <Text color="green" bold>Press [Enter] to View Consolidated Review Report</Text>
+        <Text color="gray">  |  </Text>
+        <Text color="white">Press [Esc] to Return</Text>
+      </Box>
+    </Box>
+  );
+}

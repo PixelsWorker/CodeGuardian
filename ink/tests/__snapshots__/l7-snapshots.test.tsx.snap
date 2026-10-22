@@ -1,0 +1,619 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: NO_COLOR=1 Mode Representation 1`] = `
+"╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                                ║
+ ║ Welcome to CodeGuardian Native Terminal Reviewer                                               ║
+ ║ Bounded, deterministic multi-agent GitHub pull request review system.                          ║
+ ║                                                                                                ║
+ ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+ Available Commands & Workflows:
+   • codeguardian review <PR_URL> --demo : Full interactive multi-agent review
+   • codeguardian auth status                : Preflight check for GitHub/Codex
+   • codeguardian report <RUN_ID> --format json  : Export review findings
+   • codeguardian publish <RUN_ID> --dry-run    : Dry-run publish review gate
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ G00 Synthetic Prototype Notes:                                                                 │
+ │ • All analyses use local AST diff fixtures. Zero network calls to GitHub or model APIs.        │
+ │ • Canonical 4 specialists: Security, Logic & Correctness, Architecture, Quality/Testing.       │
+ │ • Dry-run publishing preview performs ZERO external writes.                                    │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [Enter] to Begin PR Review  or  Press [A] for Auth Status"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Representative 60-Column Narrow Frame 1`] = `
+"╔════════════════════════════════════════════════════════╗
+ ║                                                        ║
+ ║ Welcome to CodeGuardian Native Terminal Reviewer       ║
+ ║ Bounded, deterministic multi-agent GitHub pull request ║
+ ║  review system.                                        ║
+ ║                                                        ║
+ ╚════════════════════════════════════════════════════════╝
+
+ Available Commands & Workflows:
+   • codeguardian review <PR_URL> --demo : Full interactive
+  multi-agent review
+   • codeguardian auth status                : Preflight
+ check for GitHub/Codex
+   • codeguardian report <RUN_ID> --format json  : Export
+ review findings
+   • codeguardian publish <RUN_ID> --dry-run    : Dry-run
+ publish review gate
+
+ ┌────────────────────────────────────────────────────────┐
+ │                                                        │
+ │ G00 Synthetic Prototype Notes:                         │
+ │ • All analyses use local AST diff fixtures. Zero       │
+ │ network calls to GitHub or model APIs.                 │
+ │ • Canonical 4 specialists: Security, Logic &           │
+ │ Correctness, Architecture, Quality/Testing.            │
+ │ • Dry-run publishing preview performs ZERO external    │
+ │ writes.                                                │
+ │                                                        │
+ └────────────────────────────────────────────────────────┘
+
+ Press [Enter] to Begin PR      or Press [A] for Auth
+ Review                            Status"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 1 — Welcome 1`] = `
+"╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                                ║
+ ║ Welcome to CodeGuardian Native Terminal Reviewer                                               ║
+ ║ Bounded, deterministic multi-agent GitHub pull request review system.                          ║
+ ║                                                                                                ║
+ ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+ Available Commands & Workflows:
+   • codeguardian review <PR_URL> --demo : Full interactive multi-agent review
+   • codeguardian auth status                : Preflight check for GitHub/Codex
+   • codeguardian report <RUN_ID> --format json  : Export review findings
+   • codeguardian publish <RUN_ID> --dry-run    : Dry-run publish review gate
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ G00 Synthetic Prototype Notes:                                                                 │
+ │ • All analyses use local AST diff fixtures. Zero network calls to GitHub or model APIs.        │
+ │ • Canonical 4 specialists: Security, Logic & Correctness, Architecture, Quality/Testing.       │
+ │ • Dry-run publishing preview performs ZERO external writes.                                    │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [Enter] to Begin PR Review  or  Press [A] for Auth Status"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 2 — Authentication Failure (Preflight Blocked) 1`] = `
+"Local Authentication & Toolchain Preflight Status:
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ GitHub CLI (gh) Session                                                    ✗ NOT AUTHENTICATED │
+ │ Required for read-only PR metadata, changed files, and diff inspection                         │
+ │                                                                                                │
+ │                                                                                                │
+ │ Codex CLI / SDK Session                                                        ✓ AUTHENTICATED │
+ │ Required for bounded specialist analysis lanes (ChatGPT login or API key)                      │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Authentication Remediation Instructions:                                                       │
+ │ • If GitHub fails: Run gh auth login -w (or gh auth login -s repo for private repositories)    │
+ │ • If Codex fails: Run codex login --device-auth                                                │
+ │ Note: In G00 DEMO mode, simulated credentials allow walkthrough testing.                       │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ⚠️  Preflight incomplete: Both services must be AUTHENTICATED before inspecting PRs.
+
+ Press [Enter] Verify Preflight (Blocked)  |  [T] Cycle Auth State (Demo)  |  Press [Esc] Return"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 2 — Authentication Success 1`] = `
+"Local Authentication & Toolchain Preflight Status:
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ GitHub CLI (gh) Session                                                        ✓ AUTHENTICATED │
+ │ Required for read-only PR metadata, changed files, and diff inspection                         │
+ │                                                                                                │
+ │                                                                                                │
+ │ Codex CLI / SDK Session                                                        ✓ AUTHENTICATED │
+ │ Required for bounded specialist analysis lanes (ChatGPT login or API key)                      │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Authentication Remediation Instructions:                                                       │
+ │ • If GitHub fails: Run gh auth login -w (or gh auth login -s repo for private repositories)    │
+ │ • If Codex fails: Run codex login --device-auth                                                │
+ │ Note: In G00 DEMO mode, simulated credentials allow walkthrough testing.                       │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [Enter] Proceed  |  [T] Cycle Auth State (Demo)  |  Press [Esc] Return"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 3 — PR Input with Validation Error 1`] = `
+"Enter Target GitHub Pull Request URL:
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ URL: https://gitlab.com/invalid/repo/pull/99                                                   │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Validation ErrorInvalid GitHub PR URL. Expected format:                                        │
+ │                 https://github.com/:owner/:repo/pull/:number                                   │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Demo Scenario Presets (Press [!]..[%] or [Ctrl+1..5] to load):                                 │
+ │ • [!] / [Ctrl+1] Normal PR: https://github.com/example/demo/pull/42                            │
+ │ • [@] / [Ctrl+2] Unauthorized (403): https://github.com/private-org/secret-repo/pull/1         │
+ │ • [#] / [Ctrl+3] Closed/Deleted (404): https://github.com/example/demo/pull/404                │
+ │ • [$] / [Ctrl+4] Draft PR (Blocked): https://github.com/example/demo/pull/99                   │
+ │ • [%] / [Ctrl+5] Rate Limit (429): https://github.com/example/demo/pull/429                    │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [Enter] to Inspect PR Diff  |  Press [Esc] to Return"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 4 — Diff Inspection & Hunks 1`] = `
+"┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ PR #42: feat(auth): token rotation & permission cache refresh          Author: @developer-alex │
+ │                                                                                                │
+ │ Base: aaaaaaa (main)                                       Head: bbbbbbb (feat/token-rotation) │
+ │                                                                                                │
+ │ Changes: +115 -27 across 5 modified files                                                      │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ⚠️  Pre-Review Surface Risk Classifier:                              HIGH RISK (AUTH & CRYPTO) │
+ │                                                                                                │
+ │ • RISK: SENSITIVE_AUTH_PATH (\`src/auth/*\` modified)                                            │
+ │ • RISK: NEW_EXTERNAL_DEP (\`jsonwebtoken\` added to package.json)                                │
+ │ • SURFACE: IN_MEMORY_CACHE_STATE (\`src/auth/session.ts\` introduces unbounded map)              │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ Changed Files List (Use [↑/↓] or [j/k] to preview diff hunks):
+
+  ▶ src/demo.ts +12 -4
+    src/auth/token.ts +48 -12
+    src/auth/session.ts +34 -8
+    src/db/redis.ts +18 -2
+    package.json +3 -1
+
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ src/demo.ts                                                                             +12 -4 │
+ │                                                                                                │
+ │ @@ -14,6 +14,14 @@ export function resolveUserPermissions(header?: string) {                   │
+ │ -  const token = parseToken(header);                                                           │
+ │ -  return lookupPermissions(token.sub);                                                        │
+ │ +  const token = parseToken(header);                                                           │
+ │ +  // BUG: token may be null if header is malformed!                                           │
+ │ +  const permissions = lookupPermissions(token.sub);                                           │
+ │ +  if (!permissions) {                                                                         │
+ │ +    return [];                                                                                │
+ │ +  }                                                                                           │
+ │ +  return permissions;                                                                         │
+ │  }                                                                                             │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+
+ Press [Enter] to Dispatch 4 Specialist Workers  |  Press [Esc] to Return"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 5 — Specialist Lanes with Partial Failure 1`] = `
+"Multi-Agent Specialist Execution Lanes:                Simulating bounded Codex specialist workers
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │                                                                                                │
+ │ Security Specialist                                                   ✓ COMPLETED (1 findings) │
+ │ Detects credential leaks, injection risks, and auth flaws                                      │
+ │                                                                                                │
+ │ ██████████████████████████████ 100%                                                            │
+ │                                                                                                │
+ │ Activity: Analysis complete. 1 verified finding.                                               │
+ │                                                                                                │
+ │                                                                                                │
+ │ Logic & Correctness Specialist                                        ✓ COMPLETED (1 findings) │
+ │ Analyzes boundary conditions, edge cases, and nullability                                      │
+ │                                                                                                │
+ │ ██████████████████████████████ 100%                                                            │
+ │                                                                                                │
+ │ Activity: Analysis complete. 1 verified finding.                                               │
+ │                                                                                                │
+ │                                                                                                │
+ │ Architecture Specialist                                               ✓ COMPLETED (2 findings) │
+ │ Monitors boundary violations, layer leaking, and patterns                                      │
+ │                                                                                                │
+ │ ██████████████████████████████ 100%                                                            │
+ │                                                                                                │
+ │ Activity: Analysis complete. 2 verified findings.                                              │
+ │                                                                                                │
+ │                                                                                                │
+ │ Quality, Testing & Performance Specialist                                             ✗ FAILED │
+ │ Assesses test coverage, complexity, and algorithmic hotspots                                   │
+ │                                                                                                │
+ │ ██████████████████████████████ 100%                                                            │
+ │                                                                                                │
+ │ Activity: FAILED: AST parser crash                                                             │
+ │                                                                                                │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Interactive Scenario Controls:                                                                 │
+ │ • Press [Space] to start/advance streaming worker progress                                     │
+ │ • Press [U] to simulate Queued worker pool state                                               │
+ │ • Press [F] to simulate Partial Failure (Quality lane)                                         │
+ │ • Press [T] to simulate Worker Timeout (Architecture lane)                                     │
+ │ • Press [K] to simulate Worker Skip (Quality lane)                                             │
+ │ • Press [Esc] to test User Cancellation                                                        │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [Enter] to Synthesize Findings & Manager Consensus"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 6 — Manager Consensus & Synthesis 1`] = `
+"Manager Validation, Synthesis & Deduplication Engine:
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ Overall Review Synthesis Status:                                        ✓ FULL CONSENSUS READY │
+ │                                                                                                │
+ │ Manager independently validated all specialist assertions against actual changed diff hunks    │
+ │ and canonical JSON schemas.                                                                    │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ Validation Pipeline Verification Checks:
+ ℹ️ Verification triage: 3 verified against PR changed lines, 1 require broader context
+ (summary-only)
+ ✗ 1 finding(s) rejected as outside PR changed-line boundaries
+ ✓ Deduplicated overlap between Architecture and Quality on session memory leak
+ ✓ PII / Credentials scrubbed from evidence quotes
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Consensus Summary Statistics:                                                                  │
+ │ • Total Candidate Findings: 5                                                                  │
+ │ • Verified Diff Findings: 3 (eligible for inline review)                                       │
+ │ • Uncertain / Needs Context: 1 (summary-only, omitted from inline)                             │
+ │ • Rejected Findings: 1 (outside diff boundary)                                                 │
+ │ • P1 Critical Flaws: 2                                                                         │
+ │ • P2 Reliability/Perf Flaws: 1                                                                 │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [Enter] to View Consolidated Review Report  |  Press [Esc] to Return"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 7 — Partial Review Report 1`] = `
+"Consolidated Review Report (Run: run-20261016-g00-partial):                      Format: [SUMMARY]
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ PARTIAL REVIEW: Incomplete specialist coverage (Quality, Testing & Performance Specialist:     │
+ │ failed). Automated publishing gated on operator review.                                        │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Findings (4 total — use [↑/↓] to inspect):
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ ▶ [P1] [VERIFIED DIFF] Null input is dereferenced in token resolver                            │
+ │                                                                                                │
+ │     Path: src/demo.ts:17 | Specialists: logic                                                  │
+ │     Evidence: parseToken(header) can return null when header is absent, but token.sub is       │
+ │     dereferenced without guard.                                                                │
+ │     Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500         │
+ │     crashes.                                                                                   │
+ │     Recommendation: Add early null check: \`if (!token) return [];\` before accessing            │
+ │     \`token.sub\`.                                                                               │
+ │                                                                                                │
+ │   [P1] [VERIFIED DIFF] Insecure fallback key generated when AUTH_SECRET is omitted             │
+ │   [P2] [VERIFIED DIFF] Unbounded in-memory Map leads to potential node memory leak             │
+ │   [P2] [NEEDS CONTEXT] Missing connection timeout on Redis client pool initialization          │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ Status: partial | Digest: sha256-c1dace56992d2c8446bd1c3a5992d8c8eafc2eecc64efe4833dbc293ef69c18e
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: failed
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
+ Incomplete worker coverage: Quality, Testing & Performance Specialist: failed
+ [E] Full current report (no file writes); CLI IDs reconstruct fixed offline recipes.
+ Controls: Press [M] for Markdown toggle | [J] for JSON toggle
+
+ Press [Enter] to Open Dry-Run Publication Gate  |  Press [Esc] to Return"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Publication Denied by Operator 1`] = `
+"┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ ⚠️  Dry-Run Publication Preview & Safeguards                                                   │
+ │ A GitHub COMMENT review is prepared, but will NOT be submitted without confirmation.           │
+ │ Simulation Note: Under G00, NO EXTERNAL API CALL OR NETWORK WRITE OCCURS.                      │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ Publication Payload Verification:                                                              │
+ │ • Target PR: #42 (example/demo)                                                                │
+ │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
+ │ • Cryptographic Report Digest:                                                                 │
+ │ sha256-de31eed146a23ddd379a6395dcb35b4194136307a74e9d2d7ab2b6618fda1753                        │
+ │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
+ │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
+ │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ Proposed review summary:
+ Run: run-20261016-demo42 | Review status: ready
+ Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
+ P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
+ gated on operator dry-run review.
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: complete
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
+
+ Summary only — needs context: [P2] Missing connection timeout on Redis client pool initialization
+ Path: src/db/redis.ts:24 (RIGHT)
+ Evidence: Redis client initialized without explicit connectTimeout or retryStrategy limits.
+ Impact: Worker threads may hang indefinitely during network partitions or cloud provider socket
+ resets.
+ Recommendation: Configure connectTimeout: 3000ms and maxRetriesPerRequest: 3.
+
+
+ Proposed inline comments:
+
+ [P1] Null input is dereferenced in token resolver
+ Path: src/demo.ts:17 (RIGHT)
+ Evidence: parseToken(header) can return null when header is absent, but token.sub is dereferenced
+ without guard.
+ Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500 crashes.
+ Recommendation: Add early null check: \`if (!token) return [];\` before accessing \`token.sub\`.
+
+
+ [P1] Insecure fallback key generated when AUTH_SECRET is omitted
+ Path: src/auth/token.ts:45 (RIGHT)
+ Evidence: Generates static predictable token 'insecure-dev-fallback-key-' when env var is
+ undefined.
+ Impact: Attackers can forge arbitrary session credentials in environments with misconfigured
+ secrets.
+ Recommendation: Throw fatal initialization error if AUTH_SECRET is missing rather than falling
+ back to static string.
+
+
+ [P2] Unbounded in-memory Map leads to potential node memory leak
+ Path: src/auth/session.ts:89 (RIGHT)
+ Evidence: sessionStore is a global Map with no LRU eviction, size bounds, or TTL cleanup
+ mechanism.
+ Impact: Server process will experience continuous heap expansion and crash via OOM under sustained
+  traffic.
+ Recommendation: Implement an LRU cache with max capacity (e.g., lru-cache) or offload session
+ storage to Redis with TTL.
+
+
+ ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                                ║
+ ║ ✗ PUBLICATION DENIED BY OPERATOR                                                               ║
+ ║ Review submission aborted. Report remains available in the current session.                    ║
+ ║                                                                                                ║
+ ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+ Decision locked. Press [R] to Restart Demo | [Esc] Back"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Simulated Publication Confirmed 1`] = `
+"┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ ⚠️  Dry-Run Publication Preview & Safeguards                                                   │
+ │ A GitHub COMMENT review is prepared, but will NOT be submitted without confirmation.           │
+ │ Simulation Note: Under G00, NO EXTERNAL API CALL OR NETWORK WRITE OCCURS.                      │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ Publication Payload Verification:                                                              │
+ │ • Target PR: #42 (example/demo)                                                                │
+ │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
+ │ • Cryptographic Report Digest:                                                                 │
+ │ sha256-de31eed146a23ddd379a6395dcb35b4194136307a74e9d2d7ab2b6618fda1753                        │
+ │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
+ │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
+ │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ Proposed review summary:
+ Run: run-20261016-demo42 | Review status: ready
+ Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
+ P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
+ gated on operator dry-run review.
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: complete
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
+
+ Summary only — needs context: [P2] Missing connection timeout on Redis client pool initialization
+ Path: src/db/redis.ts:24 (RIGHT)
+ Evidence: Redis client initialized without explicit connectTimeout or retryStrategy limits.
+ Impact: Worker threads may hang indefinitely during network partitions or cloud provider socket
+ resets.
+ Recommendation: Configure connectTimeout: 3000ms and maxRetriesPerRequest: 3.
+
+
+ Proposed inline comments:
+
+ [P1] Null input is dereferenced in token resolver
+ Path: src/demo.ts:17 (RIGHT)
+ Evidence: parseToken(header) can return null when header is absent, but token.sub is dereferenced
+ without guard.
+ Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500 crashes.
+ Recommendation: Add early null check: \`if (!token) return [];\` before accessing \`token.sub\`.
+
+
+ [P1] Insecure fallback key generated when AUTH_SECRET is omitted
+ Path: src/auth/token.ts:45 (RIGHT)
+ Evidence: Generates static predictable token 'insecure-dev-fallback-key-' when env var is
+ undefined.
+ Impact: Attackers can forge arbitrary session credentials in environments with misconfigured
+ secrets.
+ Recommendation: Throw fatal initialization error if AUTH_SECRET is missing rather than falling
+ back to static string.
+
+
+ [P2] Unbounded in-memory Map leads to potential node memory leak
+ Path: src/auth/session.ts:89 (RIGHT)
+ Evidence: sessionStore is a global Map with no LRU eviction, size bounds, or TTL cleanup
+ mechanism.
+ Impact: Server process will experience continuous heap expansion and crash via OOM under sustained
+  traffic.
+ Recommendation: Implement an LRU cache with max capacity (e.g., lru-cache) or offload session
+ storage to Redis with TTL.
+
+
+ ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                                ║
+ ║ ✓ SIMULATED PUBLICATION CONFIRMED                                                              ║
+ ║ Dry-run receipt logged. Verification nonce validated. NO EXTERNAL WRITE PERFORMED.             ║
+ ║                                                                                                ║
+ ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+ Decision locked. Press [R] to Restart Demo | [Esc] Back"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Stale Head SHA Refusal 1`] = `
+"┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ ⚠️  Dry-Run Publication Preview & Safeguards                                                   │
+ │ A GitHub COMMENT review is prepared, but will NOT be submitted without confirmation.           │
+ │ Simulation Note: Under G00, NO EXTERNAL API CALL OR NETWORK WRITE OCCURS.                      │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │                                                                                                │
+ │ Publication Payload Verification:                                                              │
+ │ • Target PR: #42 (example/demo)                                                                │
+ │ • Target Head SHA: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                    │
+ │ • Cryptographic Report Digest:                                                                 │
+ │ sha256-de31eed146a23ddd379a6395dcb35b4194136307a74e9d2d7ab2b6618fda1753                        │
+ │ • Review Action: COMMENT (Never APPROVE or REQUEST_CHANGES)                                    │
+ │ • Inline Comments: 3 findings placed on verified diff hunks                                    │
+ │ • Summary-only Findings: 1 unverified findings (needs context, omitted from inline)            │
+ │                                                                                                │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ Proposed review summary:
+ Run: run-20261016-demo42 | Review status: ready
+ Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
+ P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
+ gated on operator dry-run review.
+ worker-sec: complete
+ worker-log: complete
+ worker-arc: complete
+ worker-qty: complete
+ Tests were not executed directly by specialist workers (tests.executed=false)
+ Findings based on AST diff heuristic simulation [DEMO ONLY]
+
+ Summary only — needs context: [P2] Missing connection timeout on Redis client pool initialization
+ Path: src/db/redis.ts:24 (RIGHT)
+ Evidence: Redis client initialized without explicit connectTimeout or retryStrategy limits.
+ Impact: Worker threads may hang indefinitely during network partitions or cloud provider socket
+ resets.
+ Recommendation: Configure connectTimeout: 3000ms and maxRetriesPerRequest: 3.
+
+
+ Proposed inline comments:
+
+ [P1] Null input is dereferenced in token resolver
+ Path: src/demo.ts:17 (RIGHT)
+ Evidence: parseToken(header) can return null when header is absent, but token.sub is dereferenced
+ without guard.
+ Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500 crashes.
+ Recommendation: Add early null check: \`if (!token) return [];\` before accessing \`token.sub\`.
+
+
+ [P1] Insecure fallback key generated when AUTH_SECRET is omitted
+ Path: src/auth/token.ts:45 (RIGHT)
+ Evidence: Generates static predictable token 'insecure-dev-fallback-key-' when env var is
+ undefined.
+ Impact: Attackers can forge arbitrary session credentials in environments with misconfigured
+ secrets.
+ Recommendation: Throw fatal initialization error if AUTH_SECRET is missing rather than falling
+ back to static string.
+
+
+ [P2] Unbounded in-memory Map leads to potential node memory leak
+ Path: src/auth/session.ts:89 (RIGHT)
+ Evidence: sessionStore is a global Map with no LRU eviction, size bounds, or TTL cleanup
+ mechanism.
+ Impact: Server process will experience continuous heap expansion and crash via OOM under sustained
+  traffic.
+ Recommendation: Implement an LRU cache with max capacity (e.g., lru-cache) or offload session
+ storage to Redis with TTL.
+
+
+ ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                                ║
+ ║ ✗ PUBLICATION BLOCKED: STALE HEAD SHA                                                          ║
+ ║ Remote PR head SHA has changed since analysis started. Publication refused to prevent posting  ║
+ ║ stale comments.                                                                                ║
+ ║                                                                                                ║
+ ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+ Press [S] to Toggle Stale SHA (Demo) | [R] to Restart Demo | [Esc] Back"
+`;
+
+exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 9 — Process Interrupted / Cancellation Teardown 1`] = `
+"╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                                ║
+ ║ ⚠️ Review Process Interrupted / Cancelled                                                      ║
+ ║                                                                                                ║
+ ║ Review process cancelled by user. Safe rollback initiated.                                     ║
+ ║                                                                                                ║
+ ╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                │
+ │ Safety & Cleanup Status:                                                                       │
+ │ ✓ All active specialist worker threads safely halted                                           │
+ │ ✓ Temporary diff cache unmounted                                                               │
+ │ ✓ Zero partial comments or review drafts leaked to GitHub                                      │
+ │                                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ Press [R] to Retry / Restart Review | [Q] to Exit CLI"
+`;

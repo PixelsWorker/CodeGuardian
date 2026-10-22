@@ -1,11 +1,11 @@
 # CodeGuardian — Full Development Roadmap
 
-**Status:** PLANNING BASELINE — updated 2026-10-16 with accepted product direction decisions  
-**Updated:** 2026-10-16  
-**Product:** CLI-first, multi-agent GitHub pull-request review platform  
-**Repository:** https://github.com/PixelsWorker/CodeGuardian  
-**Active Windows checkout:** `E:\Projects\CodeGuardian\` (relocated 2026-10-16)  
-**Active planned development branch:** `dev` (future G00 feature branch requires separate approval)  
+**Status:** PLANNING BASELINE — updated 2026-10-16 with accepted product direction decisions
+**Updated:** 2026-10-16
+**Product:** CLI-first, multi-agent GitHub pull-request review platform
+**Repository:** https://github.com/PixelsWorker/CodeGuardian
+**Active Windows checkout:** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root)
+**Active feature branch:** `feat/g00-ink-cli-demo` in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\` (targeting `main`)
 **Delivery model:** One group = one independently reviewed acceptance unit, including its tests and integration checks.
 
 > This document consolidates the existing proposed scope and estimates. It does not supersede approval rules in the parent workspace instructions, repository `AGENTS.md`, `ARCHITECTURE.md`, `API-CONTRACT.md`, or `G00-SCOPE.md`. A roadmap entry is not authority to change code, install packages, create branches, push, open PRs, merge, post GitHub reviews, or deploy.
@@ -54,8 +54,8 @@ The day estimates for G00–G05 follow `PROJECT-BRIEF.md`. They are working-day 
 | **G05** | Signed GitHub events trigger safe, deduplicated automated reviews | **5–8 days** | 21–34 days with G04 | Independent security/identity/webhook approval |
 | **G06 (PROPOSED, OPTIONAL)** | Jules repository audit, verified coverage and `AUDIT.md` | **TBD after pilot** | Not included in G00-G05 estimates | Separate source access, pilot, security and human acceptance |
 
-**Primary MVP:** G00–G03 = approximately 13–21 working days of implementation (around 3–5 work weeks), excluding PRE-G00, approval waits, sandbox repairs, and surprises.  
-**Extended delivery:** G00–G05 = approximately 21–34 working days (around 4–7 work weeks) when G04 is included. G04 is optional, not a blocker for an independently approved G05.  
+**Primary MVP:** G00–G03 = approximately 13–21 working days of implementation (around 3–5 work weeks), excluding PRE-G00, approval waits, sandbox repairs, and surprises.
+**Extended delivery:** G00–G05 = approximately 21–34 working days (around 4–7 work weeks) when G04 is included. G04 is optional, not a blocker for an independently approved G05.
 **Calendar dates:** Set only after the start date, environment readiness, dependency compatibility, and group approvals are confirmed.
 
 Indicative progression: **Week 1:** PRE-G00/G00; **Weeks 1–2:** G01; **Weeks 2–4:** G02; **Weeks 4–5:** G03 MVP gate; **Weeks 5–7:** optional G04/G05. These windows can slide.
@@ -221,7 +221,7 @@ For **every** group:
 7. Obtain distinct permission for **commit**, **push**, **PR creation**, **PR merge**, and **deployment** as applicable; do not infer one from another.
 8. On an environmental blocker, stop and report evidence rather than bypass sandbox protections or re-run blindly.
 
-**Branch approach proposed for G00:** create `feat/g00-cli-ux-demo` from a verified `dev` head in its own authorized worktree; develop and test there; target a G00 PR to `dev`. The branch, worktree and PR are NOT created or authorized by this roadmap. Do not mutate the canonical `main` checkout.
+**Branch approach executed for G00:** `feat/g00-ink-cli-demo` in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\` (nested repository `E:\Projects\CodeGuardian\CodeGuardian\`); targeting draft PR against `main`. Do not mutate the canonical `main` checkout.
 
 ## 14. Immediate next group run
 
@@ -229,14 +229,14 @@ For **every** group:
 
 1. The **browser G00 mock UX** (nine screens, `src/`) is accepted as the walkthrough reference and is FROZEN at `e8e5844`. No further browser development is authorized.
 2. Confirm architecture decisions, mock contract, complete G00 screen inventory in `G00-CLI-WIREFRAMES.md`, command names and precise framework/package versions for the Ink package (`ink/`).
-3. Verify the Windows execution environment; confirm Node 24 LTS, pnpm, TypeScript, Ink 8.0 availability.
+3. Verify the Windows execution environment; confirm Node 24 LTS, npm 11.17.0, TypeScript, Ink 8.0 availability.
 4. Draft and review one executable G00 TODO for the Ink CLI, including terminal test matrix and branch/dependency permissions.
 5. Only after explicit authorization, let Codex implement the local terminal CLI with mock fixtures inside `ink/`.
 6. Review actual G00 Ink implementation, tests and terminal demonstration; approve G01 only if the complete Ink CLI UX is accepted.
 
 **G04 note:** PR-Agent integration goes inside `integrations/pr-agent/`, isolated behind a CodeGuardian adapter. No direct GitHub access. Plain-diff mode avoids a GitHub platform token but requires explicit runner filesystem/env/credential isolation. Separate approval needed before provider API access or external diff sending.
 
-**Current release state (2026-10-16):** React/Vite browser UX prototype (`src/`) frozen at `e8e5844` as accepted design reference. Repository relocated to `E:\Projects\CodeGuardian\` (single clean checkout, no linked worktrees). Native Ink CLI implementation, local test outcomes, real GitHub/Codex/Jules calls and G00 Ink acceptance remain unverified. This document approves no implementation, new branch, live audit, publication or deployment.
+**Current release state (2026-10-16):** React/Vite browser UX prototype (`src/`) frozen at `e8e5844` as accepted design reference. Canonical checkout at `E:\Projects\CodeGuardian\CodeGuardian\` plus dedicated feature worktree at `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`. Native Ink CLI implementation completed locally in `ink/` with 21/21 passing tests and clean CodeRabbit review; pending draft PR publication, full eight-layer acceptance testing, and formal operator UI/UX review. This document approves no implementation, new branch, live audit, publication or deployment.
 
 ## 15. Source-of-truth references
 
