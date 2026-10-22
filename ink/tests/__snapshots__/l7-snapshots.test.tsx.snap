@@ -372,6 +372,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Public
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Proposed review summary:
  Run: run-20261016-demo42 | Review status: ready
  Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
  P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
@@ -382,6 +383,45 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Public
  worker-qty: complete
  Tests were not executed directly by specialist workers (tests.executed=false)
  Findings based on AST diff heuristic simulation [DEMO ONLY]
+
+ Summary only — needs context: [P2] Missing connection timeout on Redis client pool initialization
+ Path: src/db/redis.ts:24 (RIGHT)
+ Evidence: Redis client initialized without explicit connectTimeout or retryStrategy limits.
+ Impact: Worker threads may hang indefinitely during network partitions or cloud provider socket
+ resets.
+ Recommendation: Configure connectTimeout: 3000ms and maxRetriesPerRequest: 3.
+
+
+ Proposed inline comments:
+
+ [P1] Null input is dereferenced in token resolver
+ Path: src/demo.ts:17 (RIGHT)
+ Evidence: parseToken(header) can return null when header is absent, but token.sub is dereferenced
+ without guard.
+ Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500 crashes.
+ Recommendation: Add early null check: \`if (!token) return [];\` before accessing \`token.sub\`.
+
+
+ [P1] Insecure fallback key generated when AUTH_SECRET is omitted
+ Path: src/auth/token.ts:45 (RIGHT)
+ Evidence: Generates static predictable token 'insecure-dev-fallback-key-' when env var is
+ undefined.
+ Impact: Attackers can forge arbitrary session credentials in environments with misconfigured
+ secrets.
+ Recommendation: Throw fatal initialization error if AUTH_SECRET is missing rather than falling
+ back to static string.
+
+
+ [P2] Unbounded in-memory Map leads to potential node memory leak
+ Path: src/auth/session.ts:89 (RIGHT)
+ Evidence: sessionStore is a global Map with no LRU eviction, size bounds, or TTL cleanup
+ mechanism.
+ Impact: Server process will experience continuous heap expansion and crash via OOM under sustained
+  traffic.
+ Recommendation: Implement an LRU cache with max capacity (e.g., lru-cache) or offload session
+ storage to Redis with TTL.
+
+
  ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
  ║                                                                                                ║
  ║ ✗ PUBLICATION DENIED BY OPERATOR                                                               ║
@@ -414,6 +454,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Simula
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Proposed review summary:
  Run: run-20261016-demo42 | Review status: ready
  Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
  P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
@@ -424,6 +465,45 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Simula
  worker-qty: complete
  Tests were not executed directly by specialist workers (tests.executed=false)
  Findings based on AST diff heuristic simulation [DEMO ONLY]
+
+ Summary only — needs context: [P2] Missing connection timeout on Redis client pool initialization
+ Path: src/db/redis.ts:24 (RIGHT)
+ Evidence: Redis client initialized without explicit connectTimeout or retryStrategy limits.
+ Impact: Worker threads may hang indefinitely during network partitions or cloud provider socket
+ resets.
+ Recommendation: Configure connectTimeout: 3000ms and maxRetriesPerRequest: 3.
+
+
+ Proposed inline comments:
+
+ [P1] Null input is dereferenced in token resolver
+ Path: src/demo.ts:17 (RIGHT)
+ Evidence: parseToken(header) can return null when header is absent, but token.sub is dereferenced
+ without guard.
+ Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500 crashes.
+ Recommendation: Add early null check: \`if (!token) return [];\` before accessing \`token.sub\`.
+
+
+ [P1] Insecure fallback key generated when AUTH_SECRET is omitted
+ Path: src/auth/token.ts:45 (RIGHT)
+ Evidence: Generates static predictable token 'insecure-dev-fallback-key-' when env var is
+ undefined.
+ Impact: Attackers can forge arbitrary session credentials in environments with misconfigured
+ secrets.
+ Recommendation: Throw fatal initialization error if AUTH_SECRET is missing rather than falling
+ back to static string.
+
+
+ [P2] Unbounded in-memory Map leads to potential node memory leak
+ Path: src/auth/session.ts:89 (RIGHT)
+ Evidence: sessionStore is a global Map with no LRU eviction, size bounds, or TTL cleanup
+ mechanism.
+ Impact: Server process will experience continuous heap expansion and crash via OOM under sustained
+  traffic.
+ Recommendation: Implement an LRU cache with max capacity (e.g., lru-cache) or offload session
+ storage to Redis with TTL.
+
+
  ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
  ║                                                                                                ║
  ║ ✓ SIMULATED PUBLICATION CONFIRMED                                                              ║
@@ -456,6 +536,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Stale 
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+ Proposed review summary:
  Run: run-20261016-demo42 | Review status: ready
  Completed review of PR #42 across 4 canonical specialists. Found 2 verified P1 issues, 1 verified
  P2 issue, 1 requiring context, and 1 candidate rejected outside diff. Automated publishing is
@@ -466,6 +547,45 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 8 — Stale 
  worker-qty: complete
  Tests were not executed directly by specialist workers (tests.executed=false)
  Findings based on AST diff heuristic simulation [DEMO ONLY]
+
+ Summary only — needs context: [P2] Missing connection timeout on Redis client pool initialization
+ Path: src/db/redis.ts:24 (RIGHT)
+ Evidence: Redis client initialized without explicit connectTimeout or retryStrategy limits.
+ Impact: Worker threads may hang indefinitely during network partitions or cloud provider socket
+ resets.
+ Recommendation: Configure connectTimeout: 3000ms and maxRetriesPerRequest: 3.
+
+
+ Proposed inline comments:
+
+ [P1] Null input is dereferenced in token resolver
+ Path: src/demo.ts:17 (RIGHT)
+ Evidence: parseToken(header) can return null when header is absent, but token.sub is dereferenced
+ without guard.
+ Impact: Unauthenticated or malformed requests will trigger unhandled TypeError 500 crashes.
+ Recommendation: Add early null check: \`if (!token) return [];\` before accessing \`token.sub\`.
+
+
+ [P1] Insecure fallback key generated when AUTH_SECRET is omitted
+ Path: src/auth/token.ts:45 (RIGHT)
+ Evidence: Generates static predictable token 'insecure-dev-fallback-key-' when env var is
+ undefined.
+ Impact: Attackers can forge arbitrary session credentials in environments with misconfigured
+ secrets.
+ Recommendation: Throw fatal initialization error if AUTH_SECRET is missing rather than falling
+ back to static string.
+
+
+ [P2] Unbounded in-memory Map leads to potential node memory leak
+ Path: src/auth/session.ts:89 (RIGHT)
+ Evidence: sessionStore is a global Map with no LRU eviction, size bounds, or TTL cleanup
+ mechanism.
+ Impact: Server process will experience continuous heap expansion and crash via OOM under sustained
+  traffic.
+ Recommendation: Implement an LRU cache with max capacity (e.g., lru-cache) or offload session
+ storage to Redis with TTL.
+
+
  ╔════════════════════════════════════════════════════════════════════════════════════════════════╗
  ║                                                                                                ║
  ║ ✗ PUBLICATION BLOCKED: STALE HEAD SHA                                                          ║

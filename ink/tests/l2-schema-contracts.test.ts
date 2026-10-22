@@ -55,6 +55,28 @@ describe('L2 — Schema and Domain Unit Testing', () => {
   });
 
   describe('ReviewFindingSchema', () => {
+    it.each([
+      { line: null, side: null },
+      { line: null, side: 'RIGHT' },
+      { line: 17, side: null },
+      { line: 0, side: 'RIGHT' },
+      { line: -1, side: 'LEFT' },
+      { line: 1.5, side: 'RIGHT' },
+      { line: Number.MAX_SAFE_INTEGER + 1, side: 'RIGHT' },
+    ])('rejects verified findings without a usable anchor: %j', anchor => {
+      const finding = { ...SYNTHETIC_FINDINGS[0], ...anchor };
+      expect(ReviewFindingSchema.safeParse(finding).success).toBe(false);
+      expect(ReviewReportSchema.safeParse({ ...SYNTHETIC_REPORT, findings: [finding] }).success).toBe(false);
+    });
+
+    it.each(['LEFT', 'RIGHT'])('accepts a verified positive integer anchor on %s', side => {
+      expect(ReviewFindingSchema.safeParse({ ...SYNTHETIC_FINDINGS[0], line: 1, side }).success).toBe(true);
+    });
+
+    it.each(['needs_context', 'rejected'])('preserves nullable anchors for %s diagnostics', verification => {
+      expect(ReviewFindingSchema.safeParse({ ...SYNTHETIC_FINDINGS[0], line: null, side: null, verification }).success).toBe(true);
+    });
+
     it('validates all synthetic findings in fixtures', () => {
       for (const finding of SYNTHETIC_FINDINGS) {
         const result = ReviewFindingSchema.safeParse(finding);

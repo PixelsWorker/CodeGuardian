@@ -107,10 +107,34 @@ export function PublishScreen({
       </Box>
 
       <Box flexDirection="column">
+        <Text bold>Proposed review summary:</Text>
         <Text>Run: {report.run_id} | Review status: {report.status}</Text>
         <Text>{report.summary}</Text>
         {report.worker_states.map(w => <Text key={w.worker_id}>{w.worker_id}: {w.state}</Text>)}
         {report.warnings.map((w, i) => <Text key={i} color="yellow">{w}</Text>)}
+        {uncertainSummary.map(f => (
+          <Box key={f.id} flexDirection="column" marginY={1}>
+            <Text bold color="yellow">Summary only — needs context: [{f.severity}] {f.title}</Text>
+            <Text>Path: {f.path}{f.line !== null ? `:${f.line}` : ''}{f.side ? ` (${f.side})` : ''}</Text>
+            <Text>Evidence: {f.evidence}</Text>
+            <Text>Impact: {f.impact}</Text>
+            <Text>Recommendation: {f.recommendation}</Text>
+          </Box>
+        ))}
+      </Box>
+
+      <Box flexDirection="column" marginY={1}>
+        <Text bold>Proposed inline comments:</Text>
+        {verifiedInline.length === 0 && <Text>No inline comments.</Text>}
+        {verifiedInline.map(f => (
+          <Box key={f.id} flexDirection="column" marginY={1}>
+            <Text bold>[{f.severity}] {f.title}</Text>
+            <Text>Path: {f.path}:{f.line} ({f.side})</Text>
+            <Text>Evidence: {f.evidence}</Text>
+            <Text>Impact: {f.impact}</Text>
+            <Text>Recommendation: {f.recommendation}</Text>
+          </Box>
+        ))}
       </Box>
 
       {isDuplicate && !confirmed && !denied && (

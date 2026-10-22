@@ -3,7 +3,7 @@ import React from 'react';
 import { createHash } from 'node:crypto';
 import { render, cleanup } from 'ink-testing-library';
 import { cliReducer, createInitialState, type CliAction } from '../src/core/state-machine.js';
-import { SYNTHETIC_REPORT, SYNTHETIC_FINDINGS, CANONICAL_SPECIALISTS, buildDemoReport, getReportForRunId } from '../src/fixtures/fixtures.js';
+import { SYNTHETIC_REPORT, SYNTHETIC_FINDINGS, CANONICAL_SPECIALISTS, buildDemoReport, getReportForRunId, restoreSpecialists } from '../src/fixtures/fixtures.js';
 import { canonicalReportPayload, finalizeReport } from '../src/core/report-digest.js';
 import { formatReportJson, formatReportMarkdown } from '../src/core/report-formatter.js';
 import { ReviewReportSchema } from '../src/types/contracts.js';
@@ -21,6 +21,33 @@ const cases: Array<[string, CliAction[]]> = [
 ];
 afterEach(cleanup);
 describe('L6 — Report/export/publication integrity', () => {
+  it('preserves a restored partial worker through bulk and individual progress and resynthesis', () => {
+    const report = getReportForRunId('run-g00~example~demo~42~pccc')!;
+    let state = { ...createInitialState(), screen: 'publish' as const, runStatus: report.status, report, findings: report.findings, specialists: restoreSpecialists(report) } as ReturnType<typeof createInitialState>;
+    state = cliReducer(state, { type: 'NAVIGATE', screen: 'specialist' });
+    const partial = state.specialists[0];
+    for (let i = 0; i < 5; i++) state = cliReducer(state, { type: 'STEP_ALL_PROGRESS' });
+    state = cliReducer(state, { type: 'SPECIALIST_PROGRESS', role: partial.role, progress: 100, activity: 'Late completion' });
+    expect(state.specialists[0]).toEqual(partial);
+    state = cliReducer(state, { type: 'FINISH_SPECIALISTS' });
+    state = cliReducer(state, { type: 'VALIDATE_FINDINGS' });
+    expect(state.runStatus).toBe('partial');
+    expect(state.report).toEqual(report);
+  });
+
+  it('keeps the partial recipe intact after navigating back and pressing Space in the app', async () => {
+    const report = getReportForRunId('run-g00~example~demo~42~pccc')!;
+    const screen = render(<App initialScreen="publish" initialReport={report} />);
+    for (let i = 0; i < 3; i++) { screen.stdin.write('\u001b'); await wait(); }
+    expect(screen.lastFrame()).toContain('PARTIAL (');
+    screen.stdin.write(' '); await wait();
+    expect(screen.lastFrame()).toContain('PARTIAL (');
+    screen.stdin.write('\r'); await wait();
+    screen.stdin.write('\r'); await wait();
+    expect(screen.lastFrame()).toContain(report.report_digest);
+    expect(screen.lastFrame()).toContain('Status: partial');
+  });
+
   for (const identity of ['example/demo/42', 'my-org/my-repo/12']) {
     it.each(cases)(`${identity}: %s round-trips every report field`, (_name, actions) => {
       const [owner, repo, number] = identity.split('/');

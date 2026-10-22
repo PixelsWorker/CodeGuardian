@@ -299,6 +299,50 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).not.toContain('Do you authorize submitting this review comment?');
   });
 
+  it('shows the complete proposed payload before approval and omits rejected diagnostics', () => {
+    const report = {
+      ...SYNTHETIC_REPORT,
+      findings: SYNTHETIC_FINDINGS.map(f => ({ ...f, evidence: `${f.evidence} END-${f.id}` })),
+    };
+    const { lastFrame } = render(
+      <PublishScreen report={report} outcome="normal" onConfirmPublish={() => {}} onDenyPublish={() => {}} onBack={() => {}} onRestart={() => {}} />
+    );
+    const frame = lastFrame()!;
+    const flat = frame.replace(/\s/g, '');
+    expect(frame).toContain('Proposed review summary:');
+    expect(frame).toContain('Proposed inline comments:');
+    expect(flat).toContain(report.summary.replace(/\s/g, ''));
+    for (const finding of report.findings) {
+      if (finding.verification === 'rejected') {
+        expect(flat).not.toContain(finding.title.replace(/\s/g, ''));
+        expect(frame).not.toContain(`END-${finding.id}`);
+        continue;
+      }
+      for (const value of [finding.title, finding.evidence, finding.impact, finding.recommendation]) {
+        expect(flat).toContain(value.replace(/\s/g, ''));
+      }
+      const entry = `[${finding.severity}] ${finding.title}`;
+      expect(flat).toContain(entry.replace(/\s/g, ''));
+      expect(frame.indexOf(`END-${finding.id}`)).toBeLessThan(frame.indexOf('Do you authorize'));
+      if (finding.verification === 'verified_diff') {
+        expect(flat).toContain(`Path:${finding.path}:${finding.line}(${finding.side})`);
+      } else {
+        expect(frame).toContain('Summary only — needs context:');
+      }
+    }
+  });
+
+  it('shows an empty inline payload and nullable summary location without fabricating an anchor', () => {
+    const finding = { ...SYNTHETIC_FINDINGS[0], verification: 'needs_context' as const, line: null, side: null };
+    const { lastFrame } = render(
+      <PublishScreen report={{ ...SYNTHETIC_REPORT, findings: [finding] }} outcome="normal" onConfirmPublish={() => {}} onDenyPublish={() => {}} onBack={() => {}} onRestart={() => {}} />
+    );
+    expect(lastFrame()).toContain('No inline comments.');
+    expect(lastFrame()).toContain(`Path: ${finding.path}`);
+    expect(lastFrame()).not.toContain('(RIGHT)');
+    expect(lastFrame()).not.toContain(':null');
+  });
+
   it('renders Screen 9: ErrorScreen on cancellation', () => {
     const { lastFrame } = render(
       <ErrorScreen

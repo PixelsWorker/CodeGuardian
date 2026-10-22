@@ -65,6 +65,14 @@ export const ReviewFindingSchema = z.object({
   verification: z.enum(["verified_diff", "needs_context", "rejected"]),
   fingerprint: z.string(),
   rejection_reason: z.string().optional(),
+}).superRefine((finding, ctx) => {
+  if (finding.verification !== "verified_diff") return;
+  if (finding.line === null || !Number.isSafeInteger(finding.line) || finding.line < 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["line"], message: "Verified diff findings require a positive integer line." });
+  }
+  if (finding.side === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["side"], message: "Verified diff findings require a diff side." });
+  }
 });
 export type ReviewFinding = z.infer<typeof ReviewFindingSchema>;
 

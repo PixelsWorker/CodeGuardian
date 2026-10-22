@@ -264,8 +264,8 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
         ...state,
         specialists: state.specialists.map(s => {
           if (s.role === action.role) {
-            // Keep a failed/timed_out specialist in terminal state; ignore late progress updates
-            if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped") {
+            // Only active lanes may accept progress; preserve terminal coverage outcomes.
+            if (s.state !== "queued" && s.state !== "running") {
               return s;
             }
             return {
@@ -342,7 +342,7 @@ export function cliReducer(state: CliState, action: CliAction): CliState {
       return {
         ...state,
         specialists: state.specialists.map(s => {
-          if (s.state === "failed" || s.state === "timed_out" || s.state === "skipped" || s.state === "complete") {
+          if (s.state !== "queued" && s.state !== "running") {
             return s;
           }
           if (s.state === "queued") {
