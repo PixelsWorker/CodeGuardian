@@ -320,7 +320,7 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 7 — Partia
 
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
  │                                                                                                │
- │ ▶ [P1] Null input is dereferenced in token resolver                                            │
+ │ ▶ [P1] [VERIFIED DIFF] Null input is dereferenced in token resolver                            │
  │                                                                                                │
  │     Path: src/demo.ts:17 | Specialists: logic                                                  │
  │     Evidence: parseToken(header) can return null when header is absent, but token.sub is       │
@@ -330,9 +330,9 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 7 — Partia
  │     Recommendation: Add early null check: \`if (!token) return [];\` before accessing            │
  │     \`token.sub\`.                                                                               │
  │                                                                                                │
- │   [P1] Insecure fallback key generated when AUTH_SECRET is omitted                             │
- │   [P2] Unbounded in-memory Map leads to potential node memory leak                             │
- │   [P2] Missing connection timeout on Redis client pool initialization                          │
+ │   [P1] [VERIFIED DIFF] Insecure fallback key generated when AUTH_SECRET is omitted             │
+ │   [P2] [VERIFIED DIFF] Unbounded in-memory Map leads to potential node memory leak             │
+ │   [P2] [NEEDS CONTEXT] Missing connection timeout on Redis client pool initialization          │
  │                                                                                                │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 

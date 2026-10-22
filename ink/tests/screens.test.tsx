@@ -136,6 +136,82 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).toContain('Deduplicated overlap between Architecture and Quality');
   });
 
+  it('renders a terminal partial worker with retained findings instead of RUNNING', () => {
+    const { lastFrame } = render(
+      <SpecialistScreen
+        specialists={[{ ...CANONICAL_SPECIALISTS[0], state: 'partial', progress: 65, findingsCount: 2 }]}
+        onComplete={() => {}}
+        onFailLane={() => {}}
+        onCancel={() => {}}
+      />
+    );
+    expect(lastFrame()).toContain('PARTIAL (2 findings)');
+    expect(lastFrame()).not.toContain('RUNNING');
+    expect(lastFrame()).not.toContain('COMPLETED');
+  });
+
+  it.each([
+    ['verified_diff', 'VERIFIED DIFF'],
+    ['needs_context', 'NEEDS CONTEXT'],
+    ['rejected', 'REJECTED'],
+  ] as const)('labels %s findings and only shows recommendations for non-rejected findings', (verification, label) => {
+    const finding = {
+      ...SYNTHETIC_FINDINGS[0],
+      verification,
+      rejection_reason: 'Outside PR changed-line boundaries',
+    };
+    const { lastFrame } = render(
+      <ReportScreen
+        report={{ ...SYNTHETIC_REPORT, findings: [finding] }}
+        onProceedToPublish={() => {}}
+        onBack={() => {}}
+      />
+    );
+    expect(lastFrame()).toContain(`[${label}]`);
+    if (verification === 'rejected') {
+      expect(lastFrame()).toContain('Rejection reason: Outside PR changed-line boundaries');
+      expect(lastFrame()).toContain('Excluded from publication.');
+      expect(lastFrame()).not.toContain('Recommendation:');
+      expect(lastFrame()).not.toContain(finding.recommendation);
+    } else {
+      expect(lastFrame()).toContain('Recommendation:');
+      expect(lastFrame()).not.toContain('Rejection reason:');
+    }
+  });
+
+  it('explains rejected findings even when their optional rejection reason is missing', () => {
+    const { lastFrame } = render(
+      <ReportScreen
+        report={{ ...SYNTHETIC_REPORT, findings: [{ ...SYNTHETIC_FINDINGS[0], verification: 'rejected' }] }}
+        onProceedToPublish={() => {}}
+        onBack={() => {}}
+      />
+    );
+    expect(lastFrame()).toContain('[REJECTED]');
+    expect(lastFrame()).toContain('No rejection reason provided.');
+    expect(lastFrame()).not.toContain('Recommendation:');
+  });
+
+  it('keeps rejected rows visibly marked and shows the rejection reason when selected', async () => {
+    const rejected = { ...SYNTHETIC_FINDINGS[1], verification: 'rejected' as const, rejection_reason: 'Outside changed lines' };
+    const { lastFrame, stdin } = render(
+      <ReportScreen
+        report={{ ...SYNTHETIC_REPORT, findings: [SYNTHETIC_FINDINGS[0], rejected] }}
+        onProceedToPublish={() => {}}
+        onBack={() => {}}
+      />
+    );
+    expect(lastFrame()).toContain(`[REJECTED] ${rejected.title}`);
+    stdin.write('\u001b[B');
+    await new Promise(resolve => setTimeout(resolve, 80));
+    expect(lastFrame()).toContain('Rejection reason: Outside changed lines');
+    expect(lastFrame()).not.toContain('Recommendation:');
+    stdin.write('\u001b[A');
+    await new Promise(resolve => setTimeout(resolve, 80));
+    expect(lastFrame()).toContain('Recommendation:');
+    expect(lastFrame()).not.toContain('Rejection reason:');
+  });
+
   it('renders Screen 6: ConsensusScreen excludes findings and deduplication when a lane fails', () => {
     const specialistsWithFailedQuality = CANONICAL_SPECIALISTS.map(s =>
       s.role === 'quality' ? { ...s, state: 'failed' as const } : s

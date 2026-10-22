@@ -58,6 +58,9 @@ export function SpecialistScreen({
           if (worker.state === "complete") {
             badge = <Text bold color="green">✓ COMPLETED ({worker.findingsCount} findings)</Text>;
             barColor = "green";
+          } else if (worker.state === "partial") {
+            badge = <Text bold color="yellow">⚠ PARTIAL ({worker.findingsCount} findings)</Text>;
+            barColor = "yellow";
           } else if (worker.state === "failed") {
             badge = <Text bold color="red">✗ FAILED</Text>;
             barColor = "red";

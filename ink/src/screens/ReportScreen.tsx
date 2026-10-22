@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text } from 'ink';
 import { useSafeInput } from '../hooks/useSafeInput.js';
-import { ReviewReport, ReviewFinding } from '../types/contracts.js';
+import { ReviewReport } from '../types/contracts.js';
 import { formatReportMarkdown, formatReportJson } from '../core/report-formatter.js';
 
 interface ReportScreenProps {
@@ -59,12 +59,15 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
             {report.findings.map((f, idx) => {
               const isSelected = idx === selectedIdx;
               const sevColor = f.severity === 'P0' ? 'red' : f.severity === 'P1' ? 'yellow' : 'cyan';
+              const verificationLabel = f.verification === 'verified_diff' ? 'VERIFIED DIFF'
+                : f.verification === 'needs_context' ? 'NEEDS CONTEXT' : 'REJECTED';
 
               return (
                 <Box key={f.id} flexDirection="column" marginY={0}>
                   <Box>
                     <Text color={isSelected ? "cyan" : "gray"}>{isSelected ? "▶ " : "  "}</Text>
                     <Text bold color={sevColor}>[{f.severity}] </Text>
+                    <Text color={f.verification === 'verified_diff' ? 'green' : 'yellow'}>[{verificationLabel}] </Text>
                     <Text bold={isSelected} color={isSelected ? "white" : "gray"}>{f.title}</Text>
                   </Box>
                   {isSelected && (
@@ -72,7 +75,11 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
                       <Text color="gray">Path: <Text color="white">{f.path}:{f.line}</Text> | Specialists: {f.source_workers.join(', ')}</Text>
                       <Text color="gray">Evidence: <Text color="yellow">{f.evidence}</Text></Text>
                       <Text color="gray">Impact: <Text color="red">{f.impact}</Text></Text>
-                      <Text color="gray">Recommendation: <Text color="green">{f.recommendation}</Text></Text>
+                      {f.verification === 'rejected' ? (
+                        <Text color="yellow">Rejection reason: {f.rejection_reason || 'No rejection reason provided.'} Excluded from publication.</Text>
+                      ) : (
+                        <Text color="gray">Recommendation: <Text color="green">{f.recommendation}</Text></Text>
+                      )}
                     </Box>
                   )}
                 </Box>
