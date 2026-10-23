@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useWindowSize } from 'ink';
 import { useSafeInput } from '../hooks/useSafeInput.js';
 
 interface WelcomeScreenProps {
@@ -8,6 +8,9 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onStart, onAuthCheck }: WelcomeScreenProps) {
+  const { columns } = useWindowSize();
+  const compact = columns < 48;
+
   useSafeInput((input, key) => {
     if (key.return) {
       onStart();
@@ -38,9 +41,13 @@ export function WelcomeScreen({ onStart, onAuthCheck }: WelcomeScreenProps) {
         <Text color="white">• Dry-run publishing preview performs ZERO external writes.</Text>
       </Box>
 
-      <Box>
+      <Box flexDirection={compact ? 'column' : 'row'}>
         <Text color="green" bold>Press [Enter] to Begin PR Review</Text>
-        <Text color="gray">  or  </Text>
+        {compact ? (
+          <Text color="gray">or</Text>
+        ) : (
+          <Text color="gray">  or  </Text>
+        )}
         <Text color="cyan">Press [A] for Auth Status</Text>
       </Box>
     </Box>
