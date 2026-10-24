@@ -604,6 +604,9 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
 
       const rawFrame = instance.lastFrame() || '';
       const frame = rawFrame.replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      for (const line of frame.split('\n')) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
       const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
       const compactText = semanticText.replace(/\s+/g, '');
       expect(semanticText).toContain('Insecure fallback');
