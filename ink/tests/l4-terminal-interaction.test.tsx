@@ -583,10 +583,12 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
 
     const assertSeparated = (frame: string, badge: string, titleStart: string) => {
       const lines = frame.split('\n');
-      const badgeLine = lines.findIndex(line => line.includes(badge));
       const titleLine = lines.findIndex(line => line.includes(titleStart));
-      expect(badgeLine).toBeGreaterThanOrEqual(0);
-      expect(titleLine).toBeGreaterThan(badgeLine);
+      expect(titleLine).toBeGreaterThan(0);
+      const badgeLine = titleLine - 1;
+      expect(lines[badgeLine]).toContain(badge);
+      expect(lines[badgeLine]).not.toContain(titleStart);
+      expect(lines[titleLine]).not.toContain(badge);
     };
 
     for (const cols of [40, 60, 80, 100]) {
