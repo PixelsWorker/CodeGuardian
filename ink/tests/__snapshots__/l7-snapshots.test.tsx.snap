@@ -57,8 +57,9 @@ exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Representative 60-C
  │                                                        │
  └────────────────────────────────────────────────────────┘
 
- Press [Enter] to Begin PR      or Press [A] for Auth
- Review                            Status"
+ Press [Enter] to Begin PR Review
+ or
+ Press [A] for Auth Status"
 `;
 
 exports[`L7 — Deterministic Terminal Snapshots > Snapshot: Screen 1 — Welcome 1`] = `

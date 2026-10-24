@@ -15,6 +15,7 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onB
   const isAuthValid = githubAuth === "authenticated" && codexAuth === "authenticated";
   const { columns } = useWindowSize();
   const compact = columns < 72;
+  const actionsCompact = compact || (!isAuthValid && columns < 97);
   const hasLongFailureBadge =
     githubAuth === 'insufficient_permissions' || codexAuth === 'insufficient_permissions';
   const hasNotAuthenticatedBadge =
@@ -97,13 +98,13 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onB
         </Box>
       )}
 
-      <Box flexDirection={compact ? 'column' : 'row'}>
+      <Box flexDirection={actionsCompact ? 'column' : 'row'}>
         <Text color={isAuthValid ? "green" : "yellow"} bold>
           Press [Enter] {isAuthValid ? "Proceed" : "Verify Preflight (Blocked)"}
         </Text>
-        {!compact && <Text color="gray">  |  </Text>}
+        {!actionsCompact && <Text color="gray">  |  </Text>}
         <Text color="yellow" bold>[T] Cycle Auth State (Demo)</Text>
-        {!compact && <Text color="gray">  |  </Text>}
+        {!actionsCompact && <Text color="gray">  |  </Text>}
         <Text color="white">Press [Esc] Return</Text>
       </Box>
     </Box>

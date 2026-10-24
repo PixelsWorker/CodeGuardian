@@ -28,8 +28,8 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
     expect(lastFrame()).toContain('GitHub CLI (gh) Session');
   });
 
-  it('keeps Welcome actions and their separator readable at compact widths', () => {
-    for (const cols of [40, 60, 80]) {
+  it('keeps Welcome actions vertically separated until the horizontal row fits', () => {
+    for (const cols of [40, 48, 60, 64, 65, 80]) {
       const tree = (
         <Box width={cols}>
           <WelcomeScreen onStart={() => undefined} onAuthCheck={() => undefined} />
@@ -42,17 +42,61 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
 
       const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
       const semanticText = frame.replace(/\s+/g, ' ');
-      expect(semanticText).toContain('Press [Enter] to Begin PR');
-      expect(semanticText).toContain('Review');
+      expect(semanticText).toContain('Press [Enter] to Begin PR Review');
       expect(semanticText).toContain('or');
-      expect(semanticText).toContain('Press [A] for Auth');
-      expect(semanticText).toContain('Status');
-      expect(semanticText).not.toContain('oPress');
-      if (cols === 40) {
-        const hasStandaloneSeparator = frame
-          .split('\n')
-          .some(line => line.replace(/[│┌┐└┘─]/g, ' ').trim() === 'or');
-        expect(hasStandaloneSeparator).toBe(true);
+      expect(semanticText).toContain('Press [A] for Auth Status');
+      expect(semanticText).not.toContain('orPress');
+      const actionLines = frame.split('\n').map(line => line.replace(/[│┌┐└┘─]/g, ' '));
+      const beginLine = actionLines.findIndex(line => line.includes('Press [Enter] to Begin'));
+      const authLine = actionLines.findIndex(line => line.includes('[A] for Auth'));
+      const separatorLine = actionLines.findIndex(line => line.trim() === 'or');
+      expect(beginLine).toBeGreaterThanOrEqual(0);
+      expect(authLine).toBeGreaterThanOrEqual(0);
+      if (cols < 65) {
+        expect(beginLine).not.toBe(authLine);
+        expect(separatorLine).toBeGreaterThan(beginLine);
+        expect(separatorLine).toBeLessThan(authLine);
+      } else {
+        expect(beginLine).toBe(authLine);
+        expect(actionLines[beginLine]).toContain('  or  ');
+      }
+    }
+  });
+
+  it('stacks blocked Authentication actions through 96 columns', () => {
+    for (const cols of [72, 80, 96, 97, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <AuthScreen
+            githubAuth="not_authenticated"
+            codexAuth="authenticated"
+            onContinue={() => undefined}
+            onBack={() => undefined}
+          />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const actionLines = frame.split('\n');
+      const enterLine = actionLines.findIndex(line => line.includes('Press [Enter]'));
+      const cycleLine = actionLines.findIndex(line => line.includes('[T] Cycle Auth State (Demo)'));
+      const escapeLine = actionLines.findIndex(line => line.includes('Press [Esc]'));
+      const semanticText = frame.replace(/\s+/g, ' ');
+      expect(semanticText).toContain('Press [Enter] Verify Preflight (Blocked)');
+      expect(semanticText).toContain('[T] Cycle Auth State (Demo)');
+      expect(semanticText).toContain('Press [Esc] Return');
+      expect(enterLine).toBeGreaterThanOrEqual(0);
+      expect(cycleLine).toBeGreaterThanOrEqual(0);
+      expect(escapeLine).toBeGreaterThanOrEqual(0);
+      if (cols < 97) {
+        expect(new Set([enterLine, cycleLine, escapeLine]).size).toBe(3);
+      } else {
+        expect(enterLine).toBe(cycleLine);
+        expect(cycleLine).toBe(escapeLine);
       }
     }
   });
@@ -130,6 +174,14 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
         const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
         const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
         const plainLines = frame.split('\n');
+        for (const [heading, cardBadge] of [
+          ['GitHub CLI (gh) Session', badge],
+          ['Codex CLI / SDK Session', badge],
+        ]) {
+          const cardLine = plainLines.find(line => line.includes(heading));
+          expect(cardLine).toBeDefined();
+          expect(cardLine?.includes(cardBadge)).toBe(false);
+        }
         for (const description of descriptions) {
           expect(semanticText).toContain(description);
         }
@@ -173,6 +225,14 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
           const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
           const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
           const plainLines = frame.split('\n');
+          const hasLongFailureBadge =
+            github.state === 'insufficient_permissions' || codex.state === 'insufficient_permissions';
+          const hasNotAuthenticatedBadge =
+            github.state === 'not_authenticated' || codex.state === 'not_authenticated';
+          const expectsCompactCards =
+            cols < 96 ||
+            (cols < 100 && (hasLongFailureBadge || hasNotAuthenticatedBadge)) ||
+            (cols < 104 && hasLongFailureBadge);
           for (const description of descriptions) {
             expect(semanticText).toContain(description);
           }
@@ -184,6 +244,14 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
             line.includes('Required for') &&
             [...scenarios].some(({ badge }) => line.includes(badge))
           )).toBe(false);
+          for (const [heading, badge] of [
+            ['GitHub CLI (gh) Session', github.badge],
+            ['Codex CLI / SDK Session', codex.badge],
+          ]) {
+            const cardLine = plainLines.find(line => line.includes(heading));
+            expect(cardLine).toBeDefined();
+            expect(cardLine?.includes(badge)).toBe(!expectsCompactCards);
+          }
         }
       }
     }

@@ -9,7 +9,7 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onStart, onAuthCheck }: WelcomeScreenProps) {
   const { columns } = useWindowSize();
-  const compact = columns < 48;
+  const compact = columns < 65;
 
   useSafeInput((input, key) => {
     if (key.return) {
