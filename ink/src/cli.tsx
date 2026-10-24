@@ -1,13 +1,36 @@
 #!/usr/bin/env node
 import { parseGitHubPrUrl } from './core/github-url.js';
 import React from 'react';
-import { render } from 'ink';
 import { Command } from 'commander';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { App } from './App.js';
 import { SYNTHETIC_REPORT, SYNTHETIC_PARTIAL_REPORT, getReportForRunId } from './fixtures/fixtures.js';
 import { formatReportMarkdown, formatReportJson } from './core/report-formatter.js';
+
+async function loadInkApplication() {
+  const originalForceColor = process.env.FORCE_COLOR;
+  const shouldTemporarilyDisableColor = Boolean(process.env.NO_COLOR) && originalForceColor === undefined;
+
+  try {
+    if (shouldTemporarilyDisableColor) {
+      process.env.FORCE_COLOR = '0';
+    }
+
+    const { render } = await import('ink');
+    const { App } = await import('./App.js');
+    return { render, App };
+  } finally {
+    if (shouldTemporarilyDisableColor) {
+      if (originalForceColor === undefined) {
+        delete process.env.FORCE_COLOR;
+      } else {
+        process.env.FORCE_COLOR = originalForceColor;
+      }
+    }
+  }
+}
+
+const { render, App } = await loadInkApplication();
 
 export function createCliProgram(options: {
   exitOverride?: boolean;
