@@ -4,6 +4,10 @@ import { render, cleanup } from 'ink-testing-library';
 import { Box } from 'ink';
 import stringWidth from 'string-width';
 import { App } from '../src/App.js';
+import { Footer } from '../src/components/Footer.js';
+import { Header } from '../src/components/Header.js';
+import { AuthScreen } from '../src/screens/AuthScreen.js';
+import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
 
 const delay = (ms: number = 30) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -22,6 +26,235 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
     await delay();
     expect(lastFrame()).toContain('Local Authentication & Toolchain Preflight Status');
     expect(lastFrame()).toContain('GitHub CLI (gh) Session');
+  });
+
+  it('keeps Welcome actions vertically separated until the horizontal row fits', () => {
+    for (const cols of [40, 48, 60, 64, 65, 80]) {
+      const tree = (
+        <Box width={cols}>
+          <WelcomeScreen onStart={() => undefined} onAuthCheck={() => undefined} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const semanticText = frame.replace(/\s+/g, ' ');
+      expect(semanticText).toContain('Press [Enter] to Begin PR Review');
+      expect(semanticText).toContain('or');
+      expect(semanticText).toContain('Press [A] for Auth Status');
+      expect(semanticText).not.toContain('orPress');
+      const actionLines = frame.split('\n').map(line => line.replace(/[│┌┐└┘─]/g, ' '));
+      const beginLine = actionLines.findIndex(line => line.includes('Press [Enter] to Begin'));
+      const authLine = actionLines.findIndex(line => line.includes('[A] for Auth'));
+      const separatorLine = actionLines.findIndex(line => line.trim() === 'or');
+      expect(beginLine).toBeGreaterThanOrEqual(0);
+      expect(authLine).toBeGreaterThanOrEqual(0);
+      if (cols < 65) {
+        expect(beginLine).not.toBe(authLine);
+        expect(separatorLine).toBeGreaterThan(beginLine);
+        expect(separatorLine).toBeLessThan(authLine);
+      } else {
+        expect(beginLine).toBe(authLine);
+        expect(actionLines[beginLine]).toContain('  or  ');
+      }
+    }
+  });
+
+  it('stacks blocked Authentication actions through 96 columns', () => {
+    for (const cols of [72, 80, 96, 97, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <AuthScreen
+            githubAuth="not_authenticated"
+            codexAuth="authenticated"
+            onContinue={() => undefined}
+            onBack={() => undefined}
+          />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const actionLines = frame.split('\n');
+      const enterLine = actionLines.findIndex(line => line.includes('Press [Enter]'));
+      const cycleLine = actionLines.findIndex(line => line.includes('[T] Cycle Auth State (Demo)'));
+      const escapeLine = actionLines.findIndex(line => line.includes('Press [Esc]'));
+      const semanticText = frame.replace(/\s+/g, ' ');
+      expect(semanticText).toContain('Press [Enter] Verify Preflight (Blocked)');
+      expect(semanticText).toContain('[T] Cycle Auth State (Demo)');
+      expect(semanticText).toContain('Press [Esc] Return');
+      expect(enterLine).toBeGreaterThanOrEqual(0);
+      expect(cycleLine).toBeGreaterThanOrEqual(0);
+      expect(escapeLine).toBeGreaterThanOrEqual(0);
+      if (cols < 97) {
+        expect(new Set([enterLine, cycleLine, escapeLine]).size).toBe(3);
+      } else {
+        expect(enterLine).toBe(cycleLine);
+        expect(cycleLine).toBe(escapeLine);
+      }
+    }
+  });
+
+  it('keeps Authentication actions distinct at 40, 60, and 80 columns', async () => {
+    for (const cols of [40, 60, 80]) {
+      const onContinue = vi.fn();
+      const onCycleAuth = vi.fn();
+      const onBack = vi.fn();
+      const tree = (
+        <Box width={cols}>
+          <AuthScreen
+            githubAuth="authenticated"
+            codexAuth="authenticated"
+            onContinue={onContinue}
+            onCycleAuth={onCycleAuth}
+            onBack={onBack}
+          />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const semanticText = frame.replace(/\s+/g, ' ');
+      expect(semanticText).toContain('Press [Enter] Proceed');
+      expect(semanticText).toContain('[T] Cycle Auth State (Demo)');
+      expect(semanticText).toContain('Press [Esc] Return');
+      expect(semanticText).not.toContain('|[T]');
+      expect(frame).not.toContain('Proceed[T]');
+
+      instance.stdin.write('t');
+      await delay();
+      expect(onCycleAuth).toHaveBeenCalledOnce();
+      instance.stdin.write('\r');
+      await delay();
+      expect(onContinue).toHaveBeenCalledOnce();
+      instance.stdin.write('\u001B');
+      await delay();
+      expect(onBack).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('keeps all Authentication status badges separate from descriptions at 40, 60, and 80 columns', () => {
+    const scenarios = [
+      { state: 'authenticated', badge: '✓ AUTHENTICATED' },
+      { state: 'not_authenticated', badge: '✗ NOT AUTHENTICATED' },
+      { state: 'session_expired', badge: '✗ EXPIRED SESSION' },
+      { state: 'insufficient_permissions', badge: '⚠️ INSUFFICIENT SCOPES' },
+    ] as const;
+    const descriptions = [
+      'Required for read-only PR metadata, changed files, and diff inspection',
+      'Required for bounded specialist analysis lanes (ChatGPT login or API key)',
+    ];
+
+    for (const cols of [40, 60, 80]) {
+      for (const { state, badge } of scenarios) {
+        const tree = (
+          <Box width={cols}>
+            <AuthScreen
+              githubAuth={state}
+              codexAuth={state}
+              onContinue={() => undefined}
+              onBack={() => undefined}
+            />
+          </Box>
+        );
+        const instance = render(tree);
+        Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+        instance.stdout.emit('resize');
+        instance.rerender(tree);
+
+        const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+        const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+        const plainLines = frame.split('\n');
+        for (const [heading, cardBadge] of [
+          ['GitHub CLI (gh) Session', badge],
+          ['Codex CLI / SDK Session', badge],
+        ]) {
+          const cardLine = plainLines.find(line => line.includes(heading));
+          expect(cardLine).toBeDefined();
+          expect(cardLine?.includes(cardBadge)).toBe(false);
+        }
+        for (const description of descriptions) {
+          expect(semanticText).toContain(description);
+        }
+        expect(semanticText.match(new RegExp(badge.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(2);
+        expect(frame).not.toMatch(/changeATED|inspectionAUTHENTICATED|AUTHENTI\s+CATED/);
+        expect(plainLines.some(line => line.includes('Required for') && line.includes(badge))).toBe(false);
+      }
+    }
+  });
+
+  it('keeps GitHub and Codex status cards readable across the 104-column breakpoint', () => {
+    const scenarios = [
+      { state: 'authenticated', badge: '✓ AUTHENTICATED' },
+      { state: 'not_authenticated', badge: '✗ NOT AUTHENTICATED' },
+      { state: 'session_expired', badge: '✗ EXPIRED SESSION' },
+      { state: 'insufficient_permissions', badge: '⚠️ INSUFFICIENT SCOPES' },
+    ] as const;
+    const descriptions = [
+      'Required for read-only PR metadata, changed files, and diff inspection',
+      'Required for bounded specialist analysis lanes (ChatGPT login or API key)',
+    ];
+
+    for (const cols of [95, 96, 100, 104]) {
+      for (const github of scenarios) {
+        for (const codex of scenarios) {
+          const tree = (
+            <Box width={cols}>
+              <AuthScreen
+                githubAuth={github.state}
+                codexAuth={codex.state}
+                onContinue={() => undefined}
+                onBack={() => undefined}
+              />
+            </Box>
+          );
+          const instance = render(tree);
+          Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+          instance.stdout.emit('resize');
+          instance.rerender(tree);
+
+          const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+          const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+          const plainLines = frame.split('\n');
+          const hasLongFailureBadge =
+            github.state === 'insufficient_permissions' || codex.state === 'insufficient_permissions';
+          const hasNotAuthenticatedBadge =
+            github.state === 'not_authenticated' || codex.state === 'not_authenticated';
+          const expectsCompactCards =
+            cols < 96 ||
+            (cols < 100 && (hasLongFailureBadge || hasNotAuthenticatedBadge)) ||
+            (cols < 104 && hasLongFailureBadge);
+          for (const description of descriptions) {
+            expect(semanticText).toContain(description);
+          }
+          for (const { badge } of [github, codex]) {
+            expect(semanticText).toContain(badge);
+          }
+          expect(frame).not.toMatch(/changeATED|inspectionAUTHENTICATED|AUTHENTI\s+CATED/);
+          expect(plainLines.some(line =>
+            line.includes('Required for') &&
+            [...scenarios].some(({ badge }) => line.includes(badge))
+          )).toBe(false);
+          for (const [heading, badge] of [
+            ['GitHub CLI (gh) Session', github.badge],
+            ['Codex CLI / SDK Session', codex.badge],
+          ]) {
+            const cardLine = plainLines.find(line => line.includes(heading));
+            expect(cardLine).toBeDefined();
+            expect(cardLine?.includes(badge)).toBe(!expectsCompactCards);
+          }
+        }
+      }
+    }
   });
 
   it('cycles auth states with [T] and blocks preflight when unauthenticated', async () => {
@@ -353,12 +586,89 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       expect(frame).toContain('DEMO');
       expect(frame).toContain('ONLY');
       expect(frame).toContain('Welcome');
+      expect(frame).toContain('CodeGuardian');
+      expect(frame).toContain('Target: #42');
+      expect(frame).toContain('[Enter] Begin');
+      expect(frame).toContain('[A] Auth status');
+      expect(frame).toContain('[Q] Quit');
+      expect(frame).toContain('TUI v0.1.0');
+      expect(frame).not.toContain('QuitTUI');
 
       // Assert that rendered lines fit within the named terminal column width
       const lines = frame.split('\n');
       for (const line of lines) {
         const cleanLine = line.replace(/\u001B\[[0-9;]*[a-zA-Z]/g, '');
         expect(stringWidth(cleanLine)).toBeLessThanOrEqual(cols);
+      }
+
+      // The 40/60-column views stack the product identity, screen title, hints,
+      // and version into separate rows. At 80 columns the horizontal layout fits.
+      const plainLines = lines.map(line => line.replace(/\u001B\[[0-9;]*[a-zA-Z]/g, ''));
+      const productLine = plainLines.findIndex(line => line.includes('CodeGuardian'));
+      const titleLine = plainLines.findIndex(line => line.includes('Welcome & CLI Overview'));
+      const quitLine = plainLines.findIndex(line => line.includes('[Q] Quit'));
+      const versionLine = plainLines.findIndex(line => line.includes('TUI v0.1.0'));
+      expect(productLine).toBeGreaterThanOrEqual(0);
+      expect(quitLine).toBeGreaterThanOrEqual(0);
+      expect(versionLine).toBeGreaterThanOrEqual(0);
+      if (cols < 72) {
+        expect(titleLine).toBeGreaterThan(productLine);
+        expect(titleLine).not.toBe(productLine);
+        expect(versionLine).not.toBe(quitLine);
+      } else {
+        expect(titleLine).toBe(productLine);
+      }
+    }
+  });
+
+  it('keeps long header metadata and navigation hints semantically intact at 40, 60, and 80 columns', () => {
+    const title = '4. PR Diff Inspection & Risk Overview';
+    const target = 'Target: #123456789 — feat(authentication): rotate credentials safely';
+    const hints = ['[Enter] Continue', '[Esc] Back', '[Q] Quit'];
+
+    for (const cols of [40, 60, 80]) {
+      const tree = (
+        <Box width={cols} flexDirection="column">
+          <Header
+            screen="inspection"
+            prNumber={123456789}
+            prTitle="feat(authentication): rotate credentials safely"
+            isDemo={true}
+          />
+          <Footer hints={hints} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = instance.lastFrame() || '';
+      const plainFrame = frame
+        .replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '')
+        .replace(/[┌┐└┘│─]/g, ' ')
+        .replace(/\s+/g, ' ');
+      expect(plainFrame).toContain('CodeGuardian');
+      expect(plainFrame).toContain(title);
+      expect(plainFrame).toContain('DEMO ONLY');
+      expect(plainFrame).toContain(target);
+      expect(plainFrame).toContain('[Enter] Continue');
+      expect(plainFrame).toContain('[Esc] Back');
+      expect(plainFrame).toContain('[Q] Quit');
+      expect(plainFrame).toContain('TUI v0.1.0');
+      expect(plainFrame).not.toContain('QuitTUI');
+
+      const cleanLines = frame
+        .replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '')
+        .split('\n');
+      for (const line of cleanLines) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+      if (cols < 72) {
+        const quitLine = cleanLines.findIndex(line => line.includes('[Q] Quit'));
+        const versionLine = cleanLines.findIndex(line => line.includes('TUI v0.1.0'));
+        expect(quitLine).toBeGreaterThanOrEqual(0);
+        expect(versionLine).toBeGreaterThan(quitLine);
       }
     }
   });

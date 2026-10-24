@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useWindowSize } from 'ink';
 import { ActiveScreen } from '../types/contracts.js';
 
 interface HeaderProps {
@@ -22,15 +22,18 @@ const SCREEN_TITLES: Record<ActiveScreen, string> = {
 };
 
 export function Header({ screen, prTitle, prNumber, isDemo = true }: HeaderProps) {
+  const { columns } = useWindowSize();
+  const compact = columns < 72;
+
   return (
     <Box flexDirection="column" marginBottom={1}>
-      <Box borderStyle="single" borderColor="cyan" paddingX={1} justifyContent="space-between">
-        <Box>
+      <Box borderStyle="single" borderColor="cyan" paddingX={1} flexDirection={compact ? 'column' : 'row'} justifyContent="space-between">
+        <Box flexDirection={compact ? 'column' : 'row'}>
           <Text bold color="cyan">🛡️  CodeGuardian</Text>
-          <Text color="gray"> | </Text>
+          {!compact && <Text color="gray"> | </Text>}
           <Text bold color="white">{SCREEN_TITLES[screen]}</Text>
         </Box>
-        <Box>
+        <Box alignItems={compact ? 'flex-start' : 'flex-end'}>
           {isDemo && (
             <Text bold color="black" backgroundColor="yellow">
               {" DEMO ONLY "}
@@ -40,8 +43,7 @@ export function Header({ screen, prTitle, prNumber, isDemo = true }: HeaderProps
       </Box>
       {prTitle && prNumber && (
         <Box paddingX={1}>
-          <Text color="gray">Target: </Text>
-          <Text color="white">#{prNumber} — {prTitle}</Text>
+          <Text color="gray">Target: <Text color="white">#{prNumber} — {prTitle}</Text></Text>
         </Box>
       )}
     </Box>

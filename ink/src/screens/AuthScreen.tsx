@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useWindowSize } from 'ink';
 import { useSafeInput } from '../hooks/useSafeInput.js';
 import { AuthState } from '../types/contracts.js';
 
@@ -13,6 +13,17 @@ interface AuthScreenProps {
 
 export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onBack }: AuthScreenProps) {
   const isAuthValid = githubAuth === "authenticated" && codexAuth === "authenticated";
+  const { columns } = useWindowSize();
+  const compact = columns < 72;
+  const actionsCompact = compact || (!isAuthValid && columns < 97);
+  const hasLongFailureBadge =
+    githubAuth === 'insufficient_permissions' || codexAuth === 'insufficient_permissions';
+  const hasNotAuthenticatedBadge =
+    githubAuth === 'not_authenticated' || codexAuth === 'not_authenticated';
+  const statusCardsCompact =
+    columns < 96 ||
+    (columns < 100 && (hasLongFailureBadge || hasNotAuthenticatedBadge)) ||
+    (columns < 104 && hasLongFailureBadge);
 
   useSafeInput((input, key) => {
     if (input === 't' || input === 'T') {
@@ -47,7 +58,12 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onB
       </Box>
 
       <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1} marginBottom={1}>
-        <Box justifyContent="space-between" marginBottom={1}>
+        <Box
+          flexDirection={statusCardsCompact ? 'column' : 'row'}
+          justifyContent={statusCardsCompact ? undefined : 'space-between'}
+          alignItems={statusCardsCompact ? 'flex-start' : undefined}
+          marginBottom={1}
+        >
           <Box flexDirection="column">
             <Text bold color="white">GitHub CLI (gh) Session</Text>
             <Text color="gray">Required for read-only PR metadata, changed files, and diff inspection</Text>
@@ -55,7 +71,12 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onB
           <Box>{getStatusBadge(githubAuth)}</Box>
         </Box>
 
-        <Box justifyContent="space-between" marginTop={1}>
+        <Box
+          flexDirection={statusCardsCompact ? 'column' : 'row'}
+          justifyContent={statusCardsCompact ? undefined : 'space-between'}
+          alignItems={statusCardsCompact ? 'flex-start' : undefined}
+          marginTop={1}
+        >
           <Box flexDirection="column">
             <Text bold color="white">Codex CLI / SDK Session</Text>
             <Text color="gray">Required for bounded specialist analysis lanes (ChatGPT login or API key)</Text>
@@ -77,13 +98,13 @@ export function AuthScreen({ githubAuth, codexAuth, onContinue, onCycleAuth, onB
         </Box>
       )}
 
-      <Box>
+      <Box flexDirection={actionsCompact ? 'column' : 'row'}>
         <Text color={isAuthValid ? "green" : "yellow"} bold>
           Press [Enter] {isAuthValid ? "Proceed" : "Verify Preflight (Blocked)"}
         </Text>
-        <Text color="gray">  |  </Text>
+        {!actionsCompact && <Text color="gray">  |  </Text>}
         <Text color="yellow" bold>[T] Cycle Auth State (Demo)</Text>
-        <Text color="gray">  |  </Text>
+        {!actionsCompact && <Text color="gray">  |  </Text>}
         <Text color="white">Press [Esc] Return</Text>
       </Box>
     </Box>
