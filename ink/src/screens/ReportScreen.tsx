@@ -68,6 +68,8 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
                     <Text color={isSelected ? "cyan" : "gray"}>{isSelected ? "▶ " : "  "}</Text>
                     <Text bold color={sevColor}>[{f.severity}] </Text>
                     <Text color={f.verification === 'verified_diff' ? 'green' : 'yellow'}>[{verificationLabel}] </Text>
+                  </Box>
+                  <Box paddingLeft={4}>
                     <Text bold={isSelected} color={isSelected ? "white" : "gray"}>{f.title}</Text>
                   </Box>
                   {isSelected && (

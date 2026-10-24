@@ -7,7 +7,9 @@ import { App } from '../src/App.js';
 import { Footer } from '../src/components/Footer.js';
 import { Header } from '../src/components/Header.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
+import { ReportScreen } from '../src/screens/ReportScreen.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
+import { SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
 
 const delay = (ms: number = 30) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -506,6 +508,68 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
     await delay();
     expect(lastFrame()).toContain('Dry-Run Publication Preview & Safeguards');
     expect(lastFrame()).toContain('Do you authorize submitting this review comment?');
+  });
+
+  it('keeps severity, verification badges, and long finding titles distinct at 40/60/80/100 columns with NO_COLOR', async () => {
+    vi.stubEnv('NO_COLOR', '1');
+    vi.stubEnv('FORCE_COLOR', '0');
+    const longTitle = 'Insecure fallback key generated when AUTH_SECRET is omitted — with an additional long explanation for narrow terminals';
+    const report = {
+      ...SYNTHETIC_REPORT,
+      findings: SYNTHETIC_REPORT.findings.map(finding =>
+        finding.id === 'f-002' ? { ...finding, title: longTitle } : finding
+      ),
+    };
+
+    const assertSeparated = (frame: string, badge: string, titleStart: string) => {
+      const lines = frame.split('\n');
+      const badgeLine = lines.findIndex(line => line.includes(badge));
+      const titleLine = lines.findIndex(line => line.includes(titleStart));
+      expect(badgeLine).toBeGreaterThanOrEqual(0);
+      expect(titleLine).toBeGreaterThan(badgeLine);
+    };
+
+    for (const cols of [40, 60, 80, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <ReportScreen report={report} onProceedToPublish={() => {}} onBack={() => {}} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const rawFrame = instance.lastFrame() || '';
+      expect(rawFrame).not.toMatch(/\u001B\[[0-9;]*m/);
+      const frame = rawFrame.replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      const compactText = semanticText.replace(/\s+/g, '');
+      expect(semanticText).toContain('Insecure fallback');
+      expect(semanticText).toContain('AUTH_SECRET is omitted');
+      expect(semanticText).toContain('additional long explanation for narrow terminals');
+      expect(semanticText).toContain('VERIFIED DIFF');
+      expect(semanticText).toContain('NEEDS CONTEXT');
+      expect(semanticText).toContain('REJECTED');
+      expect(frame).not.toMatch(/VERIFIED DIFF[ \t]*Insecure fallback/);
+      expect(frame).not.toMatch(/NEEDS CONTEXT[ \t]*Missing connection timeout/);
+      expect(frame).not.toMatch(/REJECTED[ \t]*Legacy helper assertion/);
+      expect(compactText).toContain(SYNTHETIC_REPORT.report_digest);
+      expect(semanticText).toContain('Path: src/demo.ts:17');
+
+      assertSeparated(frame, '[VERIFIED DIFF]', 'Insecure fallback');
+      assertSeparated(frame, '[NEEDS CONTEXT]', 'Missing connection timeout');
+      assertSeparated(frame, '[REJECTED]', 'Legacy helper assertion');
+
+      instance.stdin.write('\u001B[B');
+      await delay();
+      const movedFrame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const movedSemanticText = movedFrame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      const movedCompactText = movedSemanticText.replace(/\s+/g, '');
+      expect(movedFrame).toContain('▶');
+      expect(movedSemanticText).toContain('Path: src/auth/token.ts:45');
+      expect(movedCompactText).toContain(SYNTHETIC_REPORT.report_digest);
+    }
   });
 
   it('handles publication safeguards: Stale-SHA refusal, Permission Denied, Duplicate warning, and Confirmation lock', async () => {
