@@ -593,9 +593,11 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
     };
 
     for (const cols of [40, 60, 80, 100]) {
+      const onProceedToPublish = vi.fn();
+      const onBack = vi.fn();
       const tree = (
         <Box width={cols}>
-          <ReportScreen report={report} onProceedToPublish={() => {}} onBack={() => {}} />
+          <ReportScreen report={report} onProceedToPublish={onProceedToPublish} onBack={onBack} />
         </Box>
       );
       const instance = render(tree);
@@ -610,6 +612,28 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       }
       const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
       const compactText = semanticText.replace(/\s+/g, '');
+      const expectedReportHeading = `Consolidated Review Report (Run: ${report.run_id}):`;
+      const frameLines = frame.split('\n');
+      const headingLine = frameLines.findIndex(line => line.includes('Consolidated Review Report'));
+      const formatLine = frameLines.findIndex(line => line.includes('Format: [SUMMARY]'));
+      const enterLine = frameLines.findIndex(line => line.includes('Press [Enter] to Open'));
+      const escapeLine = frameLines.findIndex(line => line.includes('Press [Esc] to Return'));
+      expect(semanticText).toContain(expectedReportHeading);
+      expect(semanticText).toContain('Format: [SUMMARY]');
+      expect(headingLine).toBeGreaterThanOrEqual(0);
+      expect(formatLine).toBeGreaterThanOrEqual(0);
+      expect(enterLine).toBeGreaterThanOrEqual(0);
+      expect(escapeLine).toBeGreaterThanOrEqual(0);
+      if (cols < 72) {
+        expect(frameLines[headingLine]).not.toContain('Format:');
+        expect(formatLine).toBeGreaterThan(headingLine);
+        expect(escapeLine).toBeGreaterThan(enterLine);
+        expect(frameLines[enterLine]).not.toContain('[Esc]');
+      } else {
+        expect(formatLine).toBe(headingLine);
+        expect(escapeLine).toBe(enterLine);
+        expect(frameLines[enterLine]).toContain('|');
+      }
       expect(semanticText).toContain('Insecure fallback');
       expect(semanticText).toContain('AUTH_SECRET is omitted');
       expect(semanticText).toContain('additional long explanation for narrow terminals');
@@ -634,6 +658,37 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       expect(movedFrame).toContain('▶');
       expect(movedSemanticText).toContain('Path: src/auth/token.ts:45');
       expect(movedCompactText).toContain(SYNTHETIC_REPORT.report_digest);
+
+      instance.stdin.write('m');
+      await delay();
+      const markdownFrame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const markdownText = markdownFrame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      expect(markdownText).toContain(expectedReportHeading);
+      expect(markdownText).toContain('Format: [MARKDOWN]');
+      expect(markdownText).toContain('Press [Enter] to Open Dry-Run Publication Gate');
+      expect(markdownText).toContain('Press [Esc] to Return');
+      for (const line of markdownFrame.split('\n')) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.stdin.write('j');
+      await delay();
+      const jsonFrame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const jsonText = jsonFrame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      expect(jsonText).toContain(expectedReportHeading);
+      expect(jsonText).toContain('Format: [JSON]');
+      expect(jsonText).toContain('Press [Enter] to Open Dry-Run Publication Gate');
+      expect(jsonText).toContain('Press [Esc] to Return');
+      for (const line of jsonFrame.split('\n')) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.stdin.write('\r');
+      await delay();
+      expect(onProceedToPublish).toHaveBeenCalledOnce();
+      instance.stdin.write('\u001B');
+      await delay();
+      expect(onBack).toHaveBeenCalledOnce();
     }
   });
 

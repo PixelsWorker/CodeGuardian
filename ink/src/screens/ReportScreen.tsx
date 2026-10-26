@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useWindowSize } from 'ink';
 import { useSafeInput } from '../hooks/useSafeInput.js';
 import { ReviewReport } from '../types/contracts.js';
 import { formatReportMarkdown, formatReportJson } from '../core/report-formatter.js';
@@ -11,6 +11,8 @@ interface ReportScreenProps {
 }
 
 export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScreenProps) {
+  const { columns } = useWindowSize();
+  const compact = columns < 72;
   const [format, setFormat] = useState<"summary" | "markdown" | "json">("summary");
   const [fullExport, setFullExport] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -35,7 +37,7 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Box justifyContent="space-between" marginBottom={1}>
+      <Box flexDirection={compact ? 'column' : 'row'} justifyContent={compact ? 'flex-start' : 'space-between'} marginBottom={1}>
         <Text bold color="white">Consolidated Review Report (Run: {report.run_id}):</Text>
         <Box>
           <Text color="gray">Format: </Text>
@@ -117,9 +119,9 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
         <Text color="gray">Controls: Press <Text bold color="cyan">[M]</Text> for Markdown toggle | <Text bold color="cyan">[J]</Text> for JSON toggle</Text>
       </Box>
 
-      <Box>
+      <Box flexDirection={compact ? 'column' : 'row'}>
         <Text color="green" bold>Press [Enter] to Open Dry-Run Publication Gate</Text>
-        <Text color="gray">  |  </Text>
+        {!compact && <Text color="gray">  |  </Text>}
         <Text color="white">Press [Esc] to Return</Text>
       </Box>
     </Box>
