@@ -581,11 +581,12 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       ),
     };
 
-    const assertSeparated = (frame: string, badge: string, titleStart: string) => {
+    const assertSeparated = (frame: string, severity: string, badge: string, titleStart: string) => {
       const lines = frame.split('\n');
       const titleLine = lines.findIndex(line => line.includes(titleStart));
       expect(titleLine).toBeGreaterThan(0);
       const badgeLine = titleLine - 1;
+      expect(lines[badgeLine]).toContain(`[${severity}]`);
       expect(lines[badgeLine]).toContain(badge);
       expect(lines[badgeLine]).not.toContain(titleStart);
       expect(lines[titleLine]).not.toContain(badge);
@@ -621,9 +622,9 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       expect(compactText).toContain(SYNTHETIC_REPORT.report_digest);
       expect(semanticText).toContain('Path: src/demo.ts:17');
 
-      assertSeparated(frame, '[VERIFIED DIFF]', 'Insecure fallback');
-      assertSeparated(frame, '[NEEDS CONTEXT]', 'Missing connection timeout');
-      assertSeparated(frame, '[REJECTED]', 'Legacy helper assertion');
+      assertSeparated(frame, 'P1', '[VERIFIED DIFF]', 'Insecure fallback');
+      assertSeparated(frame, 'P2', '[NEEDS CONTEXT]', 'Missing connection timeout');
+      assertSeparated(frame, 'P2', '[REJECTED]', 'Legacy helper assertion');
 
       instance.stdin.write('\u001B[B');
       await delay();
