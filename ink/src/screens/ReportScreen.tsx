@@ -12,10 +12,19 @@ interface ReportScreenProps {
 
 export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScreenProps) {
   const { columns } = useWindowSize();
-  const compact = columns < 72;
   const [format, setFormat] = useState<"summary" | "markdown" | "json">("summary");
   const [fullExport, setFullExport] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const reportHeading = `Consolidated Review Report (Run: ${report.run_id}):`;
+  const formatLabel = `Format: [${format.toUpperCase()}]`;
+  const enterAction = 'Press [Enter] to Open Dry-Run Publication Gate';
+  const escapeAction = 'Press [Esc] to Return';
+  const availableColumns = Math.max(columns - 2, 0);
+  const reportHeadingWidth = /^[\x20-\x7E]*$/.test(reportHeading)
+    ? reportHeading.length
+    : Number.POSITIVE_INFINITY;
+  const compactHeader = reportHeadingWidth + 1 + formatLabel.length > availableColumns;
+  const compactActions = enterAction.length + '  |  '.length + escapeAction.length > availableColumns;
 
   useSafeInput((input, key) => {
     if (key.return) {
@@ -37,8 +46,8 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Box flexDirection={compact ? 'column' : 'row'} justifyContent={compact ? 'flex-start' : 'space-between'} marginBottom={1}>
-        <Text bold color="white">Consolidated Review Report (Run: {report.run_id}):</Text>
+      <Box flexDirection={compactHeader ? 'column' : 'row'} justifyContent={compactHeader ? 'flex-start' : 'space-between'} marginBottom={1}>
+        <Text bold color="white">{reportHeading}</Text>
         <Box>
           <Text color="gray">Format: </Text>
           <Text bold color="cyan">[{format.toUpperCase()}]</Text>
@@ -119,10 +128,10 @@ export function ReportScreen({ report, onProceedToPublish, onBack }: ReportScree
         <Text color="gray">Controls: Press <Text bold color="cyan">[M]</Text> for Markdown toggle | <Text bold color="cyan">[J]</Text> for JSON toggle</Text>
       </Box>
 
-      <Box flexDirection={compact ? 'column' : 'row'}>
-        <Text color="green" bold>Press [Enter] to Open Dry-Run Publication Gate</Text>
-        {!compact && <Text color="gray">  |  </Text>}
-        <Text color="white">Press [Esc] to Return</Text>
+      <Box flexDirection={compactActions ? 'column' : 'row'}>
+        <Text color="green" bold>{enterAction}</Text>
+        {!compactActions && <Text color="gray">  |  </Text>}
+        <Text color="white">{escapeAction}</Text>
       </Box>
     </Box>
   );

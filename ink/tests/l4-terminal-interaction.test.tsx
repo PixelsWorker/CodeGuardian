@@ -618,21 +618,30 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       const formatLine = frameLines.findIndex(line => line.includes('Format: [SUMMARY]'));
       const enterLine = frameLines.findIndex(line => line.includes('Press [Enter] to Open'));
       const escapeLine = frameLines.findIndex(line => line.includes('Press [Esc] to Return'));
+      const headingFitsBesideFormat = expectedReportHeading.length + 1 + 'Format: [SUMMARY]'.length <= cols - 2;
+      const actionsFitOnOneLine = 'Press [Enter] to Open Dry-Run Publication Gate'.length + '  |  '.length + 'Press [Esc] to Return'.length <= cols - 2;
       expect(semanticText).toContain(expectedReportHeading);
       expect(semanticText).toContain('Format: [SUMMARY]');
       expect(headingLine).toBeGreaterThanOrEqual(0);
       expect(formatLine).toBeGreaterThanOrEqual(0);
       expect(enterLine).toBeGreaterThanOrEqual(0);
       expect(escapeLine).toBeGreaterThanOrEqual(0);
-      if (cols < 72) {
-        expect(frameLines[headingLine]).not.toContain('Format:');
-        expect(formatLine).toBeGreaterThan(headingLine);
-        expect(escapeLine).toBeGreaterThan(enterLine);
-        expect(frameLines[enterLine]).not.toContain('[Esc]');
-      } else {
+      if (headingFitsBesideFormat) {
         expect(formatLine).toBe(headingLine);
+      } else {
+        const headingEndLine = frameLines.findIndex(line => line.includes('):'));
+        expect(headingEndLine).toBeGreaterThanOrEqual(headingLine);
+        expect(formatLine).toBeGreaterThan(headingEndLine);
+        expect(frameLines[formatLine]).not.toContain('Consolidated Review Report');
+      }
+      if (actionsFitOnOneLine) {
         expect(escapeLine).toBe(enterLine);
         expect(frameLines[enterLine]).toContain('|');
+      } else {
+        const enterEndLine = frameLines.findIndex(line => line.includes('Publication Gate'));
+        expect(enterEndLine).toBeGreaterThanOrEqual(enterLine);
+        expect(escapeLine).toBeGreaterThan(enterEndLine);
+        expect(frameLines[enterLine]).not.toContain('[Esc]');
       }
       expect(semanticText).toContain('Insecure fallback');
       expect(semanticText).toContain('AUTH_SECRET is omitted');
@@ -689,6 +698,60 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       instance.stdin.write('\u001B');
       await delay();
       expect(onBack).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('keeps UUID run IDs and Report actions distinct until each row fits', async () => {
+    const runId = '123e4567-e89b-12d3-a456-426614174000';
+    const report = { ...SYNTHETIC_REPORT, run_id: runId };
+    const expectedHeading = `Consolidated Review Report (Run: ${runId}):`;
+    const headingWidth = expectedHeading.length;
+    const formatWidth = 'Format: [SUMMARY]'.length;
+    const actionWidth = 'Press [Enter] to Open Dry-Run Publication Gate'.length + '  |  '.length + 'Press [Esc] to Return'.length;
+
+    for (const cols of [72, 74, 80, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <ReportScreen report={report} onProceedToPublish={() => {}} onBack={() => {}} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const lines = frame.split('\n');
+      const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      const headingLine = lines.findIndex(line => line.includes('Consolidated Review Report'));
+      const headingEndLine = lines.findIndex(line => line.includes('):'));
+      const formatLine = lines.findIndex(line => line.includes('Format: [SUMMARY]'));
+      const enterLine = lines.findIndex(line => line.includes('Press [Enter] to Open'));
+      const enterEndLine = lines.findIndex(line => line.includes('Publication Gate'));
+      const escapeLine = lines.findIndex(line => line.includes('Press [Esc] to Return'));
+      const availableColumns = cols - 2;
+
+      expect(semanticText).toContain(expectedHeading);
+      expect(formatLine).toBeGreaterThanOrEqual(0);
+      expect(enterLine).toBeGreaterThanOrEqual(0);
+      expect(enterEndLine).toBeGreaterThanOrEqual(enterLine);
+      expect(escapeLine).toBeGreaterThanOrEqual(0);
+      if (headingWidth + 1 + formatWidth <= availableColumns) {
+        expect(formatLine).toBe(headingLine);
+      } else {
+        expect(headingEndLine).toBeGreaterThanOrEqual(headingLine);
+        expect(formatLine).toBeGreaterThan(headingEndLine);
+      }
+      if (actionWidth <= availableColumns) {
+        expect(escapeLine).toBe(enterLine);
+      } else {
+        expect(escapeLine).toBeGreaterThan(enterEndLine);
+      }
+      for (const line of lines) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.unmount();
     }
   });
 
