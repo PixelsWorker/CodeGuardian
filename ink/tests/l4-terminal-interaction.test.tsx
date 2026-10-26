@@ -759,11 +759,12 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
   it('renders the longest run ID accepted by the offline demo route without overflow', () => {
     const owner = `a${'o'.repeat(37)}z`;
     const repo = 'r'.repeat(100);
-    const url = `https://github.com/${owner}/${repo}/pull/42`;
+    const number = Number.MAX_SAFE_INTEGER;
+    const url = `https://github.com/${owner}/${repo}/pull/${number}`;
     const identity = parseGitHubPrUrl(url);
-    expect(identity).toMatchObject({ owner, repo, number: 42, url });
+    expect(identity).toMatchObject({ owner, repo, number, url });
     const report = buildDemoReport({ ...SYNTHETIC_REPORT.pr, ...identity! }, CANONICAL_SPECIALISTS);
-    const expectedRunId = `run-g00~${owner}~${repo}~42~cccc`;
+    const expectedRunId = `run-g00~${owner}~${repo}~${number}~cccc`;
     expect(report.run_id).toBe(expectedRunId);
 
     for (const cols of [40, 60, 72, 74, 80, 100]) {
