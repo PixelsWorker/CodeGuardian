@@ -201,7 +201,11 @@ describe('G00 Nine-Screen Terminal Components', () => {
         onBack={() => {}}
       />
     );
-    expect(lastFrame()).toContain(`[REJECTED] ${rejected.title}`);
+    const initialLines = (lastFrame() || '').split('\n');
+    const rejectedBadgeLine = initialLines.findIndex(line => line.includes('[REJECTED]'));
+    const rejectedTitleLine = initialLines.findIndex(line => line.includes(rejected.title));
+    expect(rejectedBadgeLine).toBeGreaterThanOrEqual(0);
+    expect(rejectedTitleLine).toBeGreaterThan(rejectedBadgeLine);
     stdin.write('\u001b[B');
     await new Promise(resolve => setTimeout(resolve, 80));
     expect(lastFrame()).toContain('Rejection reason: Outside changed lines');

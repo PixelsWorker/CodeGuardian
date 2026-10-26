@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import React from 'react';
 import { render, cleanup } from 'ink-testing-library';
 import { Box } from 'ink';
@@ -7,7 +8,10 @@ import { App } from '../src/App.js';
 import { Footer } from '../src/components/Footer.js';
 import { Header } from '../src/components/Header.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
+import { ReportScreen } from '../src/screens/ReportScreen.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
+import { CANONICAL_SPECIALISTS, buildDemoReport, SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
+import { parseGitHubPrUrl } from '../src/core/github-url.js';
 
 const delay = (ms: number = 30) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -506,6 +510,294 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
     await delay();
     expect(lastFrame()).toContain('Dry-Run Publication Preview & Safeguards');
     expect(lastFrame()).toContain('Do you authorize submitting this review comment?');
+  });
+
+  it('keeps severity, verification badges, and long finding titles distinct at 40/60/80/100 columns with NO_COLOR', async () => {
+    const colorProbe = `
+      const tty = await import('node:tty');
+      tty.default.isatty = () => true;
+      const { pathToFileURL } = await import('node:url');
+      const { createCliProgram } = await import(pathToFileURL(process.cwd() + '/src/cli.tsx'));
+      const { render } = await import('ink-testing-library');
+      let instance;
+      const program = createCliProgram({ renderApp: element => { instance = render(element); } });
+      program.parse(['node', 'codeguardian', 'review', 'https://github.com/example/demo/pull/42', '--demo']);
+      const waitFor = async marker => {
+        for (let attempt = 0; attempt < 50; attempt++) {
+          if (instance?.lastFrame()?.includes(marker)) return;
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        throw new Error('CLI did not reach expected screen marker: ' + marker);
+      };
+      for (const marker of ['Changed Files List', 'Security Specialist', 'Consensus Summary Statistics']) {
+        await waitFor(marker);
+        instance.stdin.write('\\r');
+        await new Promise(resolve => setTimeout(resolve, 40));
+      }
+      await waitFor('Consolidated Review Report');
+      const frame = instance.lastFrame() || '';
+      process.stdout.write(JSON.stringify({
+        hasAnsi: /\\u001B\\[[0-9;]*m/.test(frame),
+        hasReportTitle: frame.includes('Consolidated Review Report'),
+        forceColorAfterStartup: process.env.FORCE_COLOR ?? null,
+      }));
+      instance.cleanup();
+    `;
+    const runColorProbe = (noColor: boolean, forceColor = false) => {
+      const env = { ...process.env };
+      delete env.FORCE_COLOR;
+      delete env.CI;
+      delete env.GITHUB_ACTIONS;
+      env.TERM = 'xterm-256color';
+      if (noColor) env.NO_COLOR = '1';
+      else delete env.NO_COLOR;
+      if (forceColor) env.FORCE_COLOR = '1';
+      return JSON.parse(execFileSync(process.execPath, [
+        '--import', 'tsx', '--input-type=module', '-e', colorProbe,
+      ], { cwd: process.cwd(), env, encoding: 'utf8' })) as {
+        hasAnsi: boolean;
+        hasReportTitle: boolean;
+        forceColorAfterStartup: string | null;
+      };
+    };
+
+    const colorEnabledControl = runColorProbe(false);
+    const noColorReport = runColorProbe(true);
+    const explicitColorOverride = runColorProbe(true, true);
+    expect(colorEnabledControl.hasAnsi).toBe(true);
+    expect(colorEnabledControl.hasReportTitle).toBe(true);
+    expect(colorEnabledControl.forceColorAfterStartup).toBe(null);
+    expect(noColorReport.hasReportTitle).toBe(true);
+    expect(noColorReport.hasAnsi).toBe(false);
+    expect(noColorReport.forceColorAfterStartup).toBe(null);
+    expect(explicitColorOverride.hasReportTitle).toBe(true);
+    expect(explicitColorOverride.hasAnsi).toBe(true);
+    expect(explicitColorOverride.forceColorAfterStartup).toBe('1');
+
+    const longTitle = 'Insecure fallback key generated when AUTH_SECRET is omitted — with an additional long explanation for narrow terminals';
+    const report = {
+      ...SYNTHETIC_REPORT,
+      findings: SYNTHETIC_REPORT.findings.map(finding =>
+        finding.id === 'f-002' ? { ...finding, title: longTitle } : finding
+      ),
+    };
+
+    const assertSeparated = (frame: string, severity: string, badge: string, titleStart: string) => {
+      const lines = frame.split('\n');
+      const titleLine = lines.findIndex(line => line.includes(titleStart));
+      expect(titleLine).toBeGreaterThan(0);
+      const badgeLine = titleLine - 1;
+      expect(lines[badgeLine]).toContain(`[${severity}]`);
+      expect(lines[badgeLine]).toContain(badge);
+      expect(lines[badgeLine]).not.toContain(titleStart);
+      expect(lines[titleLine]).not.toContain(badge);
+    };
+
+    for (const cols of [40, 60, 80, 100]) {
+      const onProceedToPublish = vi.fn();
+      const onBack = vi.fn();
+      const tree = (
+        <Box width={cols}>
+          <ReportScreen report={report} onProceedToPublish={onProceedToPublish} onBack={onBack} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const rawFrame = instance.lastFrame() || '';
+      const frame = rawFrame.replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      for (const line of frame.split('\n')) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+      const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      const compactText = semanticText.replace(/\s+/g, '');
+      const expectedReportHeading = `Consolidated Review Report (Run: ${report.run_id}):`;
+      const frameLines = frame.split('\n');
+      const headingLine = frameLines.findIndex(line => line.includes('Consolidated Review Report'));
+      const formatLine = frameLines.findIndex(line => line.includes('Format: [SUMMARY]'));
+      const enterLine = frameLines.findIndex(line => line.includes('Press [Enter] to Open'));
+      const escapeLine = frameLines.findIndex(line => line.includes('Press [Esc] to Return'));
+      const headingFitsBesideFormat = expectedReportHeading.length + 1 + 'Format: [SUMMARY]'.length <= cols - 2;
+      const actionsFitOnOneLine = 'Press [Enter] to Open Dry-Run Publication Gate'.length + '  |  '.length + 'Press [Esc] to Return'.length <= cols - 2;
+      expect(semanticText).toContain(expectedReportHeading);
+      expect(semanticText).toContain('Format: [SUMMARY]');
+      expect(headingLine).toBeGreaterThanOrEqual(0);
+      expect(formatLine).toBeGreaterThanOrEqual(0);
+      expect(enterLine).toBeGreaterThanOrEqual(0);
+      expect(escapeLine).toBeGreaterThanOrEqual(0);
+      if (headingFitsBesideFormat) {
+        expect(formatLine).toBe(headingLine);
+      } else {
+        const headingEndLine = frameLines.findIndex(line => line.includes('):'));
+        expect(headingEndLine).toBeGreaterThanOrEqual(headingLine);
+        expect(formatLine).toBeGreaterThan(headingEndLine);
+        expect(frameLines[formatLine]).not.toContain('Consolidated Review Report');
+      }
+      if (actionsFitOnOneLine) {
+        expect(escapeLine).toBe(enterLine);
+        expect(frameLines[enterLine]).toContain('|');
+      } else {
+        const enterEndLine = frameLines.findIndex(line => line.includes('Publication Gate'));
+        expect(enterEndLine).toBeGreaterThanOrEqual(enterLine);
+        expect(escapeLine).toBeGreaterThan(enterEndLine);
+        expect(frameLines[enterLine]).not.toContain('[Esc]');
+      }
+      expect(semanticText).toContain('Insecure fallback');
+      expect(semanticText).toContain('AUTH_SECRET is omitted');
+      expect(semanticText).toContain('additional long explanation for narrow terminals');
+      expect(semanticText).toContain('VERIFIED DIFF');
+      expect(semanticText).toContain('NEEDS CONTEXT');
+      expect(semanticText).toContain('REJECTED');
+      expect(frame).not.toMatch(/VERIFIED DIFF[ \t]*Insecure fallback/);
+      expect(frame).not.toMatch(/NEEDS CONTEXT[ \t]*Missing connection timeout/);
+      expect(frame).not.toMatch(/REJECTED[ \t]*Legacy helper assertion/);
+      expect(compactText).toContain(SYNTHETIC_REPORT.report_digest);
+      expect(semanticText).toContain('Path: src/demo.ts:17');
+
+      assertSeparated(frame, 'P1', '[VERIFIED DIFF]', 'Insecure fallback');
+      assertSeparated(frame, 'P2', '[NEEDS CONTEXT]', 'Missing connection timeout');
+      assertSeparated(frame, 'P2', '[REJECTED]', 'Legacy helper assertion');
+
+      instance.stdin.write('\u001B[B');
+      await delay();
+      const movedFrame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const movedSemanticText = movedFrame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      const movedCompactText = movedSemanticText.replace(/\s+/g, '');
+      expect(movedFrame).toContain('▶');
+      expect(movedSemanticText).toContain('Path: src/auth/token.ts:45');
+      expect(movedCompactText).toContain(SYNTHETIC_REPORT.report_digest);
+
+      instance.stdin.write('m');
+      await delay();
+      const markdownFrame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const markdownText = markdownFrame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      expect(markdownText).toContain(expectedReportHeading);
+      expect(markdownText).toContain('Format: [MARKDOWN]');
+      expect(markdownText).toContain('Press [Enter] to Open Dry-Run Publication Gate');
+      expect(markdownText).toContain('Press [Esc] to Return');
+      for (const line of markdownFrame.split('\n')) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.stdin.write('j');
+      await delay();
+      const jsonFrame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const jsonText = jsonFrame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      expect(jsonText).toContain(expectedReportHeading);
+      expect(jsonText).toContain('Format: [JSON]');
+      expect(jsonText).toContain('Press [Enter] to Open Dry-Run Publication Gate');
+      expect(jsonText).toContain('Press [Esc] to Return');
+      for (const line of jsonFrame.split('\n')) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.stdin.write('\r');
+      await delay();
+      expect(onProceedToPublish).toHaveBeenCalledOnce();
+      instance.stdin.write('\u001B');
+      await delay();
+      expect(onBack).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('keeps UUID run IDs and Report actions distinct until each row fits', async () => {
+    const runId = '123e4567-e89b-12d3-a456-426614174000';
+    const report = { ...SYNTHETIC_REPORT, run_id: runId };
+    const expectedHeading = `Consolidated Review Report (Run: ${runId}):`;
+    const headingWidth = expectedHeading.length;
+    const formatWidth = 'Format: [SUMMARY]'.length;
+    const actionWidth = 'Press [Enter] to Open Dry-Run Publication Gate'.length + '  |  '.length + 'Press [Esc] to Return'.length;
+
+    for (const cols of [72, 74, 80, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <ReportScreen report={report} onProceedToPublish={() => {}} onBack={() => {}} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const lines = frame.split('\n');
+      const semanticText = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+      const headingLine = lines.findIndex(line => line.includes('Consolidated Review Report'));
+      const headingEndLine = lines.findIndex(line => line.includes('):'));
+      const formatLine = lines.findIndex(line => line.includes('Format: [SUMMARY]'));
+      const enterLine = lines.findIndex(line => line.includes('Press [Enter] to Open'));
+      const enterEndLine = lines.findIndex(line => line.includes('Publication Gate'));
+      const escapeLine = lines.findIndex(line => line.includes('Press [Esc] to Return'));
+      const availableColumns = cols - 2;
+
+      expect(semanticText).toContain(expectedHeading);
+      expect(formatLine).toBeGreaterThanOrEqual(0);
+      expect(enterLine).toBeGreaterThanOrEqual(0);
+      expect(enterEndLine).toBeGreaterThanOrEqual(enterLine);
+      expect(escapeLine).toBeGreaterThanOrEqual(0);
+      if (headingWidth + 1 + formatWidth <= availableColumns) {
+        expect(formatLine).toBe(headingLine);
+      } else {
+        expect(headingEndLine).toBeGreaterThanOrEqual(headingLine);
+        expect(formatLine).toBeGreaterThan(headingEndLine);
+      }
+      if (actionWidth <= availableColumns) {
+        expect(escapeLine).toBe(enterLine);
+      } else {
+        expect(escapeLine).toBeGreaterThan(enterEndLine);
+      }
+      for (const line of lines) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.unmount();
+    }
+  });
+
+  it('renders the longest run ID accepted by the offline demo route without overflow', () => {
+    const owner = `a${'o'.repeat(37)}z`;
+    const repo = 'r'.repeat(100);
+    const number = Number.MAX_SAFE_INTEGER;
+    const url = `https://github.com/${owner}/${repo}/pull/${number}`;
+    const identity = parseGitHubPrUrl(url);
+    expect(identity).toMatchObject({ owner, repo, number, url });
+    const report = buildDemoReport({ ...SYNTHETIC_REPORT.pr, ...identity! }, CANONICAL_SPECIALISTS);
+    const expectedRunId = `run-g00~${owner}~${repo}~${number}~cccc`;
+    expect(report.run_id).toBe(expectedRunId);
+
+    for (const cols of [40, 60, 72, 74, 80, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <ReportScreen report={report} onProceedToPublish={() => {}} onBack={() => {}} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const runMarker = frame.indexOf('Run:');
+      const headingStart = runMarker + 'Run:'.length;
+      const formatStart = frame.indexOf('Format: [SUMMARY]');
+      expect(runMarker).toBeGreaterThanOrEqual(0);
+      expect(formatStart).toBeGreaterThan(headingStart);
+      const visibleHeading = frame.slice(headingStart, formatStart).replace(/[│┌┐└┘─\s]/g, '');
+      expect(visibleHeading).toContain(`${expectedRunId}):`);
+
+      const lines = frame.split('\n');
+      const headingLine = lines.findIndex(line => line.includes('Run:'));
+      const formatLine = lines.findIndex(line => line.includes('Format: [SUMMARY]'));
+      expect(headingLine).toBeGreaterThanOrEqual(0);
+      expect(formatLine).toBeGreaterThan(headingLine);
+      for (const line of lines) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.unmount();
+    }
   });
 
   it('handles publication safeguards: Stale-SHA refusal, Permission Denied, Duplicate warning, and Confirmation lock', async () => {
