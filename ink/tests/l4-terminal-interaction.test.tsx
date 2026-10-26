@@ -10,7 +10,8 @@ import { Header } from '../src/components/Header.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
 import { ReportScreen } from '../src/screens/ReportScreen.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
-import { SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
+import { CANONICAL_SPECIALISTS, buildDemoReport, SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
+import { parseGitHubPrUrl } from '../src/core/github-url.js';
 
 const delay = (ms: number = 30) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -747,6 +748,49 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       } else {
         expect(escapeLine).toBeGreaterThan(enterEndLine);
       }
+      for (const line of lines) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+
+      instance.unmount();
+    }
+  });
+
+  it('renders the longest run ID accepted by the offline demo route without overflow', () => {
+    const owner = `a${'o'.repeat(37)}z`;
+    const repo = 'r'.repeat(100);
+    const url = `https://github.com/${owner}/${repo}/pull/42`;
+    const identity = parseGitHubPrUrl(url);
+    expect(identity).toMatchObject({ owner, repo, number: 42, url });
+    const report = buildDemoReport({ ...SYNTHETIC_REPORT.pr, ...identity! }, CANONICAL_SPECIALISTS);
+    const expectedRunId = `run-g00~${owner}~${repo}~42~cccc`;
+    expect(report.run_id).toBe(expectedRunId);
+
+    for (const cols of [40, 60, 72, 74, 80, 100]) {
+      const tree = (
+        <Box width={cols}>
+          <ReportScreen report={report} onProceedToPublish={() => {}} onBack={() => {}} />
+        </Box>
+      );
+      const instance = render(tree);
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(tree);
+
+      const frame = (instance.lastFrame() || '').replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const runMarker = frame.indexOf('Run:');
+      const headingStart = runMarker + 'Run:'.length;
+      const formatStart = frame.indexOf('Format: [SUMMARY]');
+      expect(runMarker).toBeGreaterThanOrEqual(0);
+      expect(formatStart).toBeGreaterThan(headingStart);
+      const visibleHeading = frame.slice(headingStart, formatStart).replace(/[│┌┐└┘─\s]/g, '');
+      expect(visibleHeading).toContain(`${expectedRunId}):`);
+
+      const lines = frame.split('\n');
+      const headingLine = lines.findIndex(line => line.includes('Run:'));
+      const formatLine = lines.findIndex(line => line.includes('Format: [SUMMARY]'));
+      expect(headingLine).toBeGreaterThanOrEqual(0);
+      expect(formatLine).toBeGreaterThan(headingLine);
       for (const line of lines) {
         expect(stringWidth(line)).toBeLessThanOrEqual(cols);
       }
