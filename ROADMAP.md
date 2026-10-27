@@ -1,11 +1,11 @@
 # CodeGuardian — Full Development Roadmap
 
-**Status:** PLANNING BASELINE — updated 2026-10-16 with accepted product direction decisions
-**Updated:** 2026-10-16
+**Status (verified 2026-10-27):** G00 implementation is MERGED — FORMAL UX ACCEPTANCE PENDING. PR #1 merged to `main` at `ee9575e62a7687ccf0e2803432c2ddc9c3beb36f`; PR #4 to `dev` at `0e5e95c74b32bfc6228a65a160f341bf49b0c34e`; PR #5 to `dev` at `cf39f19e946d102cc2e4adc2c06b80963b890215`; PR #6 to `dev`, producing `9d8e7d6e8876b3a78e0fc1e623a5d50220898987`. PR #6 local receipts report 281/281 full tests, 47/47 focused, 14/14 snapshots and build PASS. These are local receipts, not independent hosted CI. Rockson’s full nine-screen UX decision remains pending. Windows is DEFERRED / NOT RUN, NOT WAIVED; G01 remains unauthorized. Archive/worktree lifecycle compliance remains UNVERIFIED.
+**Updated:** 2026-10-27 (post-PR #6 governance reconciliation)
 **Product:** CLI-first, multi-agent GitHub pull-request review platform
 **Repository:** https://github.com/PixelsWorker/CodeGuardian
-**Active Windows checkout:** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root)
-**Active feature branch:** `feat/g00-ink-cli-demo` in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\` (targeting `main`)
+**Historical Windows checkout reference (not currently verified):** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root).
+**Historical G00 feature branch/worktree:** `feat/g00-ink-cli-demo` was used for PR #1; the remote branch was deleted after merge. Current Windows local branch/worktree state remains unverified pending host Git receipts.
 **Delivery model:** One group = one independently reviewed acceptance unit, including its tests and integration checks.
 
 > This document consolidates the existing proposed scope and estimates. It does not supersede approval rules in the parent workspace instructions, repository `AGENTS.md`, `ARCHITECTURE.md`, `API-CONTRACT.md`, or `G00-SCOPE.md`. A roadmap entry is not authority to change code, install packages, create branches, push, open PRs, merge, post GitHub reviews, or deploy.
@@ -37,7 +37,7 @@ At the start of this roadmap, the live GitHub references were:
 
 Prior comparison showed zero file differences between those two baselines. Creating this roadmap on `dev` intentionally makes `dev` ahead in documentation without changing `main`. Do not re-run historical Git-reconciliation tasks.
 
-At this update's live remote checkpoint the repository contains browser prototype source, package manifest and tests, **not** a verified native CLI or working real PR review system. Some existing planning files retain historical Git descriptions from before reconciliation. Treat them as historical; use live Git references for new work. Do not edit protected documents incidentally.
+**Historical planning checkpoint (2026-10-16):** At that update’s live remote checkpoint, the repository contained browser prototype source, a package manifest, and tests, but no verified native CLI or working real PR review system. This describes the pre-merge planning state, not the current G00 status recorded above.
 
 ## 3. Group roadmap and effort forecast
 
@@ -74,11 +74,11 @@ Decision checklist:
 
 **Exit:** Accepted architecture and G00 brief; working approved Codex terminal execution; group TODO with integrated tests and explicit implementation authorization.
 
-## 5. G00 — Complete simulated CLI UX demo
+## 5. G00 — Complete simulated CLI UX demo (retained historical scope; implementation merged)
 
 **One observable outcome:** A native terminal application demonstrates the COMPLETE CodeGuardian UX without contacting GitHub, an AI provider, a Docker service, or any publishing endpoint.
 
-**Recommended implementation candidates (not installed or automatically approved):**
+**Historical implementation-planning reference (retained for provenance; not a request to begin or recreate a feature branch):**
 
 | Layer | Candidate | Rule |
 |---|---|---|
@@ -104,13 +104,13 @@ Decision checklist:
 - Dry-run publication preview, proposed `COMMENT` action, explicit simulated yes/no confirmation, changed-head refusal, permission denial and duplicate protection.
 - Retry, cancel, blocked, failed and partial states; keyboard navigation; narrow terminals and `NO_COLOR`.
 
-**Proposed command contract:** `codeguardian --help`, `codeguardian auth status`, `codeguardian review <GITHUB_PR_URL> --demo`, `codeguardian report <RUN_ID> --format markdown|json`, `codeguardian publish <RUN_ID> --dry-run`. These names still require G00 acceptance.
+**G00 command contract (retained for closeout):** `codeguardian --help`, `codeguardian auth status`, `codeguardian review <GITHUB_PR_URL> --demo`, `codeguardian report <RUN_ID> --format markdown|json`, `codeguardian publish <RUN_ID> --dry-run`. Implementation is merged; formal UX acceptance remains pending.
 
-**Suggested source layout:** `src/cli/`, `src/ui/`, `src/core/`, `src/contracts/`, `src/fixtures/`, `src/adapters/mock/`, and `tests/`, with separate UI, deterministic state machine, contracts, and mock adapters. Keep the G00 mock architecture replaceable rather than building real G01/G02/G03 integrations early.
+**Historical suggested source layout:** `src/cli/`, `src/ui/`, `src/core/`, `src/contracts/`, `src/fixtures/`, `src/adapters/mock/`, and `tests/`. This is retained planning material; the merged application is under `ink/`. Keep G00 mock-only; do not infer authorization for G01/G02/G03 integrations.
 
 **Test plan within the same G00 group:** CLI parsing, state transitions, PR URL rejection, worker timeout/cancellation, severity/evidence presentation, schema/fixture validation, fake publication never writing, report formatting, interaction smoke tests, small widths, redraw and non-color output. Report exact commands and pass/fail/skip counts. Do not claim real PR analysis or publication was tested.
 
-**Exit:** Complete reproducible demo and tests in ONE scoped feature branch and ONE group PR, followed by explicit operator UX acceptance. No G01 work starts until that acceptance.
+**Historical implementation exit:** The reproducible demo and tests were delivered through the scoped G00 PRs and are merged. Rockson's formal operator UX acceptance remains pending; no G01 work starts until that acceptance and separate authorization. Do not recreate the retired G00 feature branches or worktrees.
 
 ## 6. G01 — Authentication and real PR inspection
 
@@ -221,22 +221,27 @@ For **every** group:
 7. Obtain distinct permission for **commit**, **push**, **PR creation**, **PR merge**, and **deployment** as applicable; do not infer one from another.
 8. On an environmental blocker, stop and report evidence rather than bypass sandbox protections or re-run blindly.
 
-**Branch approach executed for G00:** `feat/g00-ink-cli-demo` in dedicated worktree `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\` (nested repository `E:\Projects\CodeGuardian\CodeGuardian\`); targeting draft PR against `main`. Do not mutate the canonical `main` checkout.
+**G00 branch approach (historical):** `feat/g00-ink-cli-demo` in the dedicated worktree was used for PR #1, which is now merged. The remote feature branch was deleted. Do not recreate it; verify any local Windows branch/worktree state from host Git receipts during closeout.
 
-## 14. Immediate next group run
+## 14. Current G00 closeout and next-group gate
 
-**NEXT: PRE-G00 approval/setup, then G00 — Native Ink CLI Demo.**
+**Historical state (2026-10-24):** PR #1 and PR #4 merge status and the 277-test result below describe that dated checkpoint and remain historical evidence.
 
-1. The **browser G00 mock UX** (nine screens, `src/`) is accepted as the walkthrough reference and is FROZEN at `e8e5844`. No further browser development is authorized.
-2. Confirm architecture decisions, mock contract, complete G00 screen inventory in `G00-CLI-WIREFRAMES.md`, command names and precise framework/package versions for the Ink package (`ink/`).
-3. Verify the Windows execution environment; confirm Node 24 LTS, npm 11.17.0, TypeScript, Ink 8.0 availability.
-4. Draft and review one executable G00 TODO for the Ink CLI, including terminal test matrix and branch/dependency permissions.
-5. Only after explicit authorization, let Codex implement the local terminal CLI with mock fixtures inside `ink/`.
-6. Review actual G00 Ink implementation, tests and terminal demonstration; approve G01 only if the complete Ink CLI UX is accepted.
+**Verified current state (2026-10-27):** PR #1 is merged to `main`; PRs #4, #5 and #6 are merged to `dev`, currently `9d8e7d6e8876b3a78e0fc1e623a5d50220898987`. G00 remains MERGED — FORMAL UX ACCEPTANCE PENDING. The nine-screen walkthrough receipt is supporting evidence, not Rockson’s acceptance. The 2026-10-23 archive hash verifies, but that snapshot predates later correction work; no complete final archive manifest, append-only register or worktree-retirement receipt was found in the inspected workspace. The PR #4/#5/#6 worktree paths are absent; authorized retirement is not established. Keep this lifecycle exception open. PR #6 local verification receipts report 281/281 tests, 47/47 focused, 14/14 snapshots and build PASS; no independent hosted CI is evidenced. Windows remains DEFERRED / NOT RUN, NOT WAIVED. G01 is unauthorized.
+
+1. Obtain Rockson’s personal accept/deficiency decision for the complete nine-screen native Ink CLI UX. The existing walkthrough receipt is supporting evidence, not operator acceptance.
+2. Record Windows as DEFERRED / NOT RUN, NOT WAIVED; no Windows compatibility or release claim is supported.
+3. Reconcile current G00 status in protected documents only under exact-file approval; preserve historical test counts and approval records.
+4. Keep the archive lifecycle exception open unless independently recovered evidence resolves it. The inspected 2026-10-23 archive predates later PR corrections; manifests/register/retirement receipts were not found in the inspected workspace. Do not invent or backdate records.
+5. [x] Create focused GitHub tracking issues for acceptance (#7), archive/worktree reconciliation (#8), dependency/security warnings (#9), and Windows/CI verification (#10). Issue creation is complete; the tracked decisions and risks remain open until their closure criteria are met.
+6. Keep dependency/security warnings and the `string-width` dependency disposition separate from G00 acceptance.
+7. After G00 acceptance, prepare focused G01 architecture/API-contract readiness tasks for separate approval. G01 implementation remains unauthorized.
 
 **G04 note:** PR-Agent integration goes inside `integrations/pr-agent/`, isolated behind a CodeGuardian adapter. No direct GitHub access. Plain-diff mode avoids a GitHub platform token but requires explicit runner filesystem/env/credential isolation. Separate approval needed before provider API access or external diff sending.
 
-**Current release state (2026-10-16):** React/Vite browser UX prototype (`src/`) frozen at `e8e5844` as accepted design reference. Canonical checkout at `E:\Projects\CodeGuardian\CodeGuardian\` plus dedicated feature worktree at `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\`. Native Ink CLI implementation completed locally in `ink/` with 21/21 passing tests and clean CodeRabbit review; pending draft PR publication, full eight-layer acceptance testing, and formal operator UI/UX review. This document approves no implementation, new branch, live audit, publication or deployment.
+**Historical release state (2026-10-16; retained):** The browser UX reference was frozen at `e8e5844`; the path, worktree, 21/21 test count, and review status above describe that dated planning snapshot, not current final-head or Windows verification.
+
+**Historical G00 release state (2026-10-24):** PR #1/#4 merge status and the 277/277 reported suite are retained as a dated checkpoint; they are not the latest PR #6 verification.
 
 ## 15. Source-of-truth references
 

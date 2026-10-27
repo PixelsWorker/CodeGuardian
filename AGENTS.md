@@ -3,16 +3,16 @@
 ## Authority and project boundaries
 
 Repository: https://github.com/PixelsWorker/CodeGuardian.
-**Active Windows checkout:** `E:\Projects\CodeGuardian\CodeGuardian\` (nested repository root). Read the parent workspace `../AGENTS.md` and the full-stack project rules before modifying files.
+**Historical Windows path (not a verified current checkout):** `E:\Projects\CodeGuardian\CodeGuardian\`. Read the parent workspace `../AGENTS.md` and the full-stack project rules before modifying files.
 
 Rockson approves consequential scope, dependencies, architecture and Git actions. ChatGPT researches and plans; the Development Manager reviews setup/groups; Codex implements specifically approved work; GeminiCLI/Antigravity handles separately approved narrow corrections. Do not infer authorization to create branches, install packages, modify application code, publish comments, merge or deploy from planning documents.
 
 ## Repository layout and reality
 
-- `src/`, `index.html`, `vite.config.ts`, `package.json`: existing nine-screen **React/Vite browser G00 UX reference**, synthetic fixtures and test source. **FROZEN at `e8e5844` as design reference only.** This is not an accepted native CLI and not proof that tests passed. Do not extend this browser prototype; it is the accepted UX walkthrough reference.
-- `ink/`: **native terminal application package** (G00 Ink CLI — target directory, not yet created). Contains `package.json`, `src/cli.tsx`, `src/App.tsx`, `src/components/`, `src/screens/`, `src/core/`, `tests/`. The CLI binary is `codeguardian`.
+- `src/`, `index.html`, `vite.config.ts`, `package.json`: nine-screen **React/Vite browser G00 UX reference**, synthetic fixtures and tests, **FROZEN at `e8e5844`**. Do not extend this browser prototype.
+- `ink/`: merged **mock-only native Ink terminal application** delivered in PR #1 (`ee9575e`) with follow-up corrections in PR #4 (`0e5e95c`), PR #5 (`cf39f19`) and PR #6 (`9d8e7d6`). It includes the `codeguardian` CLI, screens, components, core logic and tests. G00 is merged but still awaits Rockson’s formal nine-screen UX acceptance; merge is not acceptance.
 - `integrations/pr-agent/`: future G04 plain-diff adapter (not yet created). Isolated from `ink/`; no direct GitHub access.
-- `G00-SCOPE.md` and `G00-CLI-WIREFRAMES.md`: draft complete **native terminal CLI** G00 acceptance target; actual native executable is unverified.
+- `G00-SCOPE.md` and `G00-CLI-WIREFRAMES.md`: G00 native terminal scope and UX reference; formal operator acceptance remains pending.
 - `ARCHITECTURE.md`, `PROJECT-BRIEF.md`, `ROADMAP.md`: proposed product architecture and group roadmap. G06/Jules repository audit is OPTIONAL/PROPOSED and cannot silently expand G00.
 - `API-CONTRACT.md`: canonical proposed PR review JSON contract; separately proposed repository-wide audit schema in its G06 section. Never relax PR changed-line validation to admit non-PR audit findings.
 - `TECH-RESEARCH.md`, `SETUP.md`, `HANDOFF.md`, `REPO-INITIALIZATION.md`, `README.md`: evidence, preparation and governance.
@@ -25,6 +25,10 @@ Before approved local activity: inspect `git status -sb`, `git status --porcelai
 Keep mock fixtures synthetic and marked DEMO ONLY, with no real GitHub/Codex/Jules calls during G00. Preserve `NO_COLOR`, narrow-terminal and cancellation behavior in native G00 acceptance. Store no secrets in repository files, prompts, fixtures, browser bundles or logs.
 
 ## Git history and status
+
+**Repository-state snapshot (2026-10-27, before G00-CLOSEOUT publication):** canonical local `dev` and `origin/dev` were at `9d8e7d6e8876b3a78e0fc1e623a5d50220898987`, the PR #6 merge; `main` and `origin/main` were at `ee9575e62a7687ccf0e2803432c2ddc9c3beb36f`. At that snapshot only the canonical `dev` worktree was registered, and six governance files were locally modified and preserved. This is a dated snapshot, not a claim about every current worktree. The six-file reconciliation was subsequently committed on `docs/g00-closeout` and published in PR #11; the canonical checkout still retains its separate unstaged edits. Do not discard or publish canonical changes without applicable approval. PR #4/#5/#6 feature worktree paths are absent, but archive-before-retirement compliance remains unverified; absence is not proof of authorized retirement. The parent workspace `AGENTS.md` contains a stale statement that no application source exists; this repository file does not authorize changing that separately protected parent file.
+
+The G00 PR #5 audit and later PR #6 review receipts record an unresolved npm high-severity audit warning. The user-provided PR #6 install transcript separately warns that install scripts for esbuild 0.28.2 and 0.25.12 are not covered by `allowScripts`. No dependency fix was run. Treat these as open review/disposition items; do not approve scripts or alter dependencies without separate authorization.
 
 Original unrelated histories have been reconciled by two-parent commit `e3e6b281e517a2d884309d527650ba9329e76d8e`; no history-integration task remains.
 
