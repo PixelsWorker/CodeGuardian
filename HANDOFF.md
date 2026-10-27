@@ -52,14 +52,20 @@ E:\Projects\CodeGuardian\
 
 Historical host Git receipt (captured before layout-worktree creation): `../evidence/g00-ink-cli-demo/2026-10-23-closeout/HOST-GIT-RECEIPT-2026-10-23.json`. It records the clean primary checkout at merge SHA `ee9575e` at capture time; it is not the current worktree inventory. The 2026-10-23 layout-worktree setup receipt records the then-registered `fix/g00-terminal-layout` worktree. Current canonical state is recorded below. This historical receipt does not verify any Windows checkout.
 
-## Verified current repository state (2026-10-27)
+## Pre-publication repository snapshot (captured 2026-10-27)
 
-- Canonical `dev` and `origin/dev`: `9d8e7d6e8876b3a78e0fc1e623a5d50220898987` (PR #6 merge). `main` and `origin/main`: `ee9575e62a7687ccf0e2803432c2ddc9c3beb36f` (PR #1 merge). The PR #6 merge has parents `cf39f19e946d102cc2e4adc2c06b80963b890215` and `19ae86dcb7efac9fcfc8e6d06ffa0fac2fc2201f`.
-- Before this reconciliation began, byte comparisons matched all six canonical documents to the preserved working copies under `../evidence/g00-ink-cli-demo/2026-10-26-inspection-layout-followup/canonical-working/`. The current versions include the authorized reconciliation and are therefore expected to differ from those pre-edit copies. Preserve the originals and receipts. The current six-file diff remains unstaged pending separate Git authorization.
-- Only the canonical worktree is registered. PR #4/#5/#6 feature worktree paths are absent, but retirement approvals/receipts and complete final archives are not established. Preserve the archive lifecycle exception; do not infer compliant retirement from absence.
+- At this snapshot canonical `dev` and `origin/dev` were `9d8e7d6e8876b3a78e0fc1e623a5d50220898987` (PR #6 merge), and `main`/`origin/main` were `ee9575e62a7687ccf0e2803432c2ddc9c3beb36f` (PR #1 merge). The PR #6 merge has parents `cf39f19e946d102cc2e4adc2c06b80963b890215` and `19ae86dcb7efac9fcfc8e6d06ffa0fac2fc2201f`.
+- Before the reconciliation began, byte comparisons matched the six canonical documents to preserved working copies under `../evidence/g00-ink-cli-demo/2026-10-26-inspection-layout-followup/canonical-working/`. At the snapshot, those six canonical files remained unstaged; the reconciled copies were later published from a separate worktree. Preserve the originals and receipts.
+- At this snapshot only the canonical worktree was registered. PR #4/#5/#6 feature worktree paths were absent, but retirement approvals/receipts and complete final archives were not established. Preserve the archive lifecycle exception; do not infer compliant retirement from absence.
 - PR #6 local verification receipts report 281/281 full tests, 47/47 focused tests, 14/14 snapshots and build PASS. No independent hosted CI run was found. Exact evidence is under `../evidence/g00-ink-cli-demo/2026-10-26-inspection-layout-followup/`.
-- No standalone GitHub issues were found during the 2026-10-27 review. Issue proposals are tracking only; creation requires separate approval.
+- The pre-publication GitHub issue check on 2026-10-27 found no standalone issues; four reviewed drafts were then awaiting separate creation approval.
 - The G00 PR #5 audit and later PR #6 review receipts record one unresolved high-severity npm audit warning. The user-provided PR #6 install transcript separately warns that esbuild 0.28.2/0.25.12 lifecycle scripts are not covered by `allowScripts`. No dependency fix or script approval is evidenced; retain both as open risk items.
+
+## Current G00-CLOSEOUT publication (post-snapshot, 2026-10-27)
+
+- Governance reconciliation was committed as `1ba340732f84cba9a25ee5c7b9f5bfd6b35f436e` on `docs/g00-closeout` and published as open PR #11 to `dev`: https://github.com/PixelsWorker/CodeGuardian/pull/11. The PR changes exactly the six governance files. It is not merged.
+- The canonical `dev` checkout remains at `9d8e7d6e8876b3a78e0fc1e623a5d50220898987` with its separate six pre-existing unstaged modifications. The active governance publication worktree is `/home/rockson/Projects/Projects/CodeGuardian/worktree/g00-closeout-governance`.
+- The four tracking issues were created and remain open: [#7 — nine-screen operator acceptance](https://github.com/PixelsWorker/CodeGuardian/issues/7), [#8 — archive/worktree reconciliation](https://github.com/PixelsWorker/CodeGuardian/issues/8), [#9 — dependency/security disposition](https://github.com/PixelsWorker/CodeGuardian/issues/9), and [#10 — Windows/independent CI](https://github.com/PixelsWorker/CodeGuardian/issues/10). Their creation does not close any risk or constitute G00 acceptance.
 
 **Historical Windows checkout/worktree note (2026-10-16):** `E:\Projects\CodeGuardian\CodeGuardian\` and `..\worktree\PixelsWorker\CodeGuardian\feat-g00-ink-cli-demo\` were recorded as active at that time. The previously recorded `git fsck` result is historical; these paths do not establish current Windows host availability or worktree state. No accessible Windows checkout has been identified.
 
@@ -73,11 +79,11 @@ Reconciliation of independent Git histories is DONE (historical merge `e3e6b281e
 - `TECH-RESEARCH.md`: current official Jules API evidence plus known untested runtime details.
 - `SETUP.md` and `REPO-INITIALIZATION.md`: current remote observations and Git history.
 
-**Current G00 closeout gates:** reconcile archive/worktree history without recreating missing evidence; prepare and review focused GitHub issue proposals; obtain Rockson’s personal accept/deficiency decision for the complete nine-screen UX and Report resize observation; explicitly record Windows as DEFERRED / NOT RUN, NOT WAIVED; disposition dependency/security and CI limitations; and retain the archive lifecycle exception unless recovered evidence supports another conclusion. PR #1/#4/#5/#6 are merged. G01 remains unauthorized.
+**Current G00 closeout gates:** review and decide PR #11 separately; obtain Rockson’s personal accept/deficiency decision for the complete nine-screen UX and Report resize observation; disposition the open archive, dependency/security, Windows and CI tracking issues without treating issue creation as resolution; and retain the archive lifecycle exception unless recovered evidence supports another conclusion. PR #1/#4/#5/#6 are merged. G01 remains unauthorized.
 
 ## Next requested action / stop
 
-**Next requested action: finish G00 closeout only.** After governance review, prepare focused issue drafts for separate GitHub authorization, then Rockson reviews the nine-screen experience and records acceptance or deficiencies. Keep archive lifecycle compliance unverified; do not claim missing archival or retirement evidence. Do not begin G01 or claim Windows verification.
+**Next requested action: finish G00 closeout only.** Review PR #11 for a separate merge decision, while Rockson performs the nine-screen walkthrough and records acceptance or deficiencies. Track remaining archive, dependency/security, Windows and CI decisions in issues #7–#10. Keep archive lifecycle compliance unverified; do not claim missing archival or retirement evidence. Do not begin G01 or claim Windows verification.
 
 G06 requires a separate pilot approval for source/mirror and Jules permissions, plan review, rate/cost policy, snapshot proof and report publication. No Jules session, external repo grant, app installation, report publication, implementation, deployment, merge or release has been executed by this handoff.
 

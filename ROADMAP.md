@@ -74,11 +74,11 @@ Decision checklist:
 
 **Exit:** Accepted architecture and G00 brief; working approved Codex terminal execution; group TODO with integrated tests and explicit implementation authorization.
 
-## 5. G00 — Complete simulated CLI UX demo
+## 5. G00 — Complete simulated CLI UX demo (retained historical scope; implementation merged)
 
 **One observable outcome:** A native terminal application demonstrates the COMPLETE CodeGuardian UX without contacting GitHub, an AI provider, a Docker service, or any publishing endpoint.
 
-**Recommended implementation candidates (not installed or automatically approved):**
+**Historical implementation-planning reference (retained for provenance; not a request to begin or recreate a feature branch):**
 
 | Layer | Candidate | Rule |
 |---|---|---|
@@ -104,13 +104,13 @@ Decision checklist:
 - Dry-run publication preview, proposed `COMMENT` action, explicit simulated yes/no confirmation, changed-head refusal, permission denial and duplicate protection.
 - Retry, cancel, blocked, failed and partial states; keyboard navigation; narrow terminals and `NO_COLOR`.
 
-**Proposed command contract:** `codeguardian --help`, `codeguardian auth status`, `codeguardian review <GITHUB_PR_URL> --demo`, `codeguardian report <RUN_ID> --format markdown|json`, `codeguardian publish <RUN_ID> --dry-run`. These names still require G00 acceptance.
+**G00 command contract (retained for closeout):** `codeguardian --help`, `codeguardian auth status`, `codeguardian review <GITHUB_PR_URL> --demo`, `codeguardian report <RUN_ID> --format markdown|json`, `codeguardian publish <RUN_ID> --dry-run`. Implementation is merged; formal UX acceptance remains pending.
 
-**Suggested source layout:** `src/cli/`, `src/ui/`, `src/core/`, `src/contracts/`, `src/fixtures/`, `src/adapters/mock/`, and `tests/`, with separate UI, deterministic state machine, contracts, and mock adapters. Keep the G00 mock architecture replaceable rather than building real G01/G02/G03 integrations early.
+**Historical suggested source layout:** `src/cli/`, `src/ui/`, `src/core/`, `src/contracts/`, `src/fixtures/`, `src/adapters/mock/`, and `tests/`. This is retained planning material; the merged application is under `ink/`. Keep G00 mock-only; do not infer authorization for G01/G02/G03 integrations.
 
 **Test plan within the same G00 group:** CLI parsing, state transitions, PR URL rejection, worker timeout/cancellation, severity/evidence presentation, schema/fixture validation, fake publication never writing, report formatting, interaction smoke tests, small widths, redraw and non-color output. Report exact commands and pass/fail/skip counts. Do not claim real PR analysis or publication was tested.
 
-**Exit:** Complete reproducible demo and tests in ONE scoped feature branch and ONE group PR, followed by explicit operator UX acceptance. No G01 work starts until that acceptance.
+**Historical implementation exit:** The reproducible demo and tests were delivered through the scoped G00 PRs and are merged. Rockson's formal operator UX acceptance remains pending; no G01 work starts until that acceptance and separate authorization. Do not recreate the retired G00 feature branches or worktrees.
 
 ## 6. G01 — Authentication and real PR inspection
 
@@ -233,7 +233,7 @@ For **every** group:
 2. Record Windows as DEFERRED / NOT RUN, NOT WAIVED; no Windows compatibility or release claim is supported.
 3. Reconcile current G00 status in protected documents only under exact-file approval; preserve historical test counts and approval records.
 4. Keep the archive lifecycle exception open unless independently recovered evidence resolves it. The inspected 2026-10-23 archive predates later PR corrections; manifests/register/retirement receipts were not found in the inspected workspace. Do not invent or backdate records.
-5. Draft focused GitHub issue proposals for acceptance, archive/worktree reconciliation, dependency/security warning disposition, and Windows/CI verification; issue creation requires separate authorization.
+5. [x] Create focused GitHub tracking issues for acceptance (#7), archive/worktree reconciliation (#8), dependency/security warnings (#9), and Windows/CI verification (#10). Issue creation is complete; the tracked decisions and risks remain open until their closure criteria are met.
 6. Keep dependency/security warnings and the `string-width` dependency disposition separate from G00 acceptance.
 7. After G00 acceptance, prepare focused G01 architecture/API-contract readiness tasks for separate approval. G01 implementation remains unauthorized.
 

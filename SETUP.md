@@ -14,9 +14,11 @@
 | PR #6 merge to `dev` / current HEAD | `9d8e7d6e8876b3a78e0fc1e623a5d50220898987` |
 | Git history | Reconciled through historical two-parent merge `e3e6b281e517a2d884309d527650ba9329e76d8e` |
 | Browser reference | React/Vite nine-screen G00 mock, source/test files and `package.json` on `main` |
-| Native terminal CLI | Implemented and merged; PR #6 local receipts report 281/281 full tests, focused L4 47/47, 14/14 snapshots and build PASS; formal UX acceptance pending. No independent hosted CI is evidenced. |
-| Current local checkout (2026-10-27) | `/home/rockson/Projects/Projects/CodeGuardian/CodeGuardian`, branch `dev`, HEAD `9d8e7d6e8876b3a78e0fc1e623a5d50220898987`; six existing unstaged governance modifications are preserved. |
-| Registered worktrees (2026-10-27) | Only canonical `dev` is registered. PR #4/#5/#6 worktree paths are absent; archive-before-retirement compliance is unverified. |
+| Native terminal CLI | Implemented and merged in PRs #1/#4/#5/#6; PR #6 local receipts report 281/281 full tests, focused L4 47/47, 14/14 snapshots and build PASS; formal nine-screen UX acceptance remains pending. No independent hosted CI is evidenced. |
+| Canonical checkout snapshot (2026-10-27) | `/home/rockson/Projects/Projects/CodeGuardian/CodeGuardian`, branch `dev`, HEAD `9d8e7d6e8876b3a78e0fc1e623a5d50220898987`; the six original governance modifications remain unstaged there, separately from the published reconciliation. |
+| Pre-closeout worktree snapshot (2026-10-27) | At the earlier snapshot, only canonical `dev` was registered. PR #4/#5/#6 feature worktree paths are absent; archive-before-retirement compliance is unverified. |
+| Current governance publication | Branch `docs/g00-closeout`, worktree `/home/rockson/Projects/Projects/CodeGuardian/worktree/g00-closeout-governance`, commit `1ba340732f84cba9a25ee5c7b9f5bfd6b35f436e`; PR #11 is open and unmerged, targeting `dev`. |
+| G00 tracking issues | #7 operator acceptance, #8 archive/worktree reconciliation, #9 dependency/security, and #10 Windows/CI are open. Issue creation does not signify closure or acceptance. |
 | Verification runtime in PR #6 receipts | Node.js `v24.21.0`, npm `11.19.0` (receipt-reported) |
 | `.coderabbit.yaml` history | An earlier report said the user-reported path was absent from remote `main`; the date of that observation is not established here. The file is present in current `origin/main` (checked 2026-10-27). |
 
@@ -30,7 +32,7 @@ At the 2026-10-15 remote-only review, the root `package.json` declared `dev`, `b
 
 | Stage | Technology and purpose | State |
 |---|---|---|
-| G00 native CLI | Supported Node.js LTS / TypeScript terminal UI (Ink candidate), controlled commands, mock fixtures | Proposed; exact versions/host compatibility and scope acceptance pending |
+| G00 native CLI | Supported Node.js/TypeScript terminal UI (Ink), controlled commands, mock fixtures | Implemented and merged; formal nine-screen UX acceptance pending. Candidate/version notes are historical planning material; Windows compatibility remains DEFERRED / NOT RUN / NOT WAIVED. |
 | G01 | `gh` / GitHub API, read-only PR inspection | Later |
 | G02 | Official Codex CLI/TypeScript SDK, bounded analysis workers | Later |
 | G03 | Separate human-confirmed GitHub `COMMENT` publisher | Later |
