@@ -8,9 +8,10 @@ import { App } from '../src/App.js';
 import { Footer } from '../src/components/Footer.js';
 import { Header } from '../src/components/Header.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
+import { InspectScreen } from '../src/screens/InspectScreen.js';
 import { ReportScreen } from '../src/screens/ReportScreen.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
-import { CANONICAL_SPECIALISTS, buildDemoReport, SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
+import { CANONICAL_SPECIALISTS, buildDemoReport, SYNTHETIC_PR_IDENTITY, SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
 import { parseGitHubPrUrl } from '../src/core/github-url.js';
 
 const delay = (ms: number = 30) => new Promise(resolve => setTimeout(resolve, ms));
@@ -194,6 +195,77 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
         expect(plainLines.some(line => line.includes('Required for') && line.includes(badge))).toBe(false);
       }
     }
+  });
+
+  it('keeps the complete Inspection title and author distinct across widths and terminal redraws', async () => {
+    const shortPr = {
+      ...SYNTHETIC_PR_IDENTITY,
+      title: 'feat(auth): token rotation & permission cache refresh',
+    };
+    const longPr = {
+      ...shortPr,
+      title: `${shortPr.title} while preserving readable terminal review context`,
+    };
+    const assertHeader = (frame: string, pr: typeof shortPr, cols: number, compact: boolean) => {
+      const plainFrame = frame.replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
+      const lines = plainFrame.split('\n');
+      const semanticText = plainFrame
+        .replace(/[│╭╮╰╯┌┐└┘─]/g, ' ')
+        .replace(/\s+/g, ' ');
+      const titleLine = lines.findIndex(line => line.includes(`PR #${pr.number}:`));
+      const authorLabel = `Author: @${pr.author}`;
+      const authorLine = lines.findIndex(line => line.includes(authorLabel));
+
+      expect(semanticText).toContain(pr.title);
+      expect(semanticText).toContain(authorLabel);
+      expect(titleLine).toBeGreaterThanOrEqual(0);
+      expect(authorLine).toBeGreaterThanOrEqual(0);
+      if (compact) {
+        expect(authorLine).toBeGreaterThan(titleLine);
+        expect(lines[authorLine]).not.toContain(`PR #${pr.number}:`);
+      } else {
+        expect(authorLine).toBe(titleLine);
+        const titleEnd = lines[titleLine].indexOf(pr.title) + pr.title.length;
+        const authorStart = lines[titleLine].indexOf(authorLabel);
+        expect(authorStart).toBeGreaterThan(titleEnd);
+        expect(lines[titleLine].slice(titleEnd, authorStart)).toMatch(/^\s{2,}$/);
+      }
+      for (const line of lines) {
+        expect(stringWidth(line)).toBeLessThanOrEqual(cols);
+      }
+    };
+    const renderTree = (pr: typeof shortPr, cols: number, onStart = () => undefined, onBack = () => undefined) => (
+      <Box width={cols}>
+        <InspectScreen pr={pr} onStartAnalysis={onStart} onBack={onBack} />
+      </Box>
+    );
+
+    for (const cols of [40, 60, 72, 74, 80, 100]) {
+      for (const pr of [shortPr, longPr]) {
+        const instance = render(renderTree(pr, cols));
+        Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+        instance.stdout.emit('resize');
+        instance.rerender(renderTree(pr, cols));
+
+        assertHeader(instance.lastFrame() || '', pr, cols, pr === longPr || cols < 100);
+      }
+    }
+
+    const onStart = vi.fn();
+    const onBack = vi.fn();
+    const instance = render(renderTree(shortPr, 60, onStart, onBack));
+    for (const cols of [60, 100, 80]) {
+      Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
+      instance.stdout.emit('resize');
+      instance.rerender(renderTree(shortPr, cols, onStart, onBack));
+      assertHeader(instance.lastFrame() || '', shortPr, cols, cols < 100);
+    }
+    instance.stdin.write('\r');
+    await delay();
+    expect(onStart).toHaveBeenCalledOnce();
+    instance.stdin.write('\u001B');
+    await delay();
+    expect(onBack).toHaveBeenCalledOnce();
   });
 
   it('keeps GitHub and Codex status cards readable across the 104-column breakpoint', () => {
