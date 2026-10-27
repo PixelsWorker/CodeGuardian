@@ -206,6 +206,10 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       ...shortPr,
       title: `${shortPr.title} while preserving readable terminal review context`,
     };
+    const unicodePr = {
+      ...shortPr,
+      title: 'café authentication flow',
+    };
     const assertHeader = (frame: string, pr: typeof shortPr, cols: number, compact: boolean) => {
       const plainFrame = frame.replace(/\u001B\[[0-9;?]*[a-zA-Z]/g, '');
       const lines = plainFrame.split('\n');
@@ -240,14 +244,14 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       </Box>
     );
 
-    for (const cols of [40, 60, 72, 74, 80, 100]) {
-      for (const pr of [shortPr, longPr]) {
+    for (const cols of [40, 60, 72, 74, 80, 91, 92, 100]) {
+      for (const pr of [shortPr, longPr, unicodePr]) {
         const instance = render(renderTree(pr, cols));
         Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
         instance.stdout.emit('resize');
         instance.rerender(renderTree(pr, cols));
 
-        assertHeader(instance.lastFrame() || '', pr, cols, pr === longPr || cols < 100);
+        assertHeader(instance.lastFrame() || '', pr, cols, pr === longPr || pr === unicodePr || cols < 92);
       }
     }
 
@@ -258,7 +262,7 @@ describe('L4 — Terminal UI Component and Interaction Testing', () => {
       Object.defineProperty(instance.stdout, 'columns', { value: cols, configurable: true });
       instance.stdout.emit('resize');
       instance.rerender(renderTree(shortPr, cols, onStart, onBack));
-      assertHeader(instance.lastFrame() || '', shortPr, cols, cols < 100);
+      assertHeader(instance.lastFrame() || '', shortPr, cols, cols < 92);
     }
     instance.stdin.write('\r');
     await delay();
