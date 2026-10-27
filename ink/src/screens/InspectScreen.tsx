@@ -11,6 +11,10 @@ interface InspectScreenProps {
   onBack: () => void;
 }
 
+/**
+ * Renders the synthetic PR inspection view with a header that keeps the full
+ * pull request title and author readable at the current terminal width.
+ */
 export function InspectScreen({ pr, onStartAnalysis, onBack }: InspectScreenProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const { columns } = useWindowSize();
