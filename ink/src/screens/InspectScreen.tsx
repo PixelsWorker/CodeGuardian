@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useWindowSize } from 'ink';
 import { useSafeInput } from '../hooks/useSafeInput.js';
 import { PullRequestIdentity } from '../types/contracts.js';
 import { MOCK_DIFF_FILES } from '../fixtures/fixtures.js';
@@ -11,8 +11,19 @@ interface InspectScreenProps {
   onBack: () => void;
 }
 
+/**
+ * Renders the synthetic PR inspection view with a header that keeps the full
+ * pull request title and author readable at the current terminal width.
+ */
 export function InspectScreen({ pr, onStartAnalysis, onBack }: InspectScreenProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const { columns } = useWindowSize();
+  const prTitle = `PR #${pr.number}: ${pr.title ?? ''}`;
+  const authorLabel = `Author: @${pr.author ?? ''}`;
+  const headerContentWidth = prTitle.length + authorLabel.length + 2;
+  const compactHeader =
+    !/^[\x20-\x7E]*$/.test(`${prTitle}${authorLabel}`) ||
+    headerContentWidth > Math.max(columns - 6, 0);
 
   useSafeInput((input, key) => {
     if (key.return) {
@@ -31,9 +42,14 @@ export function InspectScreen({ pr, onStartAnalysis, onBack }: InspectScreenProp
   return (
     <Box flexDirection="column" padding={1}>
       <Box borderStyle="single" borderColor="cyan" flexDirection="column" paddingX={1} marginBottom={1}>
-        <Box justifyContent="space-between">
-          <Text bold color="white">PR #{pr.number}: {pr.title}</Text>
-          <Text color="gray">Author: @{pr.author}</Text>
+        <Box
+          width="100%"
+          flexDirection={compactHeader ? 'column' : 'row'}
+          justifyContent={compactHeader ? undefined : 'space-between'}
+          alignItems={compactHeader ? 'flex-start' : undefined}
+        >
+          <Text bold color="white">{prTitle}</Text>
+          <Text color="gray">{compactHeader ? '' : '  '}{authorLabel}</Text>
         </Box>
         <Box justifyContent="space-between" marginTop={1}>
           <Text color="gray">Base: <Text color="white">{pr.base_sha.substring(0, 7)}</Text> ({pr.base_branch})</Text>
