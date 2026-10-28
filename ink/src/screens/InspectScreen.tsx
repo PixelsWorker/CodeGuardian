@@ -100,8 +100,7 @@ export function InspectScreen({ pr, snapshot, onStartAnalysis, onBack }: Inspect
   const selectedFile = files[selectedIdx];
   const fileWindowStart = 0;
   const visibleFiles = files;
-  const patchText = selectedFile?.patch ?? 'GitHub did not provide a patch for this file.';
-  const patchLines = patchText.split('\n');
+  const patchLines = selectedFile?.patch == null ? [] : selectedFile.patch.split('\n');
   const patchPreview = patchLines.slice(0, MAX_VISIBLE_PATCH_LINES).join('\n');
 
   if (snapshot) {

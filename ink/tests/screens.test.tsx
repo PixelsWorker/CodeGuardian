@@ -131,6 +131,25 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(frame).not.toContain('Dispatch 4 Specialist Workers');
   });
 
+  it('shows an unavailable-patch message without counting it as diff content', () => {
+    const pr = {
+      provider: 'github' as const, owner: 'PixelsWorker', repo: 'CodeGuardian', number: 11,
+      url: 'https://github.com/PixelsWorker/CodeGuardian/pull/11', base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40),
+      title: 'Live PR', author: 'rockson', base_branch: 'dev', head_branch: 'topic', changed_files_count: 1,
+      additions: 0, deletions: 0, is_draft: false,
+    };
+    const snapshot = {
+      source_mode: 'live' as const, retrieved_at: '2026-10-28T08:00:00.000Z', identity: pr,
+      state: 'open' as const, is_draft: false,
+      files: [{ path: 'src/binary.png', previous_path: null, status: 'modified' as const, additions: 0, deletions: 0,
+        patch: null, patch_available: false, patch_truncated: false }],
+      pagination: { complete: true, page_count: 1, file_limit_hit: false }, status: 'partial' as const, warnings: [],
+    };
+    const { lastFrame } = render(<InspectScreen pr={pr} snapshot={snapshot} onStartAnalysis={() => {}} onBack={() => {}} />);
+    expect(lastFrame()).toContain('Diff src/binary.png · 0/0 lines');
+    expect(lastFrame()).toContain('GitHub did not provide a patch for this file.');
+  });
+
   it('keeps full pinned SHAs and the live list/diff viewport within 24 terminal rows', async () => {
     const files = Array.from({ length: 300 }, (_, index) => ({
       path: index === 0
