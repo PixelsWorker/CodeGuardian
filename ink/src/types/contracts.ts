@@ -49,6 +49,50 @@ export const PullRequestIdentitySchema = z.object({
 });
 export type PullRequestIdentity = z.infer<typeof PullRequestIdentitySchema>;
 
+export const SnapshotFileStatusSchema = z.enum([
+  "added", "removed", "modified", "renamed", "copied", "changed", "unchanged", "unknown"
+]);
+export type SnapshotFileStatus = z.infer<typeof SnapshotFileStatusSchema>;
+
+export const PullRequestSnapshotFileSchema = z.object({
+  path: z.string().min(1).max(1024),
+  previous_path: z.string().max(1024).nullable(),
+  status: SnapshotFileStatusSchema,
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  patch: z.string().max(65_536).nullable(),
+  patch_available: z.boolean(),
+  patch_truncated: z.boolean(),
+}).strict();
+export type PullRequestSnapshotFile = z.infer<typeof PullRequestSnapshotFileSchema>;
+
+export const PullRequestSnapshotSchema = z.object({
+  source_mode: z.literal("live"),
+  retrieved_at: z.string().datetime({ offset: true }),
+  identity: PullRequestIdentitySchema,
+  state: z.enum(["open", "closed"]),
+  is_draft: z.boolean(),
+  files: z.array(PullRequestSnapshotFileSchema).max(3000),
+  pagination: z.object({
+    complete: z.boolean(),
+    page_count: z.number().int().nonnegative(),
+    file_limit_hit: z.boolean(),
+  }).strict(),
+  status: z.enum(["complete", "partial"]),
+  warnings: z.array(z.string().max(1000)),
+}).strict().superRefine((snapshot, ctx) => {
+  if (snapshot.status === "complete" && (!snapshot.pagination.complete || snapshot.pagination.file_limit_hit)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["pagination"], message: "Complete snapshots require complete pagination below the file limit." });
+  }
+  if (snapshot.status === "complete" && snapshot.files.some(file => !file.patch_available || file.patch_truncated || file.status === "unknown")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["files"], message: "Complete snapshots require known file status and available, untruncated patches." });
+  }
+  if (snapshot.files.some(file => file.patch_available !== (file.patch !== null))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["files"], message: "Patch availability must match patch content." });
+  }
+});
+export type PullRequestSnapshot = z.infer<typeof PullRequestSnapshotSchema>;
+
 export const ReviewFindingSchema = z.object({
   id: z.string(),
   source_workers: z.array(z.string()),

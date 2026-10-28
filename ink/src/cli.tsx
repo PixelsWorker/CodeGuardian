@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SYNTHETIC_REPORT, SYNTHETIC_PARTIAL_REPORT, getReportForRunId } from './fixtures/fixtures.js';
 import { formatReportMarkdown, formatReportJson } from './core/report-formatter.js';
+import type { LiveSnapshotReader } from './screens/LiveInspectionApp.js';
 
 async function loadInkApplication() {
   const originalForceColor = process.env.FORCE_COLOR;
@@ -18,7 +19,8 @@ async function loadInkApplication() {
 
     const { render } = await import('ink');
     const { App } = await import('./App.js');
-    return { render, App };
+    const { LiveInspectionApp } = await import('./screens/LiveInspectionApp.js');
+    return { render, App, LiveInspectionApp };
   } finally {
     if (shouldTemporarilyDisableColor) {
       if (originalForceColor === undefined) {
@@ -30,11 +32,12 @@ async function loadInkApplication() {
   }
 }
 
-const { render, App } = await loadInkApplication();
+const { render, App, LiveInspectionApp } = await loadInkApplication();
 
 export function createCliProgram(options: {
   exitOverride?: boolean;
   renderApp?: (element: React.ReactElement) => void;
+  liveReader?: LiveSnapshotReader;
 } = {}) {
   const program = new Command();
   if (options.exitOverride) {
@@ -60,15 +63,21 @@ export function createCliProgram(options: {
       }
     });
 
-  program
+  const reviewCommand = program
     .command('review')
-    .description('Start interactive multi-agent pull request review')
+    .description('Inspect an allowlisted GitHub pull request in live read-only or demo mode')
     .argument('<pr_url>', 'GitHub PR URL to review')
     .option('--demo', 'Run in safe synthetic demonstration mode', true)
-    .option('--no-demo', 'Disallow real execution (blocked in G00)')
+    .option('--no-demo', 'Disable demo mode; use explicit --live for a real read-only inspection')
+    .option('--live', 'Read a real allowlisted GitHub PR (read-only)')
     .action((prUrl, cmdOpts) => {
-      if (cmdOpts.demo === false) {
-        console.error("Error: Real execution mode is disabled in G00. Only --demo is supported.");
+      if (cmdOpts.live && demoWasExplicit) {
+        console.error('Error: Choose one mode: --demo or --live, not both.');
+        process.exitCode = 1;
+        return;
+      }
+      if (!cmdOpts.live && cmdOpts.demo === false) {
+        console.error('Error: --no-demo does not enable live access; use explicit --live for allowlisted read-only inspection.');
         process.exitCode = 1;
         return;
       }
@@ -78,8 +87,19 @@ export function createCliProgram(options: {
         process.exitCode = 1;
         return;
       }
+      if (cmdOpts.live) {
+        if (parsed.owner.toLowerCase() !== 'pixelsworker' || parsed.repo.toLowerCase() !== 'codeguardian') {
+          console.error('Error: Live inspection is limited to https://github.com/PixelsWorker/CodeGuardian.');
+          process.exitCode = 1;
+          return;
+        }
+        renderElement(<LiveInspectionApp prUrl={parsed.url} reader={options.liveReader} />);
+        return;
+      }
       renderElement(<App initialScreen="inspection" initialPrUrl={parsed.url} isDemo={cmdOpts.demo} />);
     });
+  let demoWasExplicit = false;
+  reviewCommand.on('option:demo', value => { if (value !== false) demoWasExplicit = true; });
 
   program
     .command('report')

@@ -1,17 +1,20 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import React from 'react';
 import { render, cleanup } from 'ink-testing-library';
+import { render as renderInk } from 'ink';
+import { PassThrough, Writable } from 'node:stream';
 import { App } from '../src/App.js';
 import { cliReducer, createInitialState } from '../src/core/state-machine.js';
 import { WelcomeScreen } from '../src/screens/WelcomeScreen.js';
 import { AuthScreen } from '../src/screens/AuthScreen.js';
 import { PrEntryScreen } from '../src/screens/PrEntryScreen.js';
-import { InspectScreen } from '../src/screens/InspectScreen.js';
+import { clipTerminalLine, InspectScreen } from '../src/screens/InspectScreen.js';
 import { SpecialistScreen } from '../src/screens/SpecialistScreen.js';
 import { ConsensusScreen } from '../src/screens/ConsensusScreen.js';
 import { ReportScreen } from '../src/screens/ReportScreen.js';
 import { PublishScreen } from '../src/screens/PublishScreen.js';
 import { ErrorScreen } from '../src/screens/ErrorScreen.js';
+import { LiveInspectionApp } from '../src/screens/LiveInspectionApp.js';
 import {
   SYNTHETIC_PR_IDENTITY,
   CANONICAL_SPECIALISTS,
@@ -99,6 +102,189 @@ describe('G00 Nine-Screen Terminal Components', () => {
     expect(lastFrame()).toContain('src/demo.ts');
     expect(lastFrame()).toContain('HIGH RISK (AUTH & CRYPTO)');
     expect(lastFrame()).toContain('SENSITIVE_AUTH_PATH');
+  });
+
+  it('renders a live snapshot without synthetic risk or worker affordances', async () => {
+    const snapshot = {
+      source_mode: 'live' as const,
+      retrieved_at: '2026-10-28T08:00:00.000Z',
+      identity: {
+        provider: 'github' as const, owner: 'PixelsWorker', repo: 'CodeGuardian', number: 11,
+        url: 'https://github.com/PixelsWorker/CodeGuardian/pull/11',
+        base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40), title: 'Live PR', author: 'rockson',
+        base_branch: 'dev', head_branch: 'topic', changed_files_count: 1, additions: 2, deletions: 1, is_draft: false,
+      },
+      state: 'open' as const, is_draft: false,
+      files: [{ path: 'ink/src/cli.tsx', previous_path: null, status: 'modified' as const,
+        additions: 2, deletions: 1, patch: '@@ -1 +1 @@\n-old\n+new', patch_available: true, patch_truncated: false }],
+      pagination: { complete: true, page_count: 1, file_limit_hit: false }, status: 'complete' as const, warnings: [],
+    };
+    const { lastFrame } = render(<LiveInspectionApp prUrl={snapshot.identity.url} reader={async () => ({ ok: true, snapshot })} />);
+    await new Promise(resolve => setTimeout(resolve, 80));
+    const frame = lastFrame() ?? '';
+    expect(frame).toContain('Live GitHub Read-Only Inspection');
+    expect(frame).toContain('LIVE · READ ONLY');
+    expect(frame).toContain('LIVE SNAPSHOT COMPLETE');
+    expect(frame).toContain('ink/src/cli.tsx');
+    expect(frame).toContain('no workers or publication');
+    expect(frame).not.toContain('HIGH RISK');
+    expect(frame).not.toContain('Dispatch 4 Specialist Workers');
+  });
+
+  it('shows an unavailable-patch message without counting it as diff content', () => {
+    const pr = {
+      provider: 'github' as const, owner: 'PixelsWorker', repo: 'CodeGuardian', number: 11,
+      url: 'https://github.com/PixelsWorker/CodeGuardian/pull/11', base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40),
+      title: 'Live PR', author: 'rockson', base_branch: 'dev', head_branch: 'topic', changed_files_count: 1,
+      additions: 0, deletions: 0, is_draft: false,
+    };
+    const snapshot = {
+      source_mode: 'live' as const, retrieved_at: '2026-10-28T08:00:00.000Z', identity: pr,
+      state: 'open' as const, is_draft: false,
+      files: [{ path: 'src/binary.png', previous_path: null, status: 'modified' as const, additions: 0, deletions: 0,
+        patch: null, patch_available: false, patch_truncated: false }],
+      pagination: { complete: true, page_count: 1, file_limit_hit: false }, status: 'partial' as const, warnings: [],
+    };
+    const { lastFrame } = render(<InspectScreen pr={pr} snapshot={snapshot} onStartAnalysis={() => {}} onBack={() => {}} />);
+    expect(lastFrame()).toContain('Diff src/binary.png · 0/0 lines');
+    expect(lastFrame()).toContain('GitHub did not provide a patch for this file.');
+  });
+
+  it('keeps full pinned SHAs and the live list/diff viewport within 24 terminal rows', async () => {
+    const files = Array.from({ length: 300 }, (_, index) => ({
+      path: index === 0
+        ? 'packages/界界/😀-long-directory-name-0/nested/module-0.tsx'
+        : `packages/long-directory-name-${index}/nested/module-${index}.tsx`, previous_path: null,
+      status: 'modified' as const, additions: 120, deletions: 40,
+      patch: Array.from({ length: 120 }, (__, line) => `${line % 2 ? '+' : '-'}${index === 0 ? '界😀' : ''}${'x'.repeat(180)} ${line}`).join('\n'),
+      patch_available: true, patch_truncated: false,
+    }));
+    const snapshot = {
+      source_mode: 'live' as const, retrieved_at: '2026-10-28T08:00:00.000Z',
+      identity: {
+        provider: 'github' as const, owner: 'PixelsWorker', repo: 'CodeGuardian', number: 11,
+        url: 'https://github.com/PixelsWorker/CodeGuardian/pull/11',
+        base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40), title: 'Live PR with a deliberately long title for viewport testing', author: 'rockson',
+        base_branch: 'dev', head_branch: 'topic', changed_files_count: files.length, additions: 2, deletions: 1, is_draft: false,
+      },
+      state: 'open' as const, is_draft: false, files,
+      pagination: { complete: true, page_count: 3, file_limit_hit: false }, status: 'complete' as const, warnings: [],
+    };
+    for (const columns of [80, 72, 40]) {
+      const outputFrames: string[] = [];
+      const stdout = new Writable({ write(chunk, _encoding, callback) { outputFrames.push(String(chunk)); callback(); } }) as Writable & { columns: number; rows: number };
+      stdout.columns = columns;
+      stdout.rows = 24;
+      const stdin = new PassThrough() as PassThrough & { isTTY: boolean };
+      stdin.isTTY = false;
+      const stderr = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+      const app = renderInk(<LiveInspectionApp prUrl={snapshot.identity.url} reader={async () => ({ ok: true, snapshot })} />, {
+        stdout, stdin, stderr, debug: true, exitOnCtrlC: false, patchConsole: false,
+      });
+      try {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const frame = outputFrames.at(-1)?.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '') ?? '';
+        const compactFrame = frame.replace(/\s/g, '');
+        expect(compactFrame).toContain(`BaseSHA:${'a'.repeat(40)}`);
+        expect(compactFrame).toContain(`HeadSHA:${'b'.repeat(40)}`);
+        expect(frame).toContain(columns === 80 ? 'Files 1–6 of 300' : columns === 72 ? 'Files 1–5 of 300' : 'Files 1–4 of 300');
+        expect(frame).toContain('Diff packages/界界/😀');
+        const displayWidth = (line: string) => Array.from(line).reduce((sum, character) => {
+          const point = character.codePointAt(0)!;
+          if (/\p{Mark}/u.test(character) || point === 0x200d || point === 0xfe0f) return sum;
+          return sum + (/\p{Emoji_Presentation}/u.test(character) || (point >= 0x2e80 && point <= 0x9fff) ? 2 : 1);
+        }, 0);
+        expect(frame.split('\n').filter(line => line.length > 0).every(line => displayWidth(line) <= columns)).toBe(true);
+        expect(frame.split('\n').filter(line => line.length > 0).length).toBeLessThan(24);
+      } finally {
+        app.unmount();
+        app.cleanup();
+      }
+    }
+  });
+
+  it('clips CJK and emoji text by terminal display cells', () => {
+    const cellWidth = (value: string) => Array.from(value).reduce((sum, character) => {
+      const point = character.codePointAt(0)!;
+      if (/\p{Mark}/u.test(character) || point === 0x200d || point === 0xfe0f) return sum;
+      return sum + (/\p{Emoji_Presentation}/u.test(character) || (point >= 0x2e80 && point <= 0x9fff) ? 2 : 1);
+    }, 0);
+    for (const text of ['src/界界界/very-long-module.ts', 'patch 😀😀😀 and 🇮🇳', 'heart ❤️ and fullwidth ＡＢＣ']) {
+      for (const width of [8, 12, 24]) {
+        const clipped = clipTerminalLine(text, width);
+        expect(cellWidth(clipped)).toBeLessThanOrEqual(width);
+        expect(clipped.endsWith('…') || clipped === text).toBe(true);
+      }
+    }
+  });
+
+  it('shows a live read error and recovers through an explicit retry', async () => {
+    const snapshot = {
+      source_mode: 'live' as const, retrieved_at: '2026-10-28T08:00:00.000Z',
+      identity: {
+        provider: 'github' as const, owner: 'PixelsWorker', repo: 'CodeGuardian', number: 11,
+        url: 'https://github.com/PixelsWorker/CodeGuardian/pull/11', base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40),
+        title: 'Live PR', author: 'rockson', base_branch: 'dev', head_branch: 'topic', changed_files_count: 0,
+        additions: 0, deletions: 0, is_draft: false,
+      },
+      state: 'open' as const, is_draft: false, files: [],
+      pagination: { complete: true, page_count: 1, file_limit_hit: false }, status: 'complete' as const, warnings: [],
+    };
+    const reader = vi.fn()
+      .mockResolvedValueOnce({ ok: false, kind: 'snapshot_changed', message: 'The pull request changed while it was being read. Retry to obtain a consistent snapshot.' })
+      .mockResolvedValueOnce({ ok: true, snapshot });
+    const { lastFrame, stdin } = render(<LiveInspectionApp prUrl={snapshot.identity.url} reader={reader} />);
+    await new Promise(resolve => setTimeout(resolve, 80));
+    expect(lastFrame()).toContain('snapshot_changed');
+    expect(process.exitCode).toBe(1);
+    stdin.write('r');
+    await new Promise(resolve => setTimeout(resolve, 80));
+    expect(reader).toHaveBeenCalledTimes(2);
+    expect(lastFrame()).toContain('LIVE SNAPSHOT COMPLETE');
+    expect(process.exitCode).toBe(0);
+  });
+
+  it('returns nonzero when quitting a failed live read and zero after a successful read', async () => {
+    const originalExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      const failure = render(<LiveInspectionApp prUrl="https://github.com/PixelsWorker/CodeGuardian/pull/11"
+        reader={async () => ({ ok: false, kind: 'not_found', message: 'PR unavailable.' })} />);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(process.exitCode).toBe(1);
+      failure.stdin.write('q');
+      expect(process.exitCode).toBe(1);
+      failure.cleanup();
+
+      process.exitCode = undefined;
+      const success = render(<LiveInspectionApp prUrl="https://github.com/PixelsWorker/CodeGuardian/pull/11"
+        reader={async () => ({ ok: true, snapshot: {
+          source_mode: 'live', retrieved_at: '2026-10-28T08:00:00.000Z',
+          identity: {
+            provider: 'github', owner: 'PixelsWorker', repo: 'CodeGuardian', number: 11,
+            url: 'https://github.com/PixelsWorker/CodeGuardian/pull/11', base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40),
+            title: 'Live PR', author: 'rockson', base_branch: 'dev', head_branch: 'topic', changed_files_count: 0,
+            additions: 0, deletions: 0, is_draft: false,
+          },
+          state: 'open', is_draft: false, files: [], pagination: { complete: true, page_count: 1, file_limit_hit: false },
+          status: 'complete', warnings: [],
+        } })} />);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      success.stdin.write('q');
+      expect(process.exitCode).toBe(0);
+      success.cleanup();
+
+      process.exitCode = undefined;
+      const pending = render(<LiveInspectionApp prUrl="https://github.com/PixelsWorker/CodeGuardian/pull/11"
+        reader={() => new Promise(() => {})} />);
+      await new Promise(resolve => setTimeout(resolve, 30));
+      expect(process.exitCode).toBe(1);
+      pending.stdin.write('c');
+      expect(process.exitCode).toBe(1);
+      pending.cleanup();
+    } finally {
+      process.exitCode = originalExitCode;
+    }
   });
 
   it('renders Screen 5: SpecialistScreen with all 4 canonical specialists', () => {
