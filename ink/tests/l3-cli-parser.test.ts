@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createCliProgram } from '../src/cli.js';
 import { SYNTHETIC_REPORT } from '../src/fixtures/fixtures.js';
+import { LiveInspectionApp } from '../src/screens/LiveInspectionApp.js';
 
 describe('L3 — CLI Parser and Safety Tests', () => {
   let stdoutOutput: string[] = [];
@@ -100,11 +101,49 @@ describe('L3 — CLI Parser and Safety Tests', () => {
     expect(rendered.props.isDemo).toBe(true);
   });
 
+  it('keeps the existing no-flag review route in demo mode', () => {
+    let rendered: any = null;
+    const program = createCliProgram({ exitOverride: true, renderApp: el => { rendered = el; } });
+    program.parse(['node', 'cli.js', 'review', 'https://github.com/example/demo/pull/42']);
+    expect(rendered.props.isDemo).toBe(true);
+    expect(rendered.type).not.toBe(LiveInspectionApp);
+    expect(process.exitCode).toBeUndefined();
+  });
+
   it('enforces mandatory demo-only safeguard: rejects --no-demo with exit code 1', () => {
     const program = createCliProgram({ exitOverride: true });
     program.parse(['node', 'cli.js', 'review', 'https://github.com/example/demo/pull/42', '--no-demo']);
     expect(process.exitCode).toBe(1);
-    expect(stderrOutput.some(msg => msg.includes("Real execution mode is disabled in G00. Only --demo is supported"))).toBe(true);
+    expect(stderrOutput.some(msg => msg.includes('--no-demo does not enable live access'))).toBe(true);
+  });
+
+  it('routes an explicit allowlisted --live request to the isolated live inspector', () => {
+    let rendered: any = null;
+    const liveReader = vi.fn();
+    const program = createCliProgram({ exitOverride: true, renderApp: el => { rendered = el; }, liveReader: liveReader as any });
+    program.parse(['node', 'cli.js', 'review', 'https://github.com/PixelsWorker/CodeGuardian/pull/11', '--live']);
+    expect(rendered.type).toBe(LiveInspectionApp);
+    expect(rendered.props.prUrl).toBe('https://github.com/PixelsWorker/CodeGuardian/pull/11');
+    expect(process.exitCode).toBeUndefined();
+    expect(liveReader).not.toHaveBeenCalled();
+  });
+
+  it('rejects live requests outside the initial repository allowlist before rendering', () => {
+    let rendered: any = null;
+    const program = createCliProgram({ exitOverride: true, renderApp: el => { rendered = el; } });
+    program.parse(['node', 'cli.js', 'review', 'https://github.com/facebook/react/pull/11', '--live']);
+    expect(rendered).toBeNull();
+    expect(process.exitCode).toBe(1);
+    expect(stderrOutput.join(' ')).toContain('limited to https://github.com/PixelsWorker/CodeGuardian');
+  });
+
+  it('rejects explicitly combined demo and live modes', () => {
+    let rendered: any = null;
+    const program = createCliProgram({ exitOverride: true, renderApp: el => { rendered = el; } });
+    program.parse(['node', 'cli.js', 'review', 'https://github.com/PixelsWorker/CodeGuardian/pull/11', '--demo', '--live']);
+    expect(rendered).toBeNull();
+    expect(process.exitCode).toBe(1);
+    expect(stderrOutput.join(' ')).toContain('Choose one mode');
   });
 
   it('rejects invalid PR host (e.g. gitlab.com) with exit code 1', () => {

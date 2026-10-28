@@ -132,7 +132,7 @@ describe('L8 — Compiled CLI Binary / Subprocess E2E Tests', () => {
     ]);
     expect(error).toBeUndefined();
     expect(status).toBe(1);
-    expect(stderr).toContain("Error: Real execution mode is disabled in G00. Only --demo is supported");
+    expect(stderr).toContain('Error: --no-demo does not enable live access; use explicit --live for allowlisted read-only inspection.');
   });
 
   it('enforces mandatory dry-run safeguard: rejects publish --no-dry-run with exit code 1', () => {
