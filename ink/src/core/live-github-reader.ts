@@ -12,7 +12,7 @@ const COMMAND_TIMEOUT_MS = 30_000;
 export type GitHubReadErrorKind =
   | 'invalid_url' | 'repository_not_allowed' | 'unauthenticated' | 'forbidden_or_not_found'
   | 'not_found' | 'rate_limited' | 'timeout' | 'output_limit' | 'command_missing'
-  | 'cancelled' | 'malformed_response' | 'command_failed' | 'snapshot_changed';
+  | 'cancelled' | 'malformed_response' | 'command_failed' | 'snapshot_changed' | 'unsupported_flag';
 
 export type GitHubReadResult =
   | { ok: true; snapshot: PullRequestSnapshot }
@@ -41,12 +41,14 @@ function readErrorMessage(kind: GitHubReadErrorKind): string {
     malformed_response: 'GitHub returned a response that CodeGuardian could not validate.',
     command_failed: 'GitHub CLI request failed. Check authentication, network access and repository permissions.',
     snapshot_changed: 'The pull request changed while it was being read. Retry to obtain a consistent snapshot.',
+    unsupported_flag: 'The installed GitHub CLI does not support a required option. Upgrade GitHub CLI to 2.48.0 or newer and retry.',
   };
   return messages[kind];
 }
 
 export function classifyGhFailureText(stderr: string): GitHubReadErrorKind {
   const detail = stderr.toLowerCase();
+  if (/unknown flag|unknown shorthand flag|flag provided but not defined/.test(detail)) return 'unsupported_flag';
   if (/not logged in|authentication required|please run: gh auth login|http 401|status 401/.test(detail)) return 'unauthenticated';
   if (/rate limit|secondary rate|http 429|status 429/.test(detail)) return 'rate_limited';
   if (/http 403|status 403/.test(detail)) return 'forbidden_or_not_found';
@@ -215,13 +217,12 @@ function truncateUtf8(value: string, maxBytes: number): { text: string; truncate
   return { text: bytes.subarray(0, end).toString('utf8'), truncated: true };
 }
 
-function parseFiles(raw: string): { files: PullRequestSnapshotFile[]; pageCount: number; fileLimitHit: boolean; duplicateFileCount: number } {
+function parseFiles(raw: string): { files: PullRequestSnapshotFile[]; pageCount: number; rawFileCount: number; duplicateFileCount: number } {
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { throw new ReaderFailure('malformed_response', 'GitHub returned malformed changed-file JSON.'); }
   if (!Array.isArray(parsed)) throw new ReaderFailure('malformed_response', 'GitHub returned an invalid paginated file response.');
   const pages: unknown[][] = parsed.length > 0 && Array.isArray(parsed[0]) ? parsed as unknown[][] : [parsed];
   const rawFiles = pages.flat();
-  const fileLimitHit = rawFiles.length >= MAX_FILES;
   const seenPaths = new Set<string>();
   let duplicateFileCount = 0;
   const files = rawFiles.slice(0, MAX_FILES).flatMap(item => {
@@ -251,7 +252,7 @@ function parseFiles(raw: string): { files: PullRequestSnapshotFile[]; pageCount:
       patch_available: patch !== null, patch_truncated: patchTruncated,
     })];
   });
-  return { files, pageCount: pages.length, fileLimitHit, duplicateFileCount };
+  return { files, pageCount: pages.length, rawFileCount: rawFiles.length, duplicateFileCount };
 }
 
 function sameSnapshot(left: ReturnType<typeof parseMetadata>, right: ReturnType<typeof parseMetadata>): boolean {
@@ -283,7 +284,15 @@ export async function readGitHubPullRequestSnapshot(
   const endpoint = `repos/${G01_ALLOWED_OWNER}/${G01_ALLOWED_REPO}/pulls/${parsed.number}`;
   try {
     // gh auth status suppresses tokens by default; its output is deliberately discarded.
-    await runner(['auth', 'status', '--hostname', 'github.com'], options.signal);
+    // --slurp used below first appeared in gh 2.48.0. Older auth-status releases
+    // may also lack --active, so retry only that unsupported-option failure.
+    try {
+      await runner(['auth', 'status', '--active', '--hostname', 'github.com'], options.signal);
+    } catch (error) {
+      const kind = error && typeof error === 'object' && 'kind' in error ? (error as { kind?: unknown }).kind : undefined;
+      if (kind !== 'unsupported_flag') throw error;
+      await runner(['auth', 'status', '--hostname', 'github.com'], options.signal);
+    }
     const firstMetadata = parseMetadata(await runner(['api', '--hostname', 'github.com', '--method', 'GET', endpoint], options.signal), parsed.number);
     const fileResult = parseFiles(await runner(['api', '--hostname', 'github.com', '--method', 'GET', '--paginate', '--slurp', `${endpoint}/files?per_page=100`], options.signal));
     const lastMetadata = parseMetadata(await runner(['api', '--hostname', 'github.com', '--method', 'GET', endpoint], options.signal), parsed.number);
@@ -294,9 +303,13 @@ export async function readGitHubPullRequestSnapshot(
     }
 
     const warnings: string[] = [];
+    // The API documents a 3,000-file response ceiling. Exactly 3,000 files are
+    // complete when the pinned metadata also reports exactly 3,000; a larger
+    // metadata count proves the response was capped.
+    const fileLimitHit = fileResult.rawFileCount >= MAX_FILES && firstMetadata.changedFiles > MAX_FILES;
     let paginationComplete = true;
     let snapshotComplete = true;
-    if (fileResult.fileLimitHit) {
+    if (fileLimitHit) {
       warnings.push(`GitHub's ${MAX_FILES}-file response ceiling was reached; the snapshot is incomplete.`);
       paginationComplete = false;
       snapshotComplete = false;
@@ -331,7 +344,7 @@ export async function readGitHubPullRequestSnapshot(
     const snapshot: PullRequestSnapshot = {
       source_mode: 'live', retrieved_at: retrievedAt, identity: firstMetadata.identity,
       state: firstMetadata.state, is_draft: firstMetadata.isDraft, files: fileResult.files,
-      pagination: { complete: paginationComplete, page_count: fileResult.pageCount, file_limit_hit: fileResult.fileLimitHit },
+      pagination: { complete: paginationComplete, page_count: fileResult.pageCount, file_limit_hit: fileLimitHit },
       status: snapshotComplete ? 'complete' : 'partial', warnings,
     };
     return { ok: true, snapshot: PullRequestSnapshotSchema.parse(snapshot) };
@@ -343,7 +356,7 @@ export async function readGitHubPullRequestSnapshot(
       if (typeof kind === 'string' && Object.hasOwn({
         invalid_url: 1, repository_not_allowed: 1, unauthenticated: 1, forbidden_or_not_found: 1,
         not_found: 1, rate_limited: 1, timeout: 1, output_limit: 1, command_missing: 1,
-        cancelled: 1, malformed_response: 1, command_failed: 1, snapshot_changed: 1,
+        cancelled: 1, malformed_response: 1, command_failed: 1, snapshot_changed: 1, unsupported_flag: 1,
       }, kind)) {
         return { ok: false, kind: kind as GitHubReadErrorKind, message: readErrorMessage(kind as GitHubReadErrorKind) };
       }

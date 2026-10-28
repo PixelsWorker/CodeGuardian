@@ -60,12 +60,29 @@ describe('G01 live GitHub read-only adapter', () => {
     expect(result.snapshot.files[0].patch).toContain('\n-old\n+new');
     expect(result.snapshot.retrieved_at).toBe('2026-10-28T08:00:00.000Z');
     expect(runner.mock.calls.map(([args]) => args)).toEqual([
-      ['auth', 'status', '--hostname', 'github.com'],
+      ['auth', 'status', '--active', '--hostname', 'github.com'],
       ['api', '--hostname', 'github.com', '--method', 'GET', 'repos/PixelsWorker/CodeGuardian/pulls/11'],
       ['api', '--hostname', 'github.com', '--method', 'GET', '--paginate', '--slurp', 'repos/PixelsWorker/CodeGuardian/pulls/11/files?per_page=100'],
       ['api', '--hostname', 'github.com', '--method', 'GET', 'repos/PixelsWorker/CodeGuardian/pulls/11'],
     ]);
     expect(runner.mock.calls.flatMap(([args]) => args).some(arg => /POST|PATCH|PUT|DELETE/.test(arg))).toBe(false);
+  });
+
+  it('retries only the auth active-account flag when an older gh rejects it', async () => {
+    const outputs = ['authenticated', metadata(), filePage([file()]), metadata()];
+    const runner = vi.fn<CommandRunner>().mockImplementation(async args => {
+      if (args[0] === 'auth' && args.includes('--active')) throw new ReaderFailure('unsupported_flag', 'internal flag detail');
+      return outputs.shift()!;
+    });
+    const result = await readGitHubPullRequestSnapshot(url, { runner });
+    expect(result).toMatchObject({ ok: true, snapshot: { status: 'complete' } });
+    expect(runner.mock.calls.slice(0, 2).map(([args]) => args)).toEqual([
+      ['auth', 'status', '--active', '--hostname', 'github.com'],
+      ['auth', 'status', '--hostname', 'github.com'],
+    ]);
+
+    const failingRunner: CommandRunner = async () => { throw new ReaderFailure('unauthenticated', 'private detail'); };
+    expect(await readGitHubPullRequestSnapshot(url, { runner: failingRunner })).toMatchObject({ ok: false, kind: 'unauthenticated' });
   });
 
   it('returns a retryable failure when the PR SHA changes during retrieval', async () => {
@@ -136,6 +153,7 @@ describe('G01 live GitHub read-only adapter', () => {
     expect(classifyGhFailureText('HTTP 403: Resource not accessible')).toBe('forbidden_or_not_found');
     expect(classifyGhFailureText('HTTP 404: Not Found')).toBe('not_found');
     expect(classifyGhFailureText('HTTP 429: secondary rate limit')).toBe('rate_limited');
+    expect(classifyGhFailureText('unknown flag: --active')).toBe('unsupported_flag');
   });
 
   it('aggregates paginated file results and marks oversized patches as truncated', async () => {
@@ -200,7 +218,14 @@ describe('G01 live GitHub read-only adapter', () => {
     }
   });
 
-  it('marks the 3000-file ceiling and does not claim complete pagination', async () => {
+  it('distinguishes an exact 3000-file snapshot from the response ceiling', async () => {
+    const exactFiles = Array.from({ length: 3000 }, (_, index) => file({ filename: `src/file-${index}.ts`, patch: undefined }));
+    const exactOutputs = ['authenticated', metadata(sha2, { changed_files: 3000 }), filePage(exactFiles), metadata(sha2, { changed_files: 3000 })];
+    const exactRunner = vi.fn<CommandRunner>().mockImplementation(async () => exactOutputs.shift()!);
+    const exactResult = await readGitHubPullRequestSnapshot(url, { runner: exactRunner });
+    expect(exactResult).toMatchObject({ ok: true, snapshot: { status: 'partial', pagination: { file_limit_hit: false, complete: true } } });
+    // No patches makes the snapshot status partial, while all files are paginated completely.
+
     const manyFiles = Array.from({ length: 3000 }, (_, index) => file({ filename: `src/file-${index}.ts`, patch: undefined }));
     const outputs = ['authenticated', metadata(sha2, { changed_files: 3001 }), filePage(manyFiles), metadata(sha2, { changed_files: 3001 })];
     const runner = vi.fn<CommandRunner>().mockImplementation(async () => outputs.shift()!);

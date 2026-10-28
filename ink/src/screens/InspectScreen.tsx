@@ -8,10 +8,53 @@ import { DiffHunkView } from '../components/DiffHunkView.js';
 const MAX_VISIBLE_FILE_WINDOW = 20;
 const MAX_VISIBLE_PATCH_LINES = 120;
 
-function clipTerminalLine(value: string, width: number): string {
+function isZeroWidth(codePoint: number, character: string): boolean {
+  return /\p{Mark}/u.test(character)
+    || codePoint === 0x200d
+    || (codePoint >= 0xfe00 && codePoint <= 0xfe0f)
+    || (codePoint >= 0xe0100 && codePoint <= 0xe01ef)
+    || (codePoint >= 0x1f3fb && codePoint <= 0x1f3ff)
+    || (codePoint >= 0xe0020 && codePoint <= 0xe007f);
+}
+
+function terminalCellWidth(character: string, codePoint: number): number {
+  if (isZeroWidth(codePoint, character)) return 0;
+  if (/\p{Emoji_Presentation}/u.test(character)
+    || (codePoint >= 0x1100 && (
+      codePoint <= 0x115f || codePoint === 0x2329 || codePoint === 0x232a
+      || (codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint !== 0x303f)
+      || (codePoint >= 0xac00 && codePoint <= 0xd7a3)
+      || (codePoint >= 0xf900 && codePoint <= 0xfaff)
+      || (codePoint >= 0xfe10 && codePoint <= 0xfe19)
+      || (codePoint >= 0xfe30 && codePoint <= 0xfe6f)
+      || (codePoint >= 0xff00 && codePoint <= 0xff60)
+      || (codePoint >= 0xffe0 && codePoint <= 0xffe6)
+      || (codePoint >= 0x20000 && codePoint <= 0x3fffd)
+    ))) return 2;
+  return 1;
+}
+
+export function clipTerminalLine(value: string, width: number): string {
+  const limit = Math.max(0, width);
   const characters = Array.from(value);
-  if (characters.length <= width) return value;
-  return `${characters.slice(0, Math.max(0, width - 1)).join('')}…`;
+  const widths = characters.map(character => terminalCellWidth(character, character.codePointAt(0)!));
+  for (let index = 1; index < characters.length; index += 1) {
+    if (characters[index].codePointAt(0) === 0xfe0f && /\p{Emoji}/u.test(characters[index - 1])) widths[index - 1] = 2;
+  }
+  const totalWidth = widths.reduce((sum, item) => sum + item, 0);
+  if (totalWidth <= limit) return value;
+  if (limit === 0) return '';
+
+  const output: string[] = [];
+  let used = 0;
+  const contentLimit = limit - 1; // reserve one display cell for the ellipsis
+  for (let index = 0; index < characters.length; index += 1) {
+    const cellWidth = widths[index];
+    if (used + cellWidth > contentLimit) break;
+    output.push(characters[index]);
+    used += cellWidth;
+  }
+  return `${output.join('')}…`;
 }
 
 interface InspectScreenProps {

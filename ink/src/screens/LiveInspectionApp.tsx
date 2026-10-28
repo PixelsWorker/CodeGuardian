@@ -16,7 +16,7 @@ type ViewState =
   | { phase: 'loading' }
   | { phase: 'result'; result: GitHubReadResult };
 
-/** A successful read exits with status 0; quitting during or after a failed read exits with status 1. */
+/** Only a completed successful read exits with status 0; failed or interrupted reads exit with status 1. */
 export function LiveInspectionApp({ prUrl, reader = readGitHubPullRequestSnapshot }: LiveInspectionAppProps) {
   const [attempt, setAttempt] = useState(0);
   const [view, setView] = useState<ViewState>({ phase: 'loading' });
@@ -26,11 +26,16 @@ export function LiveInspectionApp({ prUrl, reader = readGitHubPullRequestSnapsho
   useEffect(() => {
     const request = new AbortController();
     controller.current = request;
+    process.exitCode = 1;
     setView({ phase: 'loading' });
     void reader(prUrl, { signal: request.signal }).then(result => {
-      if (!request.signal.aborted) setView({ phase: 'result', result });
+      if (!request.signal.aborted) {
+        process.exitCode = result.ok ? 0 : 1;
+        setView({ phase: 'result', result });
+      }
     }).catch(() => {
       if (!request.signal.aborted) {
+        process.exitCode = 1;
         setView({ phase: 'result', result: { ok: false, kind: 'command_failed', message: 'Inspection failed unexpectedly. Retry the read-only request.' } });
       }
     });
@@ -48,9 +53,12 @@ export function LiveInspectionApp({ prUrl, reader = readGitHubPullRequestSnapsho
     }
     if (view.phase === 'loading' && (key.escape || input === 'c' || input === 'C')) {
       controller.current?.abort();
+      process.exitCode = 1;
       setView({ phase: 'result', result: { ok: false, kind: 'cancelled', message: 'Inspection was cancelled. Press [R] to retry.' } });
     }
-    if (view.phase === 'result' && !view.result.ok && (input === 'r' || input === 'R')) setAttempt(value => value + 1);
+    if (view.phase === 'result' && !view.result.ok && (input === 'r' || input === 'R')) {
+      setAttempt(value => value + 1);
+    }
   });
 
   return (
